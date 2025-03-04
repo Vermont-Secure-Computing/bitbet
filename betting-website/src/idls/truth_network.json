@@ -1,0 +1,887 @@
+{
+  "address": "Dbxfq4HsoSmh1zuUmutjrR9SWbZ2AyzXnJT9DWdzRHwD",
+  "metadata": {
+    "name": "truth_network",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "commit_vote",
+      "discriminator": [
+        134,
+        97,
+        90,
+        126,
+        91,
+        66,
+        16,
+        26
+      ],
+      "accounts": [
+        {
+          "name": "question",
+          "writable": true
+        },
+        {
+          "name": "voter_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "voter"
+              },
+              {
+                "kind": "account",
+                "path": "question"
+              }
+            ]
+          }
+        },
+        {
+          "name": "voter",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "commitment",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "create_question",
+      "discriminator": [
+        222,
+        74,
+        49,
+        30,
+        160,
+        220,
+        179,
+        27
+      ],
+      "accounts": [
+        {
+          "name": "question_counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  113,
+                  117,
+                  101,
+                  115,
+                  116,
+                  105,
+                  111,
+                  110,
+                  95,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "asker"
+              }
+            ]
+          }
+        },
+        {
+          "name": "question",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  113,
+                  117,
+                  101,
+                  115,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "asker"
+              },
+              {
+                "kind": "account",
+                "path": "question_counter.count",
+                "account": "QuestionCounter"
+              }
+            ]
+          }
+        },
+        {
+          "name": "asker",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "question_counter"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "question_text",
+          "type": "string"
+        },
+        {
+          "name": "reward",
+          "type": "u64"
+        },
+        {
+          "name": "commit_end_time",
+          "type": "i64"
+        },
+        {
+          "name": "reveal_end_time",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "create_voter_record",
+      "discriminator": [
+        3,
+        12,
+        113,
+        222,
+        177,
+        4,
+        152,
+        165
+      ],
+      "accounts": [
+        {
+          "name": "question",
+          "writable": true
+        },
+        {
+          "name": "voter_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "voter"
+              },
+              {
+                "kind": "account",
+                "path": "question"
+              }
+            ]
+          }
+        },
+        {
+          "name": "voter",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "delete_expired_question",
+      "discriminator": [
+        63,
+        191,
+        168,
+        249,
+        120,
+        213,
+        66,
+        235
+      ],
+      "accounts": [
+        {
+          "name": "question",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  113,
+                  117,
+                  101,
+                  115,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "asker"
+              },
+              {
+                "kind": "account",
+                "path": "question.id",
+                "account": "Question"
+              }
+            ]
+          }
+        },
+        {
+          "name": "asker",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "finalize_voting",
+      "discriminator": [
+        195,
+        61,
+        27,
+        72,
+        252,
+        138,
+        175,
+        13
+      ],
+      "accounts": [
+        {
+          "name": "question",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "hello_world",
+      "discriminator": [
+        11,
+        235,
+        52,
+        244,
+        76,
+        66,
+        25,
+        71
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_counter",
+      "discriminator": [
+        67,
+        89,
+        100,
+        87,
+        231,
+        172,
+        35,
+        124
+      ],
+      "accounts": [
+        {
+          "name": "question_counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  113,
+                  117,
+                  101,
+                  115,
+                  116,
+                  105,
+                  111,
+                  110,
+                  95,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "asker"
+              }
+            ]
+          }
+        },
+        {
+          "name": "asker",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "join_network",
+      "discriminator": [
+        246,
+        184,
+        107,
+        68,
+        39,
+        172,
+        8,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "voter_list",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  114,
+                  95,
+                  108,
+                  105,
+                  115,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "leave_network",
+      "discriminator": [
+        95,
+        180,
+        37,
+        177,
+        111,
+        193,
+        20,
+        19
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "voter_list",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "reveal_vote",
+      "discriminator": [
+        100,
+        157,
+        139,
+        17,
+        186,
+        75,
+        185,
+        149
+      ],
+      "accounts": [
+        {
+          "name": "question",
+          "writable": true
+        },
+        {
+          "name": "voter_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "voter"
+              },
+              {
+                "kind": "account",
+                "path": "question"
+              }
+            ]
+          }
+        },
+        {
+          "name": "voter",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "password",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "update_reward",
+      "discriminator": [
+        62,
+        165,
+        125,
+        122,
+        39,
+        204,
+        160,
+        29
+      ],
+      "accounts": [
+        {
+          "name": "question",
+          "writable": true
+        },
+        {
+          "name": "updater",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_reward",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Question",
+      "discriminator": [
+        111,
+        22,
+        150,
+        220,
+        181,
+        122,
+        118,
+        127
+      ]
+    },
+    {
+      "name": "QuestionCounter",
+      "discriminator": [
+        91,
+        17,
+        149,
+        190,
+        211,
+        154,
+        240,
+        18
+      ]
+    },
+    {
+      "name": "Vault",
+      "discriminator": [
+        211,
+        8,
+        232,
+        43,
+        2,
+        152,
+        117,
+        119
+      ]
+    },
+    {
+      "name": "VoterList",
+      "discriminator": [
+        27,
+        237,
+        57,
+        2,
+        134,
+        241,
+        248,
+        106
+      ]
+    },
+    {
+      "name": "VoterRecord",
+      "discriminator": [
+        178,
+        96,
+        138,
+        116,
+        143,
+        202,
+        115,
+        33
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "VotingEnded",
+      "msg": "Voting period has ended."
+    },
+    {
+      "code": 6001,
+      "name": "VotingStillActive",
+      "msg": "Voting is still active."
+    },
+    {
+      "code": 6002,
+      "name": "AlreadyFinalized",
+      "msg": "Voting has already been finalized."
+    },
+    {
+      "code": 6003,
+      "name": "AlreadyJoined",
+      "msg": "You have already joined the network."
+    },
+    {
+      "code": 6004,
+      "name": "AlreadyInitialized",
+      "msg": "Question counter already exists."
+    },
+    {
+      "code": 6005,
+      "name": "AlreadyVoted",
+      "msg": "You have already voted on this question."
+    },
+    {
+      "code": 6006,
+      "name": "AlreadyRevealed",
+      "msg": "You have already revealed your vote."
+    },
+    {
+      "code": 6007,
+      "name": "InvalidReveal",
+      "msg": "Invalid voting reveal."
+    },
+    {
+      "code": 6008,
+      "name": "NotJoined",
+      "msg": "You have already leaved the network."
+    },
+    {
+      "code": 6009,
+      "name": "RentNotExpired",
+      "msg": "Rent period has not expired yet."
+    },
+    {
+      "code": 6010,
+      "name": "InvalidTimeframe",
+      "msg": "Invalid timeframe."
+    },
+    {
+      "code": 6011,
+      "name": "CommitPhaseEnded",
+      "msg": "Commit phase ended."
+    },
+    {
+      "code": 6012,
+      "name": "RevealPhaseEnded",
+      "msg": "Reveal phase ended."
+    }
+  ],
+  "types": [
+    {
+      "name": "Question",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "u64"
+          },
+          {
+            "name": "asker",
+            "type": "pubkey"
+          },
+          {
+            "name": "question_key",
+            "type": "pubkey"
+          },
+          {
+            "name": "question_text",
+            "type": "string"
+          },
+          {
+            "name": "option_1",
+            "type": "string"
+          },
+          {
+            "name": "option_2",
+            "type": "string"
+          },
+          {
+            "name": "reward",
+            "type": "u64"
+          },
+          {
+            "name": "commit_end_time",
+            "type": "i64"
+          },
+          {
+            "name": "reveal_end_time",
+            "type": "i64"
+          },
+          {
+            "name": "rent_expiration",
+            "type": "i64"
+          },
+          {
+            "name": "votes_option_1",
+            "type": "u64"
+          },
+          {
+            "name": "votes_option_2",
+            "type": "u64"
+          },
+          {
+            "name": "finalized",
+            "type": "bool"
+          },
+          {
+            "name": "committed_voters",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "QuestionCounter",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asker",
+            "type": "pubkey"
+          },
+          {
+            "name": "count",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Vault",
+      "docs": [
+        "An empty account for the vault.",
+        "This account will only hold lamports and no other data."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": []
+      }
+    },
+    {
+      "name": "Voter",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "address",
+            "type": "pubkey"
+          },
+          {
+            "name": "reputation",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VoterList",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "voters",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "Voter"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VoterRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "question",
+            "type": "pubkey"
+          },
+          {
+            "name": "voter",
+            "type": "pubkey"
+          },
+          {
+            "name": "commitment",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "revealed",
+            "type": "bool"
+          }
+        ]
+      }
+    }
+  ]
+}

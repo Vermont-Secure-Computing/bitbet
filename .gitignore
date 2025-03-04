@@ -1,0 +1,24 @@
+# Logs
+betting-website/logs
+betting-website/*.log
+betting-website/npm-debug.log*
+betting-website/yarn-debug.log*
+betting-website/yarn-error.log*
+betting-website/pnpm-debug.log*
+betting-website/lerna-debug.log*
+
+betting-website/node_modules
+betting-website/dist
+betting-website/dist-ssr
+betting-website/*.local
+
+# Editor directories and files
+betting-website/.vscode/*
+betting-website/!.vscode/extensions.json
+betting-website/.idea
+betting-website/.DS_Store
+betting-website/*.suo
+betting-website/*.ntvs*
+betting-website/*.njsproj
+betting-website/*.sln
+betting-website/*.sw?

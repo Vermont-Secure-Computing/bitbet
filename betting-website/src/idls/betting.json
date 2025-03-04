@@ -1,0 +1,391 @@
+{
+  "address": "5ea8r7iuNh3R1FWGor9gWvYmXhqXBPdh1zK3cKgXwnEp",
+  "metadata": {
+    "name": "betting_contract",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "call_hello_world",
+      "docs": [
+        "CPI Call to `helloWorld` in Truth Network"
+      ],
+      "discriminator": [
+        152,
+        33,
+        126,
+        169,
+        12,
+        54,
+        122,
+        3
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "truth_network_program",
+          "address": "Dbxfq4HsoSmh1zuUmutjrR9SWbZ2AyzXnJT9DWdzRHwD"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "check_betting_question",
+      "discriminator": [
+        87,
+        216,
+        102,
+        228,
+        54,
+        166,
+        225,
+        74
+      ],
+      "accounts": [
+        {
+          "name": "betting_question",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_betting_question",
+      "docs": [
+        "Create Betting Question (References the Truth-Network Question)"
+      ],
+      "discriminator": [
+        197,
+        226,
+        107,
+        196,
+        36,
+        160,
+        151,
+        113
+      ],
+      "accounts": [
+        {
+          "name": "betting_question",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  101,
+                  116,
+                  116,
+                  105,
+                  110,
+                  103,
+                  95,
+                  113,
+                  117,
+                  101,
+                  115,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "question_pda"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "question_pda",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "close_date",
+          "type": "i64"
+        },
+        {
+          "name": "reward_date",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "place_bet",
+      "docs": [
+        "Function to place a bet on a question"
+      ],
+      "discriminator": [
+        222,
+        62,
+        67,
+        220,
+        63,
+        166,
+        126,
+        33
+      ],
+      "accounts": [
+        {
+          "name": "betting_question",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "truth_network_question",
+          "writable": true
+        },
+        {
+          "name": "bet_program",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "truth_network_program",
+          "address": "Dbxfq4HsoSmh1zuUmutjrR9SWbZ2AyzXnJT9DWdzRHwD"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "is_option_1",
+          "type": "bool"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "BettingQuestion",
+      "discriminator": [
+        100,
+        65,
+        49,
+        159,
+        0,
+        227,
+        43,
+        98
+      ]
+    },
+    {
+      "name": "Question",
+      "discriminator": [
+        111,
+        22,
+        150,
+        220,
+        181,
+        122,
+        118,
+        127
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "BettingClosed",
+      "msg": "Betting is now closed."
+    }
+  ],
+  "types": [
+    {
+      "name": "BettingQuestion",
+      "docs": [
+        "Betting Question Struct (Linked to Truth-Network Question)"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "question_pda",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "name": "option1",
+            "type": "string"
+          },
+          {
+            "name": "option2",
+            "type": "string"
+          },
+          {
+            "name": "total_bets_option1",
+            "type": "u64"
+          },
+          {
+            "name": "total_bets_option2",
+            "type": "u64"
+          },
+          {
+            "name": "total_pool",
+            "type": "u64"
+          },
+          {
+            "name": "total_creator_commission",
+            "type": "u64"
+          },
+          {
+            "name": "total_house_commision",
+            "type": "u64"
+          },
+          {
+            "name": "bettors",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "BettorRecord"
+                }
+              }
+            }
+          },
+          {
+            "name": "close_date",
+            "type": "i64"
+          },
+          {
+            "name": "reward_date",
+            "type": "i64"
+          },
+          {
+            "name": "status",
+            "type": "string"
+          },
+          {
+            "name": "result",
+            "type": {
+              "option": "string"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "BettorRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "address",
+            "type": "pubkey"
+          },
+          {
+            "name": "chosen_option",
+            "type": "bool"
+          },
+          {
+            "name": "bet_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Question",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "u64"
+          },
+          {
+            "name": "asker",
+            "type": "pubkey"
+          },
+          {
+            "name": "question_key",
+            "type": "pubkey"
+          },
+          {
+            "name": "question_text",
+            "type": "string"
+          },
+          {
+            "name": "option_1",
+            "type": "string"
+          },
+          {
+            "name": "option_2",
+            "type": "string"
+          },
+          {
+            "name": "reward",
+            "type": "u64"
+          },
+          {
+            "name": "commit_end_time",
+            "type": "i64"
+          },
+          {
+            "name": "reveal_end_time",
+            "type": "i64"
+          },
+          {
+            "name": "rent_expiration",
+            "type": "i64"
+          },
+          {
+            "name": "votes_option_1",
+            "type": "u64"
+          },
+          {
+            "name": "votes_option_2",
+            "type": "u64"
+          },
+          {
+            "name": "finalized",
+            "type": "bool"
+          },
+          {
+            "name": "committed_voters",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}
