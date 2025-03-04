@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
-import { AnchorProvider, Program, web3 } from "@coral-xyz/anchor";
+import { AnchorProvider, Program, web3, BN } from "@coral-xyz/anchor";
 import { useNavigate } from "react-router-dom";
 import bettingIDL from "../idls/betting.json";
 import truthNetworkIDL from "../idls/truth_network.json";
@@ -67,15 +67,45 @@ const FetchQuestion = () => {
             const questionsWithDetails = await Promise.all(
                 accounts.map(async (bettingQuestion) => {
                     console.log("Fetching Truth-Network Question for PDA:", bettingQuestion.account.questionPda.toString());
+                    const totalPool = new BN(bettingQuestion.account.totalPool);
+                    const totalBetsOption1 = new BN(bettingQuestion.account.totalBetsOption1);
+                    const totalBetsOption2 = new BN(bettingQuestion.account.totalBetsOption2);
+                    const option1Odds = new BN(bettingQuestion.account.option1Odds)
+                    const option2Odds = new BN(bettingQuestion.account.option2Odds)
+                    const totalHouseCommission = new BN(bettingQuestion.account.totalHouseCommision);
+                    const totalCreatorCommission = new BN(bettingQuestion.account.totalCreatorCommission);
 
+                    console.log("totalPool: ", totalPool.toString())
+                    console.log("totalBetsOption1: ", totalBetsOption1.toString())
+                    console.log("option1Odds: ", option1Odds.toString())
+                    console.log("totalBetsOption2: ", totalBetsOption2.toString())
+                    console.log("option2Odds: ", option2Odds.toString())
+                    console.log("totalHouseCommission: ", totalHouseCommission.toString())
+                    console.log("totalCreatorCommission: ", totalCreatorCommission.toString())
                     try {
                         const truthQuestion = await truthNetworkProgram.account.question.fetch(
                             bettingQuestion.account.questionPda
                         );
-                        return { betting: bettingQuestion.account, truth: truthQuestion };
+                        return {
+                            betting: {
+                                ...bettingQuestion.account,
+                                questionPda: bettingQuestion.account.questionPda.toBase58(),
+                                totalPool: totalPool.toString(),
+                                totalBetsOption1: totalBetsOption1.toString(),
+                                totalBetsOption2: totalBetsOption2.toString(),
+                                option1Odds: option1Odds.toString(),
+                                option2Odds: option2Odds.toString(),
+                                totalHouseCommision: totalHouseCommission.toString(),
+                                totalCreatorCommission: totalCreatorCommission.toString(),
+                            },
+                            truth: {
+                                ...truthQuestion,
+                                questionKey: truthQuestion.questionKey.toBase58(),
+                            },
+                        };
                     } catch (error) {
                         console.error("Error fetching Truth-Network question:", error);
-                        return { betting: bettingQuestion.account, truth: null };
+                        return null;
                     }
                 })
             );
@@ -102,6 +132,7 @@ const FetchQuestion = () => {
                         <strong className="text-lg text-blue-400">{q.betting.title}</strong>
                         <p className="text-gray-400">🔹 Truth Network ID: {q.truth?.id?.toString() || "Not Found"}</p>
                         <p className="text-gray-500 text-sm">PDA: {q.betting.questionPda.toString()}</p>
+                        <p className="text-gray-500 text-sm">Rewards: {(new BN(q.truth.reward)  / 1_000_000_000).toString()}</p>
                     </li>
                 ))}
             </ul>

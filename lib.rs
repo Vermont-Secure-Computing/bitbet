@@ -16,7 +16,7 @@ use truth_network::{
 // Import the Truth-Network program
 use truth_network::accounts::Question;
 
-declare_id!("5ea8r7iuNh3R1FWGor9gWvYmXhqXBPdh1zK3cKgXwnEp");
+declare_id!("FFAn8x3D8bZujSHimKorCaZQvRJhaNDSMeEHYyrqUcie");
 
 #[program]
 pub mod betting_contract {
@@ -68,7 +68,7 @@ pub mod betting_contract {
         betting_question.result = None;
 
         msg!("Betting Question Created Successfully!");
-        msg!("Stored Truth-Network Question PDA: {}", betting_question.question_pda);
+        msg!("Stored Truth-Network Question PDA: {}", betting_question.question_pda); // 🔥 Debug log
 
         Ok(())
     }
@@ -86,13 +86,22 @@ pub mod betting_contract {
         let current_time = Clock::get()?.unix_timestamp;
         require!(current_time < betting_question.close_date, BettingError::BettingClosed);
 
+        // Deduct commissions
+        let truth_network_commission = amount / 100;
+        let house_commission = amount / 100;
+        let creator_commission = amount / 100;
+        let bet_after_commissions = amount - (truth_network_commission + house_commission + creator_commission);
+
+        // Track total amount bet before deductions
+        betting_question.total_bets_before_commission += amount;
+
         // Update total bets
         if is_option_1 {
             betting_question.total_bets_option1 += amount;
         } else {
             betting_question.total_bets_option2 += amount;
         }
-        betting_question.total_pool += amount;
+        betting_question.total_pool += bet_after_commissions;
 
         // Store bettor details in BettingQuestion (inside bettors Vec)
         betting_question.bettors.push(BettorRecord {
@@ -101,8 +110,18 @@ pub mod betting_contract {
             bet_amount: amount,
         });
 
-        // Calculate new reward (1% of total pool)
-        let new_reward = betting_question.total_pool * 1 / 100;
+        // Compute accurate odds based on the original total bets
+        if betting_question.total_bets_option1 > 0 && betting_question.total_bets_option2 > 0  {
+            betting_question.option1_odds = betting_question.total_bets_before_commission as f64/ betting_question.total_bets_option1 as f64;
+            betting_question.option2_odds = betting_question.total_bets_before_commission as f64/ betting_question.total_bets_option2 as f64;
+        } else {
+            betting_question.option1_odds = 0.0;
+            betting_question.option2_odds = 0.0;
+        }
+
+        // Update total commission fields
+        betting_question.total_creator_commission += creator_commission;
+        betting_question.total_house_commision += house_commission;
 
         // Call Truth-Network to update reward via CPI
         let cpi_accounts = UpdateReward {
@@ -110,7 +129,7 @@ pub mod betting_contract {
             updater: ctx.accounts.bet_program.to_account_info(),
         };
         let cpi_context = CpiContext::new(ctx.accounts.truth_network_program.to_account_info(), cpi_accounts);
-        update_reward(cpi_context, new_reward)?;
+        update_reward(cpi_context, truth_network_commission)?;
     
         Ok(())
     }
@@ -133,8 +152,11 @@ pub struct BettingQuestion {
     pub title: String,
     pub option1: String,
     pub option2: String,
+    pub option1_odds: f64,
+    pub option2_odds: f64,
     pub total_bets_option1: u64,
     pub total_bets_option2: u64,
+    pub total_bets_before_commission: u64,
     pub total_pool: u64,
     pub total_creator_commission: u64,
     pub total_house_commision: u64,
@@ -159,7 +181,7 @@ pub struct CreateBettingQuestion<'info> {
         init,
         payer = creator,
         space = 800,
-        seeds = [b"betting_question", question_pda.key().as_ref()],
+        seeds = [b"betting_question", betting_contract.key().as_ref(), question_pda.key().as_ref()],
         bump
     )]
     pub betting_question: Account<'info, BettingQuestion>,
@@ -170,6 +192,10 @@ pub struct CreateBettingQuestion<'info> {
     /// CHECK: This is a reference to the Truth-Network question.
     #[account(mut)]
     pub question_pda: AccountInfo<'info>,
+
+    /// CHECK: Betting Contract Program ID
+    #[account(address = crate::ID)]
+    pub betting_contract: AccountInfo<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -194,8 +220,10 @@ pub struct PlaceBet<'info> {
     //Truth-Network CPI Accounts
     #[account(mut)]
     pub truth_network_question: Account<'info, Question>,
-    #[account(mut)]
-    pub bet_program: Signer<'info>,
+    
+    /// CHECK: This is the betting contract's program ID, used for CPIs. No validation required.
+    pub bet_program: UncheckedAccount<'info>,
+    
     pub truth_network_program: Program<'info, TruthNetwork>,
     pub system_program: Program<'info, System>,
 }
@@ -206,6 +234,14 @@ pub struct BettorRecord {
     pub chosen_option: bool,
     pub bet_amount: u64,
 }
+
+
+// #[account]
+// pub struct Bettor {
+//     pub address: Pubkey,
+//     pub bet_amount: u64,
+//     pub chosen_option: bool, // true = Option 1, false = Option 2
+// }
 
 
 #[derive(Accounts)]
