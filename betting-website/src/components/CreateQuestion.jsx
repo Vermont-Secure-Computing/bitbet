@@ -146,7 +146,11 @@ const CreateQuestion = () => {
             console.log("Successfully created question in Truth Network:", questionPDA.toString());
 
             const [bettingQuestionPDA] = PublicKey.findProgramAddressSync(
-                [Buffer.from("betting_question"), questionPDA.toBuffer()], 
+                [
+                    Buffer.from("betting_question"),
+                    BETTING_CONTRACT_PROGRAM_ID.toBuffer(),
+                    questionPDA.toBuffer()
+                ],
                 BETTING_CONTRACT_PROGRAM_ID
             );
         

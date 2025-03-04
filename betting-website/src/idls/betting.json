@@ -1,5 +1,5 @@
 {
-  "address": "5ea8r7iuNh3R1FWGor9gWvYmXhqXBPdh1zK3cKgXwnEp",
+  "address": "FFAn8x3D8bZujSHimKorCaZQvRJhaNDSMeEHYyrqUcie",
   "metadata": {
     "name": "betting_contract",
     "version": "0.1.0",
@@ -30,7 +30,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "Dbxfq4HsoSmh1zuUmutjrR9SWbZ2AyzXnJT9DWdzRHwD"
+          "address": "39k9mmH48sHkBuxqbuYXCMLvvs5BSp7Bjrzzam63a5JX"
         }
       ],
       "args": []
@@ -99,6 +99,10 @@
               },
               {
                 "kind": "account",
+                "path": "betting_contract"
+              },
+              {
+                "kind": "account",
                 "path": "question_pda"
               }
             ]
@@ -112,6 +116,10 @@
         {
           "name": "question_pda",
           "writable": true
+        },
+        {
+          "name": "betting_contract",
+          "address": "FFAn8x3D8bZujSHimKorCaZQvRJhaNDSMeEHYyrqUcie"
         },
         {
           "name": "system_program",
@@ -163,13 +171,11 @@
           "writable": true
         },
         {
-          "name": "bet_program",
-          "writable": true,
-          "signer": true
+          "name": "bet_program"
         },
         {
           "name": "truth_network_program",
-          "address": "Dbxfq4HsoSmh1zuUmutjrR9SWbZ2AyzXnJT9DWdzRHwD"
+          "address": "39k9mmH48sHkBuxqbuYXCMLvvs5BSp7Bjrzzam63a5JX"
         },
         {
           "name": "system_program",
@@ -253,11 +259,23 @@
             "type": "string"
           },
           {
+            "name": "option1_odds",
+            "type": "f64"
+          },
+          {
+            "name": "option2_odds",
+            "type": "f64"
+          },
+          {
             "name": "total_bets_option1",
             "type": "u64"
           },
           {
             "name": "total_bets_option2",
+            "type": "u64"
+          },
+          {
+            "name": "total_bets_before_commission",
             "type": "u64"
           },
           {
@@ -383,6 +401,14 @@
           {
             "name": "committed_voters",
             "type": "u64"
+          },
+          {
+            "name": "eligible_voters",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }
