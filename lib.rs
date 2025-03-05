@@ -46,6 +46,7 @@ pub mod betting_contract {
         reward_date: i64,
     ) -> Result<()> {
         let betting_question = &mut ctx.accounts.betting_question;
+        let vault = &mut ctx.accounts.vault;
 
         msg!("Creating Betting Question...");
         msg!("Title: {}", title);
@@ -66,9 +67,11 @@ pub mod betting_contract {
         betting_question.reward_date = reward_date;
         betting_question.status = "open".to_string();
         betting_question.result = None;
+        betting_question.vault = vault.key(); // This will store Vault PDA in BettingQuestion
 
         msg!("Betting Question Created Successfully!");
-        msg!("Stored Truth-Network Question PDA: {}", betting_question.question_pda); // 🔥 Debug log
+        msg!("Stored Truth-Network Question PDA: {}", betting_question.question_pda);
+        msg!("Bet Vault PDA: {}", vault.key());
 
         Ok(())
     }
@@ -143,6 +146,8 @@ pub mod betting_contract {
 }
 
 
+#[account]
+pub struct Vault {} // PDA for holding bets SOL
 
 /// Betting Question Struct (Linked to Truth-Network Question)
 #[account]
@@ -165,6 +170,7 @@ pub struct BettingQuestion {
     pub reward_date: i64,
     pub status: String,  // "open", "closed", "resolved"
     pub result: Option<String>,
+    pub vault: Pubkey,
 }
 
 /// Account Structs
@@ -197,8 +203,18 @@ pub struct CreateBettingQuestion<'info> {
     #[account(address = crate::ID)]
     pub betting_contract: AccountInfo<'info>,
 
+    #[account(
+        init,
+        payer = creator,
+        space = 8,
+        seeds = [b"bet_vault", betting_question.key().as_ref()],
+        bump
+    )]
+    pub vault: Account<'info, Vault>,
+
     pub system_program: Program<'info, System>,
 }
+
 
 #[derive(Accounts)]
 pub struct InitializeHouseWallet<'info> {
