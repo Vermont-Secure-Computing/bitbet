@@ -1,5 +1,5 @@
 {
-  "address": "39k9mmH48sHkBuxqbuYXCMLvvs5BSp7Bjrzzam63a5JX",
+  "address": "Af4GKPVNrHLHuYAgqkT4KiFFL2aJFyfRThrMrC2wjshf",
   "metadata": {
     "name": "truth_network",
     "version": "0.1.0",
@@ -62,6 +62,10 @@
               }
             ]
           }
+        },
+        {
+          "name": "vault",
+          "writable": true
         },
         {
           "name": "system_program",
@@ -206,6 +210,28 @@
                 "kind": "account",
                 "path": "question_counter.count",
                 "account": "QuestionCounter"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "question"
               }
             ]
           }
@@ -807,6 +833,21 @@
       "code": 6016,
       "name": "NoEligibleVoters",
       "msg": "No eligible voters."
+    },
+    {
+      "code": 6017,
+      "name": "InvalidVaultAccount",
+      "msg": "Invalid vault account"
+    },
+    {
+      "code": 6018,
+      "name": "InsufficientFunds",
+      "msg": "Insufficient funds."
+    },
+    {
+      "code": 6019,
+      "name": "Overflow",
+      "msg": "Overflow"
     }
   ],
   "types": [
@@ -825,6 +866,10 @@
           },
           {
             "name": "question_key",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_address",
             "type": "pubkey"
           },
           {
