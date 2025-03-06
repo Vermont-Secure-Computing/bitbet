@@ -132,6 +132,12 @@ const CreateQuestion = () => {
             console.log("calculated commit end time: ", commitEndTimeTimestamp)
             console.log("calculated reveal end time: ", revealEndTimeTimestamp)
 
+            const [truthVaultPDA] = await PublicKey.findProgramAddress(
+                [Buffer.from("vault"), questionPDA.toBuffer()],
+                TRUTH_NETWORK_PROGRAM_ID
+              );
+            console.log("Truth network Vault PDA: ", truthVaultPDA)
+
             console.log("Calling truth network create question function")
             const tx = await truthNetworkProgram.methods
                 .createQuestion(questionText, rewardLamports, commitEndTimeTimestamp, revealEndTimeTimestamp)
@@ -139,6 +145,7 @@ const CreateQuestion = () => {
                     asker: publicKey,
                     questionCounter: questionCounterPDA,
                     question: questionPDA,
+                    vault: truthVaultPDA,
                     systemProgram: web3.SystemProgram.programId,
                 })
                 .rpc();
@@ -153,9 +160,18 @@ const CreateQuestion = () => {
                 ],
                 BETTING_CONTRACT_PROGRAM_ID
             );
-        
 
             console.log("Derived BettingQuestion PDA:", bettingQuestionPDA.toString());
+
+            const [bettingVaultPDA] = PublicKey.findProgramAddressSync(
+                [
+                    Buffer.from("bet_vault"),
+                    new PublicKey(bettingQuestionPDA).toBuffer()
+                ],
+                bettingProgram.programId
+            );
+
+            console.log("Vault PDA: ", bettingVaultPDA.toBase58());
 
             // Call Betting Smart Contract Create Question
             console.log("Calling Betting Smart Contract createBettingQuestion function...");
@@ -187,6 +203,7 @@ const CreateQuestion = () => {
                     creator: publicKey,
                     questionPda: questionPDA,
                     systemProgram: web3.SystemProgram.programId,
+                    vault: bettingVaultPDA
                 })
                 .rpc();
             

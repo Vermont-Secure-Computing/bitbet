@@ -1,7 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::{program::invoke};
+use anchor_lang::solana_program::{program::invoke, program::invoke_signed};
 use anchor_lang::solana_program::instruction::Instruction;
-use std::collections::BTreeMap;
+use anchor_lang::solana_program::system_instruction;
+use anchor_lang::system_program;
 
 // Import the truth_network program
 declare_program!(truth_network);
@@ -16,7 +17,7 @@ use truth_network::{
 // Import the Truth-Network program
 use truth_network::accounts::Question;
 
-declare_id!("FFAn8x3D8bZujSHimKorCaZQvRJhaNDSMeEHYyrqUcie");
+declare_id!("H3xyKqz57emssN2cL1fKPSCeBRb5zJYK8eBSY8Vx9tJq");
 
 #[program]
 pub mod betting_contract {
@@ -76,28 +77,28 @@ pub mod betting_contract {
         Ok(())
     }
 
-
     /// Function to place a bet on a question
-    pub fn place_bet(
-        ctx: Context<PlaceBet>,
-        amount: u64,
-        is_option_1: bool
-    ) -> Result<()> {
+    pub fn place_bet(ctx: Context<PlaceBet>, amount: u64, is_option_1: bool) -> Result<()> {
         let betting_question = &mut ctx.accounts.betting_question;
-
+        let user = &ctx.accounts.user;
+        let vault = &mut ctx.accounts.vault; // Betting vault (owned by Betting Program)
+        let truth_vault = &mut ctx.accounts.truth_network_vault; // Truth-Network vault (owned by Truth-Network)
+    
+        let system_program = &ctx.accounts.system_program;
+    
         // Ensure betting is still open
         let current_time = Clock::get()?.unix_timestamp;
         require!(current_time < betting_question.close_date, BettingError::BettingClosed);
-
+    
         // Deduct commissions
         let truth_network_commission = amount / 100;
         let house_commission = amount / 100;
         let creator_commission = amount / 100;
         let bet_after_commissions = amount - (truth_network_commission + house_commission + creator_commission);
-
+    
         // Track total amount bet before deductions
         betting_question.total_bets_before_commission += amount;
-
+    
         // Update total bets
         if is_option_1 {
             betting_question.total_bets_option1 += amount;
@@ -105,27 +106,62 @@ pub mod betting_contract {
             betting_question.total_bets_option2 += amount;
         }
         betting_question.total_pool += bet_after_commissions;
-
-        // Store bettor details in BettingQuestion (inside bettors Vec)
+    
+        // Store bettor details
         betting_question.bettors.push(BettorRecord {
-            address: *ctx.accounts.user.key,
+            address: *user.key,
             chosen_option: is_option_1,
             bet_amount: amount,
         });
-
-        // Compute accurate odds based on the original total bets
-        if betting_question.total_bets_option1 > 0 && betting_question.total_bets_option2 > 0  {
-            betting_question.option1_odds = betting_question.total_bets_before_commission as f64/ betting_question.total_bets_option1 as f64;
-            betting_question.option2_odds = betting_question.total_bets_before_commission as f64/ betting_question.total_bets_option2 as f64;
+    
+        // Transfer the user's bet to the vault using System Program
+        {
+            let transfer_instruction = anchor_lang::system_program::transfer(
+                CpiContext::new(
+                    system_program.to_account_info(),
+                    anchor_lang::system_program::Transfer {
+                        from: user.to_account_info(),
+                        to: vault.to_account_info(),
+                    },
+                ),
+                amount,
+            )?;
+            msg!("User bet is transferred to the vault, amount: {}", amount);
+        }
+    
+        // Transfer commission from Betting Vault to Truth-Network Vault
+        {
+            let vault_balance_before = vault.get_lamports();
+            let truth_balance_before = truth_vault.get_lamports();
+    
+            // Subtract from betting vault
+            vault.sub_lamports(truth_network_commission)?;
+    
+            // Add to truth network vault
+            truth_vault.add_lamports(truth_network_commission)?;
+    
+            let vault_balance_after = vault.get_lamports();
+            let truth_balance_after = truth_vault.get_lamports();
+    
+            require_eq!(vault_balance_after, vault_balance_before - truth_network_commission);
+            require_eq!(truth_balance_after, truth_balance_before + truth_network_commission);
+    
+            msg!("Successfully transferred {} lamports to Truth-Network vault!", truth_network_commission);
+        }
+    
+        // Compute odds
+        if betting_question.total_bets_option1 > 0 && betting_question.total_bets_option2 > 0 {
+            betting_question.option1_odds = betting_question.total_bets_before_commission as f64 / betting_question.total_bets_option1 as f64;
+            betting_question.option2_odds = betting_question.total_bets_before_commission as f64 / betting_question.total_bets_option2 as f64;
         } else {
             betting_question.option1_odds = 0.0;
             betting_question.option2_odds = 0.0;
         }
-
+    
         // Update total commission fields
         betting_question.total_creator_commission += creator_commission;
         betting_question.total_house_commision += house_commission;
-
+    
         // Call Truth-Network to update reward via CPI
         let cpi_accounts = UpdateReward {
             question: ctx.accounts.truth_network_question.to_account_info(),
@@ -133,10 +169,12 @@ pub mod betting_contract {
         };
         let cpi_context = CpiContext::new(ctx.accounts.truth_network_program.to_account_info(), cpi_accounts);
         update_reward(cpi_context, truth_network_commission)?;
+        msg!("Truth network question rewards updated with {}", truth_network_commission);
     
         Ok(())
     }
-
+    
+    
     pub fn check_betting_question(ctx: Context<CheckBettingQuestion>) -> Result<()> {
         let betting_question = &ctx.accounts.betting_question;
         msg!("Betting Question Exists: {}", betting_question.title);
@@ -230,8 +268,13 @@ pub struct InitializeHouseWallet<'info> {
 pub struct PlaceBet<'info> {
     #[account(mut)]
     pub betting_question: Account<'info, BettingQuestion>,
+
     #[account(mut)]
     pub user: Signer<'info>,
+
+    /// Betting Vault (For holding bets)
+    #[account(mut)]
+    pub vault: Account<'info, Vault>,
 
     //Truth-Network CPI Accounts
     #[account(mut)]
@@ -242,6 +285,10 @@ pub struct PlaceBet<'info> {
     
     pub truth_network_program: Program<'info, TruthNetwork>,
     pub system_program: Program<'info, System>,
+
+    /// CHECK: Add Truth-Network Vault as a mutable account
+    #[account(mut)]
+    pub truth_network_vault: UncheckedAccount<'info>,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
@@ -250,14 +297,6 @@ pub struct BettorRecord {
     pub chosen_option: bool,
     pub bet_amount: u64,
 }
-
-
-// #[account]
-// pub struct Bettor {
-//     pub address: Pubkey,
-//     pub bet_amount: u64,
-//     pub chosen_option: bool, // true = Option 1, false = Option 2
-// }
 
 
 #[derive(Accounts)]

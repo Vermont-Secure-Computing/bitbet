@@ -70,22 +70,23 @@ const FetchQuestion = () => {
                     const totalPool = new BN(bettingQuestion.account.totalPool);
                     const totalBetsOption1 = new BN(bettingQuestion.account.totalBetsOption1);
                     const totalBetsOption2 = new BN(bettingQuestion.account.totalBetsOption2);
-                    const option1Odds = new BN(bettingQuestion.account.option1Odds)
-                    const option2Odds = new BN(bettingQuestion.account.option2Odds)
+                    const option1Odds = bettingQuestion.account.option1Odds
+                    const option2Odds = bettingQuestion.account.option2Odds
                     const totalHouseCommission = new BN(bettingQuestion.account.totalHouseCommision);
                     const totalCreatorCommission = new BN(bettingQuestion.account.totalCreatorCommission);
 
                     console.log("totalPool: ", totalPool.toString())
                     console.log("totalBetsOption1: ", totalBetsOption1.toString())
-                    console.log("option1Odds: ", option1Odds.toString())
+                    console.log("option1Odds: ", bettingQuestion.account.option1Odds)
                     console.log("totalBetsOption2: ", totalBetsOption2.toString())
-                    console.log("option2Odds: ", option2Odds.toString())
+                    console.log("option2Odds: ", typeof bettingQuestion.account.option1Odds)
                     console.log("totalHouseCommission: ", totalHouseCommission.toString())
                     console.log("totalCreatorCommission: ", totalCreatorCommission.toString())
                     try {
                         const truthQuestion = await truthNetworkProgram.account.question.fetch(
                             bettingQuestion.account.questionPda
                         );
+                        console.log("truthQuestion: ", truthQuestion)
                         return {
                             betting: {
                                 ...bettingQuestion.account,
@@ -93,14 +94,16 @@ const FetchQuestion = () => {
                                 totalPool: totalPool.toString(),
                                 totalBetsOption1: totalBetsOption1.toString(),
                                 totalBetsOption2: totalBetsOption2.toString(),
-                                option1Odds: option1Odds.toString(),
-                                option2Odds: option2Odds.toString(),
+                                option1Odds: option1Odds,
+                                option2Odds: option2Odds,
                                 totalHouseCommision: totalHouseCommission.toString(),
                                 totalCreatorCommission: totalCreatorCommission.toString(),
+                                vault: bettingQuestion.account.vault.toBase58(),
                             },
                             truth: {
                                 ...truthQuestion,
                                 questionKey: truthQuestion.questionKey.toBase58(),
+                                vaultAddress: truthQuestion.vaultAddress.toBase58()
                             },
                         };
                     } catch (error) {
@@ -125,7 +128,7 @@ const FetchQuestion = () => {
             <h2 className="text-2xl font-bold text-gray-200">All Questions</h2>
             {loading ? <p className="text-gray-400">Loading...</p> : null}
             <ul className="mt-4 space-y-4">
-                {questions.map((q, index) => (
+                {questions && questions.map((q, index) => (
                     <li key={index} 
                         onClick={() => navigate(`/question/${q.betting.questionPda.toString()}`, { state: q })}
                         className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer border border-gray-700 shadow-md">
