@@ -10,14 +10,16 @@ use truth_network::{
     program::TruthNetwork,
     cpi::accounts::HelloWorld,
     cpi::accounts::UpdateReward,
+    cpi::accounts::FinalizeVoting,
     cpi::hello_world,
     cpi::update_reward,
+    cpi::finalize_voting,
 };
 
 // Import the Truth-Network program
 use truth_network::accounts::Question;
 
-declare_id!("H3xyKqz57emssN2cL1fKPSCeBRb5zJYK8eBSY8Vx9tJq");
+declare_id!("HiF5DAmMR6HiZmhroFANvG8UajcMDydKPDbn4MD2qhRs");
 
 #[program]
 pub mod betting_contract {
@@ -108,11 +110,29 @@ pub mod betting_contract {
         betting_question.total_pool += bet_after_commissions;
     
         // Store bettor details
-        betting_question.bettors.push(BettorRecord {
-            address: *user.key,
-            chosen_option: is_option_1,
-            bet_amount: amount,
-        });
+        // betting_question.bettors.push(BettorRecord {
+        //     address: *user.key,
+        //     chosen_option: is_option_1,
+        //     bet_amount: amount,
+        //     won: false, // Default to false (will be updated later)
+        //     winnings: 0, // Default to 0 (will be updated if they win)
+        // });
+        // // **Create BettorAccount**
+        let bettor_account = &mut ctx.accounts.bettor_account;
+
+        msg!("Initializing bettor account: {:?}", bettor_account.key());
+        msg!("Bet Amount: {}", amount);
+        msg!("User: {}", &ctx.accounts.user.key());
+        msg!("Betting Question PDA: {}", betting_question.key());
+
+        bettor_account.bettor_address = *user.key;
+        bettor_account.question_pda = betting_question.key();
+        bettor_account.chosen_option = is_option_1;
+        bettor_account.bet_amount = amount;
+        bettor_account.won = false; // Default false, updated after voting
+        bettor_account.winnings = 0; // Default 0, updated if won
+        msg!("Bettor Account Initialized");
+
     
         // Transfer the user's bet to the vault using System Program
         {
@@ -181,6 +201,81 @@ pub mod betting_contract {
         Ok(())
     }
 
+    pub fn fetch_and_store_winner(ctx: Context<FetchAndStoreWinner>, question_id: u64) -> Result<()> {
+        let betting_question = &mut ctx.accounts.betting_question;
+        let truth_network_question = &ctx.accounts.truth_network_question;
+
+        // Ensure betting is still open
+        let current_time = Clock::get()?.unix_timestamp;
+        require!(current_time > betting_question.close_date, BettingError::BettingActive);
+    
+        msg!("Fetching winner from Truth Network...");
+    
+        // Step 1: Call 'finalize_voting' on Truth-Network contract
+        {
+            let cpi_accounts = FinalizeVoting {
+                question: truth_network_question.to_account_info(),
+            };
+    
+            let cpi_context = CpiContext::new(ctx.accounts.truth_network_program.to_account_info(), cpi_accounts);
+            finalize_voting(cpi_context, question_id)?;
+        }
+        
+        msg!("Called finalize_voting on Truth-Network for Question ID: {}", question_id);
+    
+        // Step 2: Fetch winner details from Truth-Network
+        let winner = truth_network_question.winning_option;
+        let winning_percentage = truth_network_question.winning_percent;
+
+        msg!("winning option: {}", winner);
+        msg!("winning percent: {}", winning_percentage);
+    
+        require!(winner == 1 || winner == 2, BettingError::InvalidWinner);
+    
+        // Step 3: Update betting question result
+        betting_question.winner = winner;
+        betting_question.winning_percentage = winning_percentage;
+    
+        msg!("Winner Fetched & Stored: Option {} ({}%)", winner, winning_percentage);
+    
+        // Step 4: Compute Winning Odds
+        let winning_odds = if winner == 1 {
+            betting_question.option1_odds
+        } else {
+            betting_question.option2_odds
+        };
+    
+        msg!("Winning Option: {}", if winner == 1 { "Option 1" } else { "Option 2" });
+        msg!("Winning Odds: {}", winning_odds);
+    
+        // // Step 5: Process Bettors One at a Time
+        // for bettor in ctx.remaining_accounts.iter() {
+        //     let bettor_info = bettor.to_account_info(); // Get AccountInfo
+        //     let mut bettor_account = Account::<BettorAccount>::try_from(&bettor_info)?;
+    
+        //     if (winner == 1 && bettor_account.chosen_option)
+        //         || (winner == 2 && !bettor_account.chosen_option) {
+    
+        //         let odds = if winner == 1 {
+        //             betting_question.option1_odds
+        //         } else {
+        //             betting_question.option2_odds
+        //         };
+    
+        //         bettor_account.won = true;
+        //         bettor_account.winnings = (bettor_account.bet_amount as f64 * odds) as u64;
+        //     } else {
+        //         bettor_account.won = false;
+        //         bettor_account.winnings = 0;
+        //     }
+        // }
+    
+        Ok(())
+    }
+    
+    
+    
+
 }
 
 
@@ -203,11 +298,13 @@ pub struct BettingQuestion {
     pub total_pool: u64,
     pub total_creator_commission: u64,
     pub total_house_commision: u64,
-    pub bettors: Vec<BettorRecord>,
+    //pub bettors: Vec<BettorRecord>,
     pub close_date: i64,
     pub reward_date: i64,
     pub status: String,  // "open", "closed", "resolved"
     pub result: Option<String>,
+    pub winner: u8, // 1 = option1, 2 = option2, 0 = draw
+    pub winning_percentage: f64, // Percentage of winning votes (0-100)
     pub vault: Pubkey,
 }
 
@@ -269,6 +366,9 @@ pub struct PlaceBet<'info> {
     #[account(mut)]
     pub betting_question: Account<'info, BettingQuestion>,
 
+    #[account(init, payer = user, space = 8 + 82, seeds = [b"bettor", user.key().as_ref(), betting_question.key().as_ref()], bump)]
+    pub bettor_account: Account<'info, BettorAccount>,
+
     #[account(mut)]
     pub user: Signer<'info>,
 
@@ -291,11 +391,24 @@ pub struct PlaceBet<'info> {
     pub truth_network_vault: UncheckedAccount<'info>,
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
-pub struct BettorRecord {
-    pub address: Pubkey,
+
+// #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
+// pub struct BettorRecord {
+//     pub address: Pubkey,
+//     pub chosen_option: bool,
+//     pub bet_amount: u64,
+//     pub won: bool,      // Track if bettor won
+//     pub winnings: u64,  // Store winnings amount 
+// }
+
+#[account]
+pub struct BettorAccount {
+    pub bettor_address: Pubkey,
+    pub question_pda: Pubkey,
     pub chosen_option: bool,
     pub bet_amount: u64,
+    pub won: bool,
+    pub winnings: u64,
 }
 
 
@@ -315,6 +428,19 @@ pub struct HouseWallet {
     pub total_funds: u64,
 }
 
+
+#[derive(Accounts)]
+pub struct FetchAndStoreWinner<'info> {
+    #[account(mut)]
+    pub betting_question: Account<'info, BettingQuestion>,
+
+    /// CHECK: This is the question account from Truth Network.
+    #[account(mut)]
+    pub truth_network_question: Account<'info, Question>,
+
+    pub truth_network_program: Program<'info, TruthNetwork>,
+}
+
 #[derive(Accounts)]
 pub struct CheckBettingQuestion<'info> {
     #[account(mut)]
@@ -323,6 +449,10 @@ pub struct CheckBettingQuestion<'info> {
 
 #[error_code]
 pub enum BettingError {
+    #[msg("Betting is still active.")]
+    BettingActive,
     #[msg("Betting is now closed.")]
     BettingClosed,
+    #[msg("Invalid winning option.")]
+    InvalidWinner,
 }

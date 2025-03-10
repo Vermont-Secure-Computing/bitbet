@@ -126,8 +126,10 @@ const CreateQuestion = () => {
             const bettingTimestamp = Math.floor(selectedTime.getTime() / 1000);
 
             // Calculate commit and reveal times
-            const commitEndTimeTimestamp = new BN(bettingTimestamp + 4 * 60 * 60); // +4 hours
-            const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60 * 60); // +6 hours
+            // const commitEndTimeTimestamp = new BN(bettingTimestamp + 4 * 60 * 60); // +4 hours
+            // const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60 * 60); // +6 hours
+            const commitEndTimeTimestamp = new BN(bettingTimestamp + 5 * 60); // +4 hours
+            const revealEndTimeTimestamp = new BN(bettingTimestamp + 10 * 60); // +6 hours
 
             console.log("calculated commit end time: ", commitEndTimeTimestamp)
             console.log("calculated reveal end time: ", revealEndTimeTimestamp)

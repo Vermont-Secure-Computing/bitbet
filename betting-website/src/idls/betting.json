@@ -1,5 +1,5 @@
 {
-  "address": "H3xyKqz57emssN2cL1fKPSCeBRb5zJYK8eBSY8Vx9tJq",
+  "address": "HiF5DAmMR6HiZmhroFANvG8UajcMDydKPDbn4MD2qhRs",
   "metadata": {
     "name": "betting_contract",
     "version": "0.1.0",
@@ -30,7 +30,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "Af4GKPVNrHLHuYAgqkT4KiFFL2aJFyfRThrMrC2wjshf"
+          "address": "CaKtVz5bhapzdaxr8r5Sx6Jq8ZnanXFNTwY6oCCCVuFP"
         }
       ],
       "args": []
@@ -119,7 +119,7 @@
         },
         {
           "name": "betting_contract",
-          "address": "H3xyKqz57emssN2cL1fKPSCeBRb5zJYK8eBSY8Vx9tJq"
+          "address": "HiF5DAmMR6HiZmhroFANvG8UajcMDydKPDbn4MD2qhRs"
         },
         {
           "name": "vault",
@@ -168,6 +168,39 @@
       ]
     },
     {
+      "name": "fetch_and_store_winner",
+      "discriminator": [
+        95,
+        179,
+        39,
+        9,
+        120,
+        215,
+        130,
+        21
+      ],
+      "accounts": [
+        {
+          "name": "betting_question",
+          "writable": true
+        },
+        {
+          "name": "truth_network_question",
+          "writable": true
+        },
+        {
+          "name": "truth_network_program",
+          "address": "CaKtVz5bhapzdaxr8r5Sx6Jq8ZnanXFNTwY6oCCCVuFP"
+        }
+      ],
+      "args": [
+        {
+          "name": "question_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "place_bet",
       "docs": [
         "Function to place a bet on a question"
@@ -186,6 +219,33 @@
         {
           "name": "betting_question",
           "writable": true
+        },
+        {
+          "name": "bettor_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  101,
+                  116,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "betting_question"
+              }
+            ]
+          }
         },
         {
           "name": "user",
@@ -208,7 +268,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "Af4GKPVNrHLHuYAgqkT4KiFFL2aJFyfRThrMrC2wjshf"
+          "address": "CaKtVz5bhapzdaxr8r5Sx6Jq8ZnanXFNTwY6oCCCVuFP"
         },
         {
           "name": "system_program",
@@ -246,6 +306,19 @@
       ]
     },
     {
+      "name": "BettorAccount",
+      "discriminator": [
+        122,
+        110,
+        158,
+        151,
+        236,
+        225,
+        6,
+        38
+      ]
+    },
+    {
       "name": "Question",
       "discriminator": [
         111,
@@ -275,8 +348,18 @@
   "errors": [
     {
       "code": 6000,
+      "name": "BettingActive",
+      "msg": "Betting is still active."
+    },
+    {
+      "code": 6001,
       "name": "BettingClosed",
       "msg": "Betting is now closed."
+    },
+    {
+      "code": 6002,
+      "name": "InvalidWinner",
+      "msg": "Invalid winning option."
     }
   ],
   "types": [
@@ -341,16 +424,6 @@
             "type": "u64"
           },
           {
-            "name": "bettors",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "BettorRecord"
-                }
-              }
-            }
-          },
-          {
             "name": "close_date",
             "type": "i64"
           },
@@ -369,6 +442,14 @@
             }
           },
           {
+            "name": "winner",
+            "type": "u8"
+          },
+          {
+            "name": "winning_percentage",
+            "type": "f64"
+          },
+          {
             "name": "vault",
             "type": "pubkey"
           }
@@ -376,12 +457,16 @@
       }
     },
     {
-      "name": "BettorRecord",
+      "name": "BettorAccount",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "address",
+            "name": "bettor_address",
+            "type": "pubkey"
+          },
+          {
+            "name": "question_pda",
             "type": "pubkey"
           },
           {
@@ -390,6 +475,14 @@
           },
           {
             "name": "bet_amount",
+            "type": "u64"
+          },
+          {
+            "name": "won",
+            "type": "bool"
+          },
+          {
+            "name": "winnings",
             "type": "u64"
           }
         ]
@@ -463,6 +556,14 @@
           {
             "name": "eligible_voters",
             "type": "u64"
+          },
+          {
+            "name": "winning_option",
+            "type": "u8"
+          },
+          {
+            "name": "winning_percent",
+            "type": "f64"
           },
           {
             "name": "bump",
