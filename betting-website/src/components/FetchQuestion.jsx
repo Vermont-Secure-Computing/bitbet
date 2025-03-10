@@ -75,6 +75,8 @@ const FetchQuestion = () => {
                     const totalHouseCommission = new BN(bettingQuestion.account.totalHouseCommision);
                     const totalCreatorCommission = new BN(bettingQuestion.account.totalCreatorCommission);
 
+                    
+
                     console.log("totalPool: ", totalPool.toString())
                     console.log("totalBetsOption1: ", totalBetsOption1.toString())
                     console.log("option1Odds: ", bettingQuestion.account.option1Odds)
@@ -87,6 +89,7 @@ const FetchQuestion = () => {
                             bettingQuestion.account.questionPda
                         );
                         console.log("truthQuestion: ", truthQuestion)
+                        console.log("truth question id: ", truthQuestion.id.toString())
                         return {
                             betting: {
                                 ...bettingQuestion.account,
@@ -103,7 +106,8 @@ const FetchQuestion = () => {
                             truth: {
                                 ...truthQuestion,
                                 questionKey: truthQuestion.questionKey.toBase58(),
-                                vaultAddress: truthQuestion.vaultAddress.toBase58()
+                                vaultAddress: truthQuestion.vaultAddress.toBase58(),
+                                id: truthQuestion.id.toString()
                             },
                         };
                     } catch (error) {

@@ -54,6 +54,18 @@ const QuestionDetails = () => {
     const bettingProgram = provider ? new Program(bettingIDL, provider) : null;
     const truthNetworkProgram = provider ? new Program(truthNetworkIDL, provider) : null;
 
+    const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
+    const [bettingQuestion_PDA] = PublicKey.findProgramAddressSync(
+        [
+            Buffer.from("betting_question"),
+            BETTING_CONTRACT_PROGRAM_ID.toBuffer(), 
+            new PublicKey(questionData.truth.questionKey).toBuffer(), 
+        ],
+        BETTING_CONTRACT_PROGRAM_ID
+    );
+
+    console.log("Derived BettingQuestion PDA:", bettingQuestionPDA.toBase58());
+
 
     if (!questionData) return <p>No question data available</p>; // Handle missing data
 
@@ -100,20 +112,6 @@ const QuestionDetails = () => {
 
             const betAmountLamports = new BN(parseFloat(betAmount) * 1_000_000_000);
 
-
-            const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
-            const [bettingQuestionPDA] = PublicKey.findProgramAddressSync(
-                [
-                    Buffer.from("betting_question"),
-                    BETTING_CONTRACT_PROGRAM_ID.toBuffer(), 
-                    new PublicKey(questionData.truth.questionKey).toBuffer(), 
-                ],
-                BETTING_CONTRACT_PROGRAM_ID
-            );
-
-            console.log("Derived BettingQuestion PDA:", bettingQuestionPDA.toBase58());
-
-
             if (!bettingProgram) {
                 console.error("Betting Program is NOT initialized!");
                 return alert("Betting program is not ready. Try reloading the page.");
@@ -127,19 +125,30 @@ const QuestionDetails = () => {
             const [vaultPDA] = PublicKey.findProgramAddressSync(
                 [
                     Buffer.from("bet_vault"),
-                    bettingQuestionPDA.toBuffer()
+                    bettingQuestion_PDA.toBuffer()
                 ],
                 bettingProgram.programId
             );
 
             console.log("Vault PDA: ", vaultPDA.toBase58());
+
+            const [bettorPda] = PublicKey.findProgramAddressSync(
+                [
+                    Buffer.from("bettor"),
+                    publicKey.toBuffer(),
+                    bettingQuestion_PDA.toBuffer(),
+                ],
+                BETTING_CONTRACT_PROGRAM_ID
+            );
+            console.log("Derived Bettor PDA (Frontend):", bettorPda.toBase58());
             
             const tx = await bettingProgram.methods
                 .placeBet(betAmountLamports, isOption1)
                 .accounts({
-                    bettingQuestion: bettingQuestionPDA,
+                    bettingQuestion: bettingQuestion_PDA,
                     vault: vaultPDA,
                     user: publicKey,
+                    bettorAccount: bettorPda,
                     truthNetworkQuestion: new PublicKey(questionData.truth.questionKey),
                     betProgram: bettingProgram.programId,
                     truthNetworkProgram: truthNetworkProgram.programId,
@@ -227,6 +236,37 @@ const QuestionDetails = () => {
     
         setLoading(false);
     };
+
+
+    const fetchWinner = async () => {
+        if (!publicKey) return toast.error("Please connect your wallet.");
+
+        console.log("truth question id: ", questionData.truth.id)
+        console.log("betting question: ", questionData.betting.questionPda)
+        console.log("truthNetworkQuestion: ", questionData.truth.questionKey)
+        console.log("truthNetworkProgram: ", truthNetworkProgram.programId,)
+        try {
+            
+            const tx = await bettingProgram.methods
+                .fetchAndStoreWinner(new BN(questionData.truth.id))
+                .accounts({
+                    bettingQuestion: bettingQuestion_PDA,
+                    truthNetworkQuestion: questionData.truth.questionKey,
+                    truthNetworkProgram: truthNetworkProgram.programId,
+                })
+                .rpc();
+
+            console.log("Winner fetched & winners determined:", tx);
+            toast.success("Winner fetched & winnings calculated!");
+
+            // Fetch updated question details
+            await fetchQuestionDetails();
+        } catch (error) {
+            console.error("Error fetching winner & determining winners:", error);
+            toast.error("Failed to fetch winner & calculate winnings.");
+        }
+    };
+    
     
 
     // Compute odds for progress bar
@@ -316,12 +356,24 @@ const QuestionDetails = () => {
                 </div>
 
                 <button
-                    onClick={finalizeVoting}
+                    onClick={fetchWinner}
                     disabled={loading}
                     className="w-full mt-4 !bg-blue-500 hover:!bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition"
                 >
-                    Finalize Voting
+                    Fetch Winner
                 </button>
+
+                {questionData.betting.winner !== null && (
+                    <>
+                        <p className="text-gray-400 mt-1">
+                            <strong>Winner:</strong> {questionData.betting.winner === 1 ? questionData.betting.option1 : questionData.betting.option2}
+                        </p>
+                        <p className="text-gray-400 mt-1">
+                            <strong>Winning Percentage:</strong> {questionData.betting.winningPercentage}%
+                        </p>
+                    </>
+                )}
+                
             </div>
         </>
     );
