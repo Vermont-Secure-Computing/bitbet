@@ -19,7 +19,7 @@ use truth_network::{
 // Import the Truth-Network program
 use truth_network::accounts::Question;
 
-declare_id!("HiF5DAmMR6HiZmhroFANvG8UajcMDydKPDbn4MD2qhRs");
+declare_id!("2ym4wL9hHMHKPRXvWnkhcy8qu76wAtTQTzHKeCn4EGQv");
 
 #[program]
 pub mod betting_contract {
@@ -171,8 +171,8 @@ pub mod betting_contract {
     
         // Compute odds
         if betting_question.total_bets_option1 > 0 && betting_question.total_bets_option2 > 0 {
-            betting_question.option1_odds = betting_question.total_bets_before_commission as f64 / betting_question.total_bets_option1 as f64;
-            betting_question.option2_odds = betting_question.total_bets_before_commission as f64 / betting_question.total_bets_option2 as f64;
+            betting_question.option1_odds = betting_question.total_pool as f64 / betting_question.total_bets_option1 as f64;
+            betting_question.option2_odds = betting_question.total_pool as f64 / betting_question.total_bets_option2 as f64;
         } else {
             betting_question.option1_odds = 0.0;
             betting_question.option2_odds = 0.0;
@@ -222,8 +222,14 @@ pub mod betting_contract {
         }
         
         msg!("Called finalize_voting on Truth-Network for Question ID: {}", question_id);
+        msg!("Called finalize_voting on Truth-Network for Question ID: {}", question_id);
+
+        // Step 2: Manually Re-fetch the Truth-Network Question
+        let account_info = truth_network_question.to_account_info();
+        let latest_data = &mut account_info.try_borrow_mut_data()?;
+        let truth_network_question: Question = Question::try_deserialize(&mut latest_data.as_ref())?;
     
-        // Step 2: Fetch winner details from Truth-Network
+        // Step 3: Fetch winner details from Truth-Network
         let winner = truth_network_question.winning_option;
         let winning_percentage = truth_network_question.winning_percent;
 
@@ -232,13 +238,13 @@ pub mod betting_contract {
     
         require!(winner == 1 || winner == 2, BettingError::InvalidWinner);
     
-        // Step 3: Update betting question result
+        // Step 4: Update betting question result
         betting_question.winner = winner;
         betting_question.winning_percentage = winning_percentage;
     
         msg!("Winner Fetched & Stored: Option {} ({}%)", winner, winning_percentage);
     
-        // Step 4: Compute Winning Odds
+        // Step 5: Compute Winning Odds
         let winning_odds = if winner == 1 {
             betting_question.option1_odds
         } else {
@@ -247,33 +253,105 @@ pub mod betting_contract {
     
         msg!("Winning Option: {}", if winner == 1 { "Option 1" } else { "Option 2" });
         msg!("Winning Odds: {}", winning_odds);
-    
-        // // Step 5: Process Bettors One at a Time
-        // for bettor in ctx.remaining_accounts.iter() {
-        //     let bettor_info = bettor.to_account_info(); // Get AccountInfo
-        //     let mut bettor_account = Account::<BettorAccount>::try_from(&bettor_info)?;
-    
-        //     if (winner == 1 && bettor_account.chosen_option)
-        //         || (winner == 2 && !bettor_account.chosen_option) {
-    
-        //         let odds = if winner == 1 {
-        //             betting_question.option1_odds
-        //         } else {
-        //             betting_question.option2_odds
-        //         };
-    
-        //         bettor_account.won = true;
-        //         bettor_account.winnings = (bettor_account.bet_amount as f64 * odds) as u64;
-        //     } else {
-        //         bettor_account.won = false;
-        //         bettor_account.winnings = 0;
-        //     }
-        // }
+        
     
         Ok(())
     }
+
+
+    pub fn claim_winnings(ctx: Context<ClaimWinnings>) -> Result<()> {
+        let betting_question = &ctx.accounts.betting_question;
+        let truth_network_question = &ctx.accounts.truth_network_question;
+        let bettor_account = &mut ctx.accounts.bettor_account;
+        let user = &ctx.accounts.user;
+        let vault = &mut ctx.accounts.vault; // Betting Vault
     
+        msg!("User {} is attempting to claim winnings", user.key());
+
+        // Ensure the bettor is the caller
+        require!(
+            bettor_account.bettor_address == *user.key,
+            BettingError::UnauthorizedBettor
+        );
+
+        // Ensure the bet belongs to the correct question
+        require!(
+            bettor_account.question_pda == betting_question.key(),
+            BettingError::InvalidBettingQuestion
+        );
     
+        // Check if the user has already claimed winnings
+        require!(!bettor_account.claimed, BettingError::AlreadyClaimed);
+    
+        // Check if betting has ended
+        require!(
+            Clock::get()?.unix_timestamp >= betting_question.close_date,
+            BettingError::BettingActive
+        );
+    
+        // Ensure Truth-Network question is finalized
+        require!(
+            truth_network_question.finalized,
+            BettingError::WinnerNotFinalized
+        );
+    
+        // Get the winning option from Truth-Network question
+        let winning_option = truth_network_question.winning_option;
+        require!(winning_option == 1 || winning_option == 2, BettingError::InvalidWinner);
+    
+        // Check if the user placed a bet on the winning option
+        let user_bet_won = (winning_option == 1 && bettor_account.chosen_option)
+            || (winning_option == 2 && !bettor_account.chosen_option);
+        
+        require!(user_bet_won, BettingError::UserDidNotWin);
+    
+        // Compute winnings
+        let winning_odds = if winning_option == 1 {
+            betting_question.option1_odds
+        } else {
+            betting_question.option2_odds
+        };
+    
+        let user_winnings = (bettor_account.bet_amount as f64 * winning_odds) as u64;
+        require!(user_winnings > 0, BettingError::NoWinningsAvailable);
+    
+        // Check if vault has enough balance
+        let vault_balance = vault.get_lamports();
+        require!(vault_balance >= user_winnings, BettingError::InsufficientVaultBalance);
+    
+        msg!(
+            "User won {} lamports. Transferring from vault {}...",
+            user_winnings,
+            vault.key()
+        );
+    
+        // Transfer winnings from Vault to User
+        {
+            let vault_balance_before = vault.get_lamports();
+            let user_balance_before = user.get_lamports();
+    
+            // Deduct from vault
+            vault.sub_lamports(user_winnings)?;
+    
+            // Add to user
+            user.add_lamports(user_winnings)?;
+    
+            let vault_balance_after = vault.get_lamports();
+            let user_balance_after = user.get_lamports();
+    
+            require_eq!(vault_balance_after, vault_balance_before - user_winnings);
+            require_eq!(user_balance_after, user_balance_before + user_winnings);
+    
+            msg!("Successfully transferred {} lamports to user {}!", user_winnings, user.key());
+        }
+    
+        // Mark bettor winnings as claimed (NEW UPDATE)
+        bettor_account.claimed = true;
+    
+        msg!("Claim successful! User {} received {} SOL", user.key(), user_winnings);
+    
+        Ok(())
+    }
     
 
 }
@@ -365,8 +443,8 @@ pub struct InitializeHouseWallet<'info> {
 pub struct PlaceBet<'info> {
     #[account(mut)]
     pub betting_question: Account<'info, BettingQuestion>,
-
-    #[account(init, payer = user, space = 8 + 82, seeds = [b"bettor", user.key().as_ref(), betting_question.key().as_ref()], bump)]
+    
+    #[account(init, payer = user, space = 8 + 83, seeds = [b"bettor", user.key().as_ref(), betting_question.key().as_ref()], bump)]
     pub bettor_account: Account<'info, BettorAccount>,
 
     #[account(mut)]
@@ -391,16 +469,6 @@ pub struct PlaceBet<'info> {
     pub truth_network_vault: UncheckedAccount<'info>,
 }
 
-
-// #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
-// pub struct BettorRecord {
-//     pub address: Pubkey,
-//     pub chosen_option: bool,
-//     pub bet_amount: u64,
-//     pub won: bool,      // Track if bettor won
-//     pub winnings: u64,  // Store winnings amount 
-// }
-
 #[account]
 pub struct BettorAccount {
     pub bettor_address: Pubkey,
@@ -409,6 +477,7 @@ pub struct BettorAccount {
     pub bet_amount: u64,
     pub won: bool,
     pub winnings: u64,
+    pub claimed: bool
 }
 
 
@@ -447,6 +516,29 @@ pub struct CheckBettingQuestion<'info> {
     pub betting_question: Account<'info, BettingQuestion>,
 }
 
+#[derive(Accounts)]
+pub struct ClaimWinnings<'info> {
+    #[account(mut)]
+    pub betting_question: Account<'info, BettingQuestion>,
+
+    #[account(mut)]
+    pub bettor_account: Account<'info, BettorAccount>,
+
+    #[account(mut)]
+    pub user: Signer<'info>, 
+
+    #[account(mut)]
+    pub truth_network_question: Account<'info, Question>,
+
+    #[account(mut)]
+    pub vault: Account<'info, Vault>, 
+
+    pub system_program: Program<'info, System>,
+}
+
+
+
+
 #[error_code]
 pub enum BettingError {
     #[msg("Betting is still active.")]
@@ -455,4 +547,18 @@ pub enum BettingError {
     BettingClosed,
     #[msg("Invalid winning option.")]
     InvalidWinner,
+    #[msg("Truth Network question not finalize.")]
+    WinnerNotFinalized,
+    #[msg("Winnings already claimed.")]
+    AlreadyClaimed,
+    #[msg("User did not win.")]
+    UserDidNotWin,
+    #[msg("Insufficient vault balance.")]
+    InsufficientVaultBalance,
+    #[msg("No winnings available..")]
+    NoWinningsAvailable,
+    #[msg("User is not authorized to claim winnings.")]
+    UnauthorizedBettor,
+    #[msg("Betting question mismatch.")]
+    InvalidBettingQuestion,
 }
