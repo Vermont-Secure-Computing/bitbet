@@ -74,6 +74,7 @@ const FetchQuestion = () => {
                     const option2Odds = bettingQuestion.account.option2Odds
                     const totalHouseCommission = new BN(bettingQuestion.account.totalHouseCommision);
                     const totalCreatorCommission = new BN(bettingQuestion.account.totalCreatorCommission);
+                    const betClosing = new BN(bettingQuestion.account.closeDate);
 
                     
 
@@ -84,12 +85,15 @@ const FetchQuestion = () => {
                     console.log("option2Odds: ", typeof bettingQuestion.account.option1Odds)
                     console.log("totalHouseCommission: ", totalHouseCommission.toString())
                     console.log("totalCreatorCommission: ", totalCreatorCommission.toString())
+                    console.log("bet closing: ", betClosing.toString())
                     try {
                         const truthQuestion = await truthNetworkProgram.account.question.fetch(
                             bettingQuestion.account.questionPda
                         );
                         console.log("truthQuestion: ", truthQuestion)
                         console.log("truth question id: ", truthQuestion.id.toString())
+                        console.log("reveal end time: ", truthQuestion.revealEndTime.toString())
+                        
                         return {
                             betting: {
                                 ...bettingQuestion.account,
@@ -102,12 +106,15 @@ const FetchQuestion = () => {
                                 totalHouseCommision: totalHouseCommission.toString(),
                                 totalCreatorCommission: totalCreatorCommission.toString(),
                                 vault: bettingQuestion.account.vault.toBase58(),
+                                closeDate: betClosing.toNumber(),
                             },
                             truth: {
                                 ...truthQuestion,
                                 questionKey: truthQuestion.questionKey.toBase58(),
                                 vaultAddress: truthQuestion.vaultAddress.toBase58(),
-                                id: truthQuestion.id.toString()
+                                id: truthQuestion.id.toString(),
+                                revealEndTime: truthQuestion.revealEndTime.toNumber(),
+                                winningOption: truthQuestion.winningOption === 1 ? true : (truthQuestion.winningOption === 2 ? false : null)
                             },
                         };
                     } catch (error) {

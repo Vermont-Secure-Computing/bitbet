@@ -1,5 +1,5 @@
 {
-  "address": "HiF5DAmMR6HiZmhroFANvG8UajcMDydKPDbn4MD2qhRs",
+  "address": "2ym4wL9hHMHKPRXvWnkhcy8qu76wAtTQTzHKeCn4EGQv",
   "metadata": {
     "name": "betting_contract",
     "version": "0.1.0",
@@ -30,7 +30,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "CaKtVz5bhapzdaxr8r5Sx6Jq8ZnanXFNTwY6oCCCVuFP"
+          "address": "9PBFznkpYBp1FHCEvm2VyrYxW1Ro737vpxwmuSCw9Wpg"
         }
       ],
       "args": []
@@ -51,6 +51,47 @@
         {
           "name": "betting_question",
           "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claim_winnings",
+      "discriminator": [
+        161,
+        215,
+        24,
+        59,
+        14,
+        236,
+        242,
+        221
+      ],
+      "accounts": [
+        {
+          "name": "betting_question",
+          "writable": true
+        },
+        {
+          "name": "bettor_account",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "truth_network_question",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": []
@@ -119,7 +160,7 @@
         },
         {
           "name": "betting_contract",
-          "address": "HiF5DAmMR6HiZmhroFANvG8UajcMDydKPDbn4MD2qhRs"
+          "address": "2ym4wL9hHMHKPRXvWnkhcy8qu76wAtTQTzHKeCn4EGQv"
         },
         {
           "name": "vault",
@@ -190,7 +231,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "CaKtVz5bhapzdaxr8r5Sx6Jq8ZnanXFNTwY6oCCCVuFP"
+          "address": "9PBFznkpYBp1FHCEvm2VyrYxW1Ro737vpxwmuSCw9Wpg"
         }
       ],
       "args": [
@@ -268,7 +309,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "CaKtVz5bhapzdaxr8r5Sx6Jq8ZnanXFNTwY6oCCCVuFP"
+          "address": "9PBFznkpYBp1FHCEvm2VyrYxW1Ro737vpxwmuSCw9Wpg"
         },
         {
           "name": "system_program",
@@ -360,6 +401,41 @@
       "code": 6002,
       "name": "InvalidWinner",
       "msg": "Invalid winning option."
+    },
+    {
+      "code": 6003,
+      "name": "WinnerNotFinalized",
+      "msg": "Truth Network question not finalize."
+    },
+    {
+      "code": 6004,
+      "name": "AlreadyClaimed",
+      "msg": "Winnings already claimed."
+    },
+    {
+      "code": 6005,
+      "name": "UserDidNotWin",
+      "msg": "User did not win."
+    },
+    {
+      "code": 6006,
+      "name": "InsufficientVaultBalance",
+      "msg": "Insufficient vault balance."
+    },
+    {
+      "code": 6007,
+      "name": "NoWinningsAvailable",
+      "msg": "No winnings available.."
+    },
+    {
+      "code": 6008,
+      "name": "UnauthorizedBettor",
+      "msg": "User is not authorized to claim winnings."
+    },
+    {
+      "code": 6009,
+      "name": "InvalidBettingQuestion",
+      "msg": "Betting question mismatch."
     }
   ],
   "types": [
@@ -484,6 +560,10 @@
           {
             "name": "winnings",
             "type": "u64"
+          },
+          {
+            "name": "claimed",
+            "type": "bool"
           }
         ]
       }

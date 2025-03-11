@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { Program, AnchorProvider, web3, BN } from "@coral-xyz/anchor";
@@ -8,23 +8,63 @@ import bettingIDL from "../idls/betting.json";
 import truthNetworkIDL from "../idls/truth_network.json";
 
 const connection = new web3.Connection("https://api.devnet.solana.com", "confirmed");
+const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
 
 const QuestionDetails = () => {
+
     // Get the passed question data from the state
     const location = useLocation();
     // Retrieve state data
-    const questionData = location.state; 
+    const questionState = location.state; 
+    const questionData = useMemo(() => questionState, [questionState]);
+    console.log("question details: ", questionData)
+
+    const { publicKey, signTransaction, signAllTransactions } = useWallet();
+    const walletAdapter = publicKey && signTransaction ? { 
+        publicKey, 
+        signTransaction, 
+        signAllTransactions, 
+        network: "devnet" 
+    } : null;
+
+    const provider = walletAdapter ? new AnchorProvider(connection, walletAdapter, { preflightCommitment: "processed" }) : null;
+    const bettingProgram = provider ? new Program(bettingIDL, provider) : null;
+    const truthNetworkProgram = provider ? new Program(truthNetworkIDL, provider) : null;
+
+    const [betAmount, setBetAmount] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [vaultBalance, setVaultBalance] = useState(0);
+    const [truthVaultBalance, setTruthVaultBalance] = useState(0);
+    const [bettorData, setBettorData] = useState(null);
+    const [closeDate, setCloseDate] = useState(null)
+    const [revealEndTime, setRevealEndTime] = useState(null)
+
 
     useEffect(() => {
-        console.log("use effect")
-        console.log("questionData.betting.vault: ", questionData.betting.vault)
-        console.log("questionData.truth.vault_address: ", questionData.truth.vaultAddress)
+        // console.log("use effect")
+        // console.log("questionData.betting.vault: ", questionData.betting.vault)
+        // console.log("questionData.truth.vault_address: ", questionData.truth.vaultAddress)
         if (questionData?.betting?.vault && questionData?.truth?.vaultAddress) {
             fetchVaultBalance();
         }
+
+        if (questionData?.betting?.closeDate) {
+            //console.log("close date (raw):", questionData.betting.closeDate);
+            
+            const parsedCloseDate = new Date(questionData.betting.closeDate * 1000);
+            //console.log("Parsed close date:", parsedCloseDate);
+            
+            setCloseDate(parsedCloseDate);
+        }
+    
+        if (questionData?.truth?.revealEndTime) {
+            const parsedRevealEndTime = new Date(questionData.truth.revealEndTime * 1000);
+            //console.log("Parsed reveal end time:", parsedRevealEndTime);
+            
+            setRevealEndTime(parsedRevealEndTime);
+        }
     }, [questionData]);
 
-    
 
     // Convert PublicKey back
     const bettingQuestionPDA = new PublicKey(questionData.betting.questionPda);
@@ -42,43 +82,88 @@ const QuestionDetails = () => {
     // console.log("totalBetsOption2: ", totalBetsOption2)
 
 
-    const { publicKey, signTransaction, signAllTransactions } = useWallet();
-    const walletAdapter = publicKey && signTransaction ? { 
-        publicKey, 
-        signTransaction, 
-        signAllTransactions, 
-        network: "devnet" 
-    } : null;
+    
+    // const [bettingQuestion_PDA] = useMemo(() => PublicKey.findProgramAddressSync(
+    //     [
+    //         Buffer.from("betting_question"),
+    //         BETTING_CONTRACT_PROGRAM_ID.toBuffer(), 
+    //         new PublicKey(questionData.truth.questionKey).toBuffer(), 
+    //     ],
+    //     BETTING_CONTRACT_PROGRAM_ID
+    // ));
+    const [bettingQuestion_PDA, setBettingQuestion_PDA] = useState(null);
+    useEffect(() => {
+        if (!questionData || !questionData.truth.questionKey) return;
+    
+        const [pda] = PublicKey.findProgramAddressSync(
+            [
+                Buffer.from("betting_question"),
+                BETTING_CONTRACT_PROGRAM_ID.toBuffer(),
+                new PublicKey(questionData.truth.questionKey).toBuffer(), 
+            ],
+            BETTING_CONTRACT_PROGRAM_ID
+        );
+    
+        setBettingQuestion_PDA(pda);
+        console.log("Derived BettingQuestion PDA:", pda.toBase58());
+    }, [questionData]);
 
-    const provider = walletAdapter ? new AnchorProvider(connection, walletAdapter, { preflightCommitment: "processed" }) : null;
-    const bettingProgram = provider ? new Program(bettingIDL, provider) : null;
-    const truthNetworkProgram = provider ? new Program(truthNetworkIDL, provider) : null;
-
-    const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
-    const [bettingQuestion_PDA] = PublicKey.findProgramAddressSync(
-        [
-            Buffer.from("betting_question"),
-            BETTING_CONTRACT_PROGRAM_ID.toBuffer(), 
-            new PublicKey(questionData.truth.questionKey).toBuffer(), 
-        ],
-        BETTING_CONTRACT_PROGRAM_ID
-    );
-
-    console.log("Derived BettingQuestion PDA:", bettingQuestionPDA.toBase58());
+    //console.log("Derived BettingQuestion PDA:", bettingQuestionPDA.toBase58());
 
 
     if (!questionData) return <p>No question data available</p>; // Handle missing data
 
-    const [betAmount, setBetAmount] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [vaultBalance, setVaultBalance] = useState(0);
-    const [truthVaultBalance, setTruthVaultBalance] = useState(0);
+    
+    // useEffect(() => {
+    //     if (bettingQuestion_PDA && publicKey) fetchBettorData();
+    // }, [bettingQuestion_PDA, publicKey]); 
+    useEffect(() => {
+        if (bettingQuestionPDA && publicKey && !bettorData) {
+            console.log("Fetching Bettor Data...");
+            fetchBettorData();
+        }
+    }, [bettingQuestionPDA, publicKey]);
+
+    const fetchBettorData = async () => {
+        console.log("Fetching Bettor Data");
+        if (!publicKey) return;
+        
+        try {
+            const [bettorPda] = PublicKey.findProgramAddressSync(
+                [
+                    Buffer.from("bettor"),
+                    publicKey.toBuffer(),
+                    bettingQuestion_PDA.toBuffer(),
+                ],
+                BETTING_CONTRACT_PROGRAM_ID
+            );
+    
+            console.log("Fetching Bettor PDA:", bettorPda.toBase58());
+    
+            // Check if the account exists first
+            const bettorAccountInfo = await connection.getAccountInfo(bettorPda);
+            if (!bettorAccountInfo) {
+                console.warn("Bettor account does NOT exist yet.");
+                setBettorData(null);
+                return;
+            }
+    
+            // If the account exists, fetch it
+            const bettorAccount = await bettingProgram.account.bettorAccount.fetch(bettorPda);
+            console.log("Bettor Account:", bettorAccount);
+            setBettorData(bettorAccount);
+        } catch (error) {
+            console.error("Error fetching bettor account:", error);
+        }
+    };
+    
+
 
     const fetchVaultBalance = async () => {
         console.log("fetching vault balance")
         try {
             if (!questionData?.betting?.vault || !questionData?.truth?.vaultAddress) {
-                console.warn("❗ Vault data is missing. Skipping balance fetch.");
+                console.warn("Vault data is missing. Skipping balance fetch.");
                 return;
             }
     
@@ -121,7 +206,7 @@ const QuestionDetails = () => {
                 console.error("Truth network Program is NOT initialized!");
                 return alert("Truth network program is not ready. Try reloading the page.");
             }
-
+            console.log("bettingQuestion_pda: ", bettingQuestion_PDA.toString())
             const [vaultPDA] = PublicKey.findProgramAddressSync(
                 [
                     Buffer.from("bet_vault"),
@@ -178,73 +263,13 @@ const QuestionDetails = () => {
         setLoading(false);
     };
 
-
-    const finalizeVoting = async () => {
-        if (!publicKey) {
-            return toast.error("Please connect your wallet.");
-        }
-    
-        setLoading(true);
-    
-        try {
-            // Initialize the Truth-Network program
-            if (!truthNetworkProgram) {
-                console.error("Truth network program is not initialized!");
-                return alert("Truth network program is not ready. Try reloading the page.");
-            }
-    
-            // Ensure we have the correct question PDA
-            const questionPDA = new PublicKey(questionData.truth.questionKey);
-            console.log("Finalizing Voting for Question PDA:", questionPDA.toBase58());
-    
-            // Call the finalizeVoting function from the Truth-Network contract
-            const tx = await truthNetworkProgram.methods
-                .finalizeVoting()
-                .accounts({
-                    question: questionPDA,
-                })
-                .rpc();
-    
-            console.log("Finalize Voting Transaction:", tx);
-
-            const txDetails = await connection.getParsedTransaction(tx, {
-                commitment: "confirmed",
-                maxSupportedTransactionVersion: 0,
-            });
-    
-            if (txDetails && txDetails.meta && txDetails.meta.logMessages) {
-                console.log("Transaction Logs:", txDetails.meta.logMessages);
-    
-                // 🔹 Extract the final voting results from logs
-                const votingLog = txDetails.meta.logMessages.find(log =>
-                    log.includes("Voting Finalized.")
-                );
-    
-                if (votingLog) {
-                    console.log("Parsed Voting Log:", votingLog);
-                    toast.success(`Voting Finalized: ${votingLog}`);
-                } else {
-                    console.warn("No voting result log found.");
-                }
-            }
-
-            toast.success("Voting finalized successfully!");
-        } catch (error) {
-            console.error("Error finalizing voting:", error);
-            toast.error("Failed to finalize voting.");
-        }
-    
-        setLoading(false);
-    };
-
-
     const fetchWinner = async () => {
         if (!publicKey) return toast.error("Please connect your wallet.");
 
-        console.log("truth question id: ", questionData.truth.id)
-        console.log("betting question: ", questionData.betting.questionPda)
-        console.log("truthNetworkQuestion: ", questionData.truth.questionKey)
-        console.log("truthNetworkProgram: ", truthNetworkProgram.programId,)
+        // console.log("truth question id: ", questionData.truth.id)
+        // console.log("betting question: ", questionData.betting.questionPda)
+        // console.log("truthNetworkQuestion: ", questionData.truth.questionKey)
+        // console.log("truthNetworkProgram: ", truthNetworkProgram.programId,)
         try {
             
             const tx = await bettingProgram.methods
@@ -266,6 +291,63 @@ const QuestionDetails = () => {
             toast.error("Failed to fetch winner & calculate winnings.");
         }
     };
+
+    const claimWinnings = async () => {
+        if (!publicKey) return toast.error("Please connect your wallet.");
+        if (!bettorData) return toast.error("No bettor data found.");
+        if (bettorData.claimed) return toast.info("Winnings already claimed.");
+    
+        setLoading(true);
+    
+        try {
+            console.log("Claiming winnings...");
+    
+            const [bettorPda] = PublicKey.findProgramAddressSync(
+                [
+                    Buffer.from("bettor"),
+                    publicKey.toBuffer(),
+                    bettingQuestion_PDA.toBuffer(),
+                ],
+                BETTING_CONTRACT_PROGRAM_ID
+            );
+    
+            console.log("Bettor PDA:", bettorPda.toBase58());
+    
+            const [vaultPDA] = PublicKey.findProgramAddressSync(
+                [
+                    Buffer.from("bet_vault"),
+                    bettingQuestion_PDA.toBuffer()
+                ],
+                bettingProgram.programId
+            );
+    
+            console.log("Vault PDA:", vaultPDA.toBase58());
+    
+            const tx = await bettingProgram.methods
+                .claimWinnings()
+                .accounts({
+                    bettingQuestion: bettingQuestion_PDA,
+                    bettorAccount: bettorPda,
+                    user: publicKey,
+                    truthNetworkQuestion: new PublicKey(questionData.truth.questionKey),
+                    vault: vaultPDA,
+                    systemProgram: web3.SystemProgram.programId,
+                })
+                .rpc();
+    
+            console.log("Claim Winnings Transaction:", tx);
+            toast.success("Winnings successfully claimed!");
+    
+            // Fetch updated bettor data
+            await fetchBettorData();
+        } catch (error) {
+            console.error("Error claiming winnings:", error);
+            toast.error("Failed to claim winnings.");
+        }
+    
+        setLoading(false);
+    };
+    
     
     
 
@@ -274,7 +356,13 @@ const QuestionDetails = () => {
     const option1Percentage = totalBets === 0 ? 50 : (Number(questionData.betting.totalBetsOption1) / totalBets) * 100;
     const option2Percentage = 100 - option1Percentage;
 
-    console.log("option 1 odds: ", questionData.betting.option1Odds)
+    // console.log("option 1 odds: ", questionData.betting.option1Odds)
+    // console.log("is betting over: ", Date.now() / 1000 >= closeDate)
+    // console.log("close date: ", closeDate)
+    // console.log(revealEndTime)
+
+    console.log("Question Data Truth Key:", questionData.truth.questionKey);
+    console.log("Truth Network Program ID:", truthNetworkProgram.programId.toBase58());
 
     return (
         <>  
@@ -284,6 +372,12 @@ const QuestionDetails = () => {
                 <p className="text-gray-400 mt-2"><strong>Status:</strong> {questionData.betting.status}</p>
                 <p className="text-gray-300 mt-1"><strong>Options:</strong> {questionData.betting.option1} vs {questionData.betting.option2}</p>
                 <p className="text-gray-400 mt-1"><strong>Truth-Network Question:</strong> {questionData.truth.questionText}</p>
+
+                {bettorData && bettorData.claimed && (
+                    <p className="mt-2 text-green-400 font-bold">
+                        Winnings Claimed!
+                    </p>
+                )}
 
                 {/* Betting Form */}
                 <div className="mt-4">
@@ -297,14 +391,14 @@ const QuestionDetails = () => {
                     <div className="flex gap-4 mt-4">
                         <button
                             onClick={() => handleBet(true)}
-                            disabled={loading}
+                            disabled={loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000)}
                             className="flex-1 !bg-green-500 hover:!bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition"
                         >
                             Bet on {questionData.betting.option1} (1: {option1Odds.toFixed(2)})
                         </button>
                         <button
                             onClick={() => handleBet(false)}
-                            disabled={loading}
+                            disabled={loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000)}
                             className="flex-1 !bg-red-500 hover:!bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition"
                         >
                             Bet on {questionData.betting.option2} (1: {option2Odds.toFixed(2)})
@@ -355,21 +449,36 @@ const QuestionDetails = () => {
                     <p className="text-gray-400">Truth-Network Vault Balance: <span className="text-blue-400">{truthVaultBalance.toFixed(2)} SOL</span></p>
                 </div>
 
-                <button
-                    onClick={fetchWinner}
-                    disabled={loading}
-                    className="w-full mt-4 !bg-blue-500 hover:!bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition"
-                >
-                    Fetch Winner
-                </button>
 
-                {questionData.betting.winner !== null && (
+                {revealEndTime && Date.now() / 1000 >= revealEndTime.getTime() / 1000 && !questionData.truth.finalized && (
+                    <button
+                        onClick={fetchWinner}
+                        disabled={loading}
+                        className="w-full mt-4 !bg-purple-500 hover:!bg-purple-600 text-white font-bold py-2 px-4 rounded-lg transition"
+                    >
+                        Finalize Voting
+                    </button>
+                )}
+
+                {bettorData && questionData.truth.winningOption !== null && bettorData.chosenOption === questionData.truth.winningOption && !bettorData.claimed && (
+                    <button
+                        onClick={claimWinnings}
+                        disabled={loading}
+                        className="w-full mt-4 !bg-yellow-500 hover:!bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition"
+                    >
+                        Claim Winnings
+                    </button>
+                )}
+
+
+
+                {questionData.truth.winningOption !== null && (
                     <>
                         <p className="text-gray-400 mt-1">
-                            <strong>Winner:</strong> {questionData.betting.winner === 1 ? questionData.betting.option1 : questionData.betting.option2}
+                            <strong>Winner:</strong> {questionData.truth.winningOption === true ? questionData.betting.option1 : questionData.betting.option2}
                         </p>
                         <p className="text-gray-400 mt-1">
-                            <strong>Winning Percentage:</strong> {questionData.betting.winningPercentage}%
+                            <strong>Winning Percentage:</strong> {questionData.truth.winningPercent.toFixed(2)}%
                         </p>
                     </>
                 )}
