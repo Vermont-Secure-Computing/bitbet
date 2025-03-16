@@ -297,59 +297,94 @@ pub mod betting_contract {
     
         // Get the winning option from Truth-Network question
         let winning_option = truth_network_question.winning_option;
+        let winning_percentage = truth_network_question.winning_percent;
+
         require!(winning_option == 1 || winning_option == 2, BettingError::InvalidWinner);
-    
-        // Check if the user placed a bet on the winning option
-        let user_bet_won = (winning_option == 1 && bettor_account.chosen_option)
-            || (winning_option == 2 && !bettor_account.chosen_option);
         
-        require!(user_bet_won, BettingError::UserDidNotWin);
-    
-        // Compute winnings
-        let winning_odds = if winning_option == 1 {
-            betting_question.option1_odds
-        } else {
-            betting_question.option2_odds
-        };
-    
-        let user_winnings = (bettor_account.bet_amount as f64 * winning_odds) as u64;
-        require!(user_winnings > 0, BettingError::NoWinningsAvailable);
-    
-        // Check if vault has enough balance
-        let vault_balance = vault.get_lamports();
-        require!(vault_balance >= user_winnings, BettingError::InsufficientVaultBalance);
-    
         msg!(
-            "User won {} lamports. Transferring from vault {}...",
-            user_winnings,
-            vault.key()
+            "Winning option: {}, Winning percentage: {}%",
+            winning_option,
+            winning_percentage
         );
+        
+
+        // Case 1: If winning percentage is 75% or higher -> Only winners get winnings
+        if winning_percentage >= 75.0 {
+            // Check if the user placed a bet on the winning option
+            let user_bet_won = (winning_option == 1 && bettor_account.chosen_option)
+                || (winning_option == 2 && !bettor_account.chosen_option);
+        
+            require!(user_bet_won, BettingError::UserDidNotWin);
     
-        // Transfer winnings from Vault to User
-        {
-            let vault_balance_before = vault.get_lamports();
-            let user_balance_before = user.get_lamports();
+            // Compute winnings
+            let winning_odds = if winning_option == 1 {
+                betting_question.option1_odds
+            } else {
+                betting_question.option2_odds
+            };
     
-            // Deduct from vault
-            vault.sub_lamports(user_winnings)?;
+            let user_winnings = (bettor_account.bet_amount as f64 * winning_odds) as u64;
+            require!(user_winnings > 0, BettingError::NoWinningsAvailable);
     
-            // Add to user
-            user.add_lamports(user_winnings)?;
+            // Check if vault has enough balance
+            let vault_balance = vault.get_lamports();
+            require!(vault_balance >= user_winnings, BettingError::InsufficientVaultBalance);
     
-            let vault_balance_after = vault.get_lamports();
-            let user_balance_after = user.get_lamports();
+            msg!(
+                "User won {} lamports. Transferring from vault {}...",
+                user_winnings,
+                vault.key()
+            );
     
-            require_eq!(vault_balance_after, vault_balance_before - user_winnings);
-            require_eq!(user_balance_after, user_balance_before + user_winnings);
-    
-            msg!("Successfully transferred {} lamports to user {}!", user_winnings, user.key());
+            // Transfer winnings from Vault to User
+            {
+                let vault_balance_before = vault.get_lamports();
+                let user_balance_before = user.get_lamports();
+        
+                // Deduct from vault
+                vault.sub_lamports(user_winnings)?;
+        
+                // Add to user
+                user.add_lamports(user_winnings)?;
+        
+                let vault_balance_after = vault.get_lamports();
+                let user_balance_after = user.get_lamports();
+        
+                require_eq!(vault_balance_after, vault_balance_before - user_winnings);
+                require_eq!(user_balance_after, user_balance_before + user_winnings);
+        
+                msg!("Successfully transferred {} lamports to user {}!", user_winnings, user.key());
+            }
+        
+            msg!("Claim successful! User {} received {} SOL", user.key(), user_winnings);
+            
+        } else {
+            // Case 2: If winning percentage is below 75% -> Refund 97% of bet amount to all bettors
+            let refund_amount = (bettor_account.bet_amount as f64 * 0.97) as u64;
+
+            require!(refund_amount > 0, BettingError::NoWinningsAvailable);
+
+            // Check if vault has enough balance
+            let vault_balance = vault.get_lamports();
+            require!(vault_balance >= refund_amount, BettingError::InsufficientVaultBalance);
+
+            msg!(
+                "Refunding {} lamports to user {}...",
+                refund_amount,
+                user.key()
+            );
+
+            // Transfer refund
+            vault.sub_lamports(refund_amount)?;
+            user.add_lamports(refund_amount)?;
+
+            msg!("Refund successful! User {} received {} SOL", user.key(), refund_amount);
+
         }
-    
-        // Mark bettor winnings as claimed (NEW UPDATE)
+
+        // Mark bettor winnings as claimed
         bettor_account.claimed = true;
-    
-        msg!("Claim successful! User {} received {} SOL", user.key(), user_winnings);
-    
+
         Ok(())
     }
     
