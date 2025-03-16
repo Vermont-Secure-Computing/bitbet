@@ -4,6 +4,8 @@ import { PublicKey } from "@solana/web3.js";
 import { Program, AnchorProvider, web3, BN } from "@coral-xyz/anchor";
 import { toast } from "react-toastify";
 import { useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
+
 import bettingIDL from "../idls/betting.json";
 import truthNetworkIDL from "../idls/truth_network.json";
 
@@ -188,7 +190,7 @@ const QuestionDetails = () => {
     const handleBet = async (isOption1) => {
         if (!publicKey) return toast.error("Please connect your wallet.");
         if (!betAmount || isNaN(betAmount) || betAmount <= 0) {
-            return toast.error("Enter a valid bet amount.");
+            return toast.error("Enter a valid bet amount.", { transition: Bounce });
         }
 
         setLoading(true);
@@ -253,11 +255,11 @@ const QuestionDetails = () => {
 
             setBetAmount("");
 
-            toast.success("Bet placed successfully!");
+            toast.success("Bet placed successfully!", { transition: Bounce });
             console.log("Transaction:", tx);
         } catch (error) {
             console.error("Error placing bet:", error);
-            toast.error("Failed to place bet.");
+            toast.error("Failed to place bet.", { transition: Bounce });
         }
 
         setLoading(false);
@@ -282,13 +284,13 @@ const QuestionDetails = () => {
                 .rpc();
 
             console.log("Winner fetched & winners determined:", tx);
-            toast.success("Winner fetched & winnings calculated!");
+            toast.success("Winner fetched & winnings calculated!", { transition: Bounce });
 
             // Fetch updated question details
-            await fetchQuestionDetails();
+            //await fetchQuestionDetails();
         } catch (error) {
             console.error("Error fetching winner & determining winners:", error);
-            toast.error("Failed to fetch winner & calculate winnings.");
+            toast.error("Failed to fetch winner & calculate winnings.", { transition: Bounce });
         }
     };
 
@@ -365,8 +367,9 @@ const QuestionDetails = () => {
     console.log("Truth Network Program ID:", truthNetworkProgram.programId.toBase58());
 
     return (
-        <>  
-            <div className="max-w-2xl mx-auto mt-10 p-6 border border-gray-600 rounded-lg shadow-lg bg-gray-900 text-white">
+        <div className="flex flex-col min-h-screen justify-center items-center bg-gray-900 text-white">  
+            <Link to="/">Back to List</Link>
+            <div className="w-full max-w-2xl mx-auto p-6 border border-gray-600 rounded-lg shadow-lg bg-gray-800">
                 {/* Title */}
                 <h2 className="text-2xl font-bold text-gray-200">{questionData.betting.title}</h2>
                 <p className="text-gray-400 mt-2"><strong>Status:</strong> {questionData.betting.status}</p>
@@ -460,13 +463,23 @@ const QuestionDetails = () => {
                     </button>
                 )}
 
-                {bettorData && questionData.truth.winningOption !== null && bettorData.chosenOption === questionData.truth.winningOption && !bettorData.claimed && (
+                {bettorData && questionData.truth.winningOption !== null && bettorData.chosenOption === questionData.truth.winningOption && questionData.truth.winningPercent >= 75 && !bettorData.claimed && (
                     <button
                         onClick={claimWinnings}
                         disabled={loading}
                         className="w-full mt-4 !bg-yellow-500 hover:!bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition"
                     >
                         Claim Winnings
+                    </button>
+                )}
+
+                {bettorData && questionData.truth.winningOption !== null && questionData.truth.winningPercent > 0 && questionData.truth.winningPercent > 75 && !bettorData.claimed && (
+                    <button
+                        onClick={claimWinnings}
+                        disabled={loading}
+                        className="w-full mt-4 !bg-yellow-500 hover:!bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition"
+                    >
+                        Refund Bet
                     </button>
                 )}
 
@@ -484,7 +497,7 @@ const QuestionDetails = () => {
                 )}
                 
             </div>
-        </>
+        </div>
     );
 };
 

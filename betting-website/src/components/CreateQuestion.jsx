@@ -106,11 +106,6 @@ const CreateQuestion = () => {
             const questionCount = questionCounterAccount.count;
             console.log("question count: ", questionCount.count)
 
-            // if(questionCount.count === undefined) {
-            //     alert("Undefined question counter")
-            //     return
-            // }
-
             const questionIdBuffer = new BN(questionCount).toArrayLike(Buffer, "le", 8);
             const [questionPDA] = PublicKey.findProgramAddressSync(
                 [Buffer.from("question"), publicKey.toBuffer(), questionIdBuffer],
@@ -128,8 +123,8 @@ const CreateQuestion = () => {
             // Calculate commit and reveal times
             // const commitEndTimeTimestamp = new BN(bettingTimestamp + 4 * 60 * 60); // +4 hours
             // const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60 * 60); // +6 hours
-            const commitEndTimeTimestamp = new BN(bettingTimestamp + 3 * 60); // +4 hours
-            const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60); // +6 hours
+            const commitEndTimeTimestamp = new BN(bettingTimestamp + 3 * 60); // +3 minutes for testing purposes
+            const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60); // +6 minutes for testing purposes
 
             console.log("calculated commit end time: ", commitEndTimeTimestamp)
             console.log("calculated reveal end time: ", revealEndTimeTimestamp)
