@@ -62,7 +62,7 @@ const CreateQuestion = () => {
 
     const createQuestion = async () => {
         if (!publicKey) return alert("Please connect your wallet");
-        if (!questionText || !bettingEndTime || !rewardsTime) return alert("All fields are required");
+        if (!questionText || !bettingEndTime ) return alert("All fields are required");
         if (!connected) {
             console.error("Wallet is not connected.");
             return alert("Please connect your wallet first.");
@@ -194,7 +194,7 @@ const CreateQuestion = () => {
             console.log("=== Using Signers:", wallet.adapter ? wallet.adapter.publicKey.toString() : "No Signer");
 
             const txBet = await bettingProgram.methods
-                .createBettingQuestion(questionText, bettingEndTimeTimestamp, rewardsTimeTimestamp)
+                .createBettingQuestion(questionText, bettingEndTimeTimestamp, revealEndTimeTimestamp) //rewardTimeTimestamp
                 .accounts({
                     bettingQuestion: bettingQuestionPDA,
                     creator: publicKey,
@@ -215,14 +215,14 @@ const CreateQuestion = () => {
     };
 
     return (
-        <div className="max-w-lg mx-auto p-6 bg-white shadow-lg rounded-lg">
+        <div className="max-w-lg mx-auto p-6 bg-white shadow-lg text-gray-800 rounded-lg">
             <h2 className="text-xl font-bold mb-4">Create a Betting Question</h2>
             <input
                 type="text"
                 placeholder="Enter question..."
                 value={questionText}
                 onChange={(e) => setQuestionText(e.target.value)}
-                className="w-full p-2 border rounded-md mb-3"
+                className="w-full p-2 border border-1 border-color-gray-400 text-gray-600 rounded-md mb-3"
             />
             <label>Betting Close Date</label>
             <input 
@@ -230,16 +230,16 @@ const CreateQuestion = () => {
                 value={bettingEndTime} 
                 onChange={(e) => setBettingEndTime(e.target.value)} 
                 placeholder="Betting End Time" 
-                className="w-full p-2 border rounded-md mb-3"
+                className="w-full p-2 border border-1 border-color-gray-400 text-gray-600  rounded-md mb-3"
             />
-            <label>Resolution Date</label>
+            {/* <label>Resolution Date</label>
             <input 
                 type="datetime-local" 
                 value={rewardsTime} 
                 onChange={(e) => setRewardsTime(e.target.value)} 
                 placeholder="Rewards Time" 
-                className="w-full p-2 border rounded-md mb-3"
-            />
+                className="w-full p-2 border border-1 border-color-gray-400 text-gray-600  rounded-md mb-3"
+            /> */}
             <button
                 onClick={createQuestion}
                 className="w-full !bg-blue-600 text-white py-2 rounded-md"

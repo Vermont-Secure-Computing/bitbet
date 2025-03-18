@@ -3,6 +3,7 @@ use anchor_lang::solana_program::{program::invoke, program::invoke_signed};
 use anchor_lang::solana_program::instruction::Instruction;
 use anchor_lang::solana_program::system_instruction;
 use anchor_lang::system_program;
+use std::str::FromStr;
 
 // Import the truth_network program
 declare_program!(truth_network);
@@ -19,7 +20,9 @@ use truth_network::{
 // Import the Truth-Network program
 use truth_network::accounts::Question;
 
-declare_id!("2ym4wL9hHMHKPRXvWnkhcy8qu76wAtTQTzHKeCn4EGQv");
+pub const HOUSE_WALLET: &str = "6tBwNgSW17jiWoEuoGEyqwwH3Jkv86WN61FETFoHonof";
+
+declare_id!("7vVPVGsFoaBWr5GTNQLTgXdi8muHTPQVguijLqJ2sdo6");
 
 #[program]
 pub mod betting_contract {
@@ -71,6 +74,8 @@ pub mod betting_contract {
         betting_question.status = "open".to_string();
         betting_question.result = None;
         betting_question.vault = vault.key(); // This will store Vault PDA in BettingQuestion
+        betting_question.house_commission_claimed = false;
+        betting_question.creator_commission_claimed = false;
 
         msg!("Betting Question Created Successfully!");
         msg!("Stored Truth-Network Question PDA: {}", betting_question.question_pda);
@@ -109,15 +114,8 @@ pub mod betting_contract {
         }
         betting_question.total_pool += bet_after_commissions;
     
-        // Store bettor details
-        // betting_question.bettors.push(BettorRecord {
-        //     address: *user.key,
-        //     chosen_option: is_option_1,
-        //     bet_amount: amount,
-        //     won: false, // Default to false (will be updated later)
-        //     winnings: 0, // Default to 0 (will be updated if they win)
-        // });
-        // // **Create BettorAccount**
+        
+        // **Create BettorAccount**
         let bettor_account = &mut ctx.accounts.bettor_account;
 
         msg!("Initializing bettor account: {:?}", bettor_account.key());
@@ -204,6 +202,9 @@ pub mod betting_contract {
     pub fn fetch_and_store_winner(ctx: Context<FetchAndStoreWinner>, question_id: u64) -> Result<()> {
         let betting_question = &mut ctx.accounts.betting_question;
         let truth_network_question = &ctx.accounts.truth_network_question;
+        let house_wallet = &ctx.accounts.house_wallet;
+        let vault = &ctx.accounts.vault;
+
 
         // Ensure betting is still open
         let current_time = Clock::get()?.unix_timestamp;
@@ -241,6 +242,7 @@ pub mod betting_contract {
         // Step 4: Update betting question result
         betting_question.winner = winner;
         betting_question.winning_percentage = winning_percentage;
+        betting_question.status = "close".to_string();
     
         msg!("Winner Fetched & Stored: Option {} ({}%)", winner, winning_percentage);
     
@@ -253,6 +255,41 @@ pub mod betting_contract {
     
         msg!("Winning Option: {}", if winner == 1 { "Option 1" } else { "Option 2" });
         msg!("Winning Odds: {}", winning_odds);
+
+
+        // Step 6: Transfer House Commission if Not Yet Claimed
+        if !betting_question.house_commission_claimed {
+            let house_commission = betting_question.total_house_commision;
+            require!(house_commission > 0, BettingError::NoCommissionAvailable);
+
+            msg!(
+                "Transferring {} lamports to House Wallet: {}",
+                house_commission,
+                house_wallet.key()
+            );
+    
+            // Use SystemProgram to Transfer Funds
+            let transfer_instruction = system_instruction::transfer(
+                &vault.key(),
+                &house_wallet.key(),
+                house_commission,
+            );
+    
+            invoke(
+                &transfer_instruction,
+                &[
+                    vault.to_account_info(),
+                    house_wallet.to_account_info(),
+                    ctx.accounts.system_program.to_account_info(),
+                ],
+            )?;
+    
+            // Mark commission as claimed
+            betting_question.house_commission_claimed = true;
+
+        } else {
+            msg!("House commission already claimed.");
+        }
         
     
         Ok(())
@@ -387,8 +424,50 @@ pub mod betting_contract {
 
         Ok(())
     }
-    
 
+
+    pub fn claim_creator_commission(ctx: Context<ClaimCreatorCommission>) -> Result<()> {
+        let betting_question = &mut ctx.accounts.betting_question;
+        let creator = &ctx.accounts.creator;
+        let vault = &mut ctx.accounts.vault;
+    
+        msg!("Creator {} is attempting to claim commission", creator.key());
+    
+        require!(
+            betting_question.creator == *creator.key,
+            BettingError::UnauthorizedCreator
+        );
+    
+        require!(
+            Clock::get()?.unix_timestamp >= betting_question.close_date,
+            BettingError::BettingActive
+        );
+    
+        require!(!betting_question.creator_commission_claimed, BettingError::CommissionAlreadyClaimed);
+        
+        let commission_amount = betting_question.total_creator_commission;
+        require!(commission_amount > 0, BettingError::NoCommissionAvailable);
+    
+        let vault_balance = vault.get_lamports();
+        require!(vault_balance >= commission_amount, BettingError::InsufficientVaultBalance);
+    
+        msg!(
+            "Transferring {} lamports to creator {}...",
+            commission_amount,
+            creator.key()
+        );
+    
+        vault.sub_lamports(commission_amount)?;
+        creator.add_lamports(commission_amount)?;
+    
+        // Mark as claimed
+        betting_question.creator_commission_claimed = true;
+    
+        msg!("Creator commission of {} lamports claimed by {}", commission_amount, creator.key());
+    
+        Ok(())
+    }
+    
 }
 
 
@@ -411,14 +490,15 @@ pub struct BettingQuestion {
     pub total_pool: u64,
     pub total_creator_commission: u64,
     pub total_house_commision: u64,
-    //pub bettors: Vec<BettorRecord>,
     pub close_date: i64,
     pub reward_date: i64,
-    pub status: String,  // "open", "closed", "resolved"
+    pub status: String, 
     pub result: Option<String>,
-    pub winner: u8, // 1 = option1, 2 = option2, 0 = draw
-    pub winning_percentage: f64, // Percentage of winning votes (0-100)
+    pub winner: u8,
+    pub winning_percentage: f64,
     pub vault: Pubkey,
+    pub creator_commission_claimed: bool,
+    pub house_commission_claimed: bool,
 }
 
 /// Account Structs
@@ -466,7 +546,11 @@ pub struct CreateBettingQuestion<'info> {
 
 #[derive(Accounts)]
 pub struct InitializeHouseWallet<'info> {
-    #[account(init, payer = creator, space = 8 + 8)]
+    #[account(
+        init, 
+        payer = creator, 
+        space = 8 + 8
+    )]
     pub house_wallet: Account<'info, HouseWallet>,
     #[account(mut)]
     pub creator: Signer<'info>,
@@ -479,7 +563,12 @@ pub struct PlaceBet<'info> {
     #[account(mut)]
     pub betting_question: Account<'info, BettingQuestion>,
     
-    #[account(init, payer = user, space = 8 + 83, seeds = [b"bettor", user.key().as_ref(), betting_question.key().as_ref()], bump)]
+    #[account(
+        init, 
+        payer = user, 
+        space = 8 + 83, 
+        seeds = [b"bettor", user.key().as_ref(), betting_question.key().as_ref()], 
+        bump)]
     pub bettor_account: Account<'info, BettorAccount>,
 
     #[account(mut)]
@@ -504,6 +593,7 @@ pub struct PlaceBet<'info> {
     pub truth_network_vault: UncheckedAccount<'info>,
 }
 
+
 #[account]
 pub struct BettorAccount {
     pub bettor_address: Pubkey,
@@ -515,16 +605,6 @@ pub struct BettorAccount {
     pub claimed: bool
 }
 
-
-#[derive(Accounts)]
-pub struct DistributeCommissions<'info> {
-    #[account(mut)]
-    pub betting_question: Account<'info, BettingQuestion>,
-    #[account(mut)]
-    pub house_wallet: Account<'info, HouseWallet>,
-    #[account(mut)]
-    pub creator: Signer<'info>
-}
 
 /// House Wallet Struct
 #[account]
@@ -543,6 +623,15 @@ pub struct FetchAndStoreWinner<'info> {
     pub truth_network_question: Account<'info, Question>,
 
     pub truth_network_program: Program<'info, TruthNetwork>,
+
+    /// CHECK: This is a fixed known address for the house wallet, no need for ownership verification.
+    #[account(mut, address = HOUSE_WALLET.parse::<Pubkey>().unwrap())]
+    pub house_wallet: AccountInfo<'info>,
+
+    #[account(mut)]
+    pub vault: Signer<'info>, 
+
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -572,6 +661,19 @@ pub struct ClaimWinnings<'info> {
 }
 
 
+#[derive(Accounts)]
+pub struct ClaimCreatorCommission<'info> {
+    #[account(mut)]
+    pub betting_question: Account<'info, BettingQuestion>,
+
+    #[account(mut)]
+    pub creator: Signer<'info>, 
+
+    #[account(mut)]
+    pub vault: Account<'info, Vault>, 
+
+    pub system_program: Program<'info, System>,
+}
 
 
 #[error_code]
@@ -596,4 +698,10 @@ pub enum BettingError {
     UnauthorizedBettor,
     #[msg("Betting question mismatch.")]
     InvalidBettingQuestion,
+    #[msg("No commission available to claim.")]
+    NoCommissionAvailable,
+    #[msg("Unathorized question creator.")]
+    UnauthorizedCreator,
+    #[msg("Commission already claimed.")]
+    CommissionAlreadyClaimed
 }

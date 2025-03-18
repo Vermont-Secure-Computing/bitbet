@@ -75,6 +75,7 @@ const FetchQuestion = () => {
                     const totalHouseCommission = new BN(bettingQuestion.account.totalHouseCommision);
                     const totalCreatorCommission = new BN(bettingQuestion.account.totalCreatorCommission);
                     const betClosing = new BN(bettingQuestion.account.closeDate);
+                    const betCreator = bettingQuestion.account.creator.toString();
 
                     
 
@@ -86,6 +87,7 @@ const FetchQuestion = () => {
                     console.log("totalHouseCommission: ", totalHouseCommission.toString())
                     console.log("totalCreatorCommission: ", totalCreatorCommission.toString())
                     console.log("bet closing: ", betClosing.toString())
+                    console.log("bet creator: ", bettingQuestion.account.creator.toString())
                     try {
                         const truthQuestion = await truthNetworkProgram.account.question.fetch(
                             bettingQuestion.account.questionPda
@@ -107,6 +109,7 @@ const FetchQuestion = () => {
                                 totalCreatorCommission: totalCreatorCommission.toString(),
                                 vault: bettingQuestion.account.vault.toBase58(),
                                 closeDate: betClosing.toNumber(),
+                                creator: betCreator
                             },
                             truth: {
                                 ...truthQuestion,
@@ -144,9 +147,9 @@ const FetchQuestion = () => {
                         onClick={() => navigate(`/question/${q.betting.questionPda.toString()}`, { state: q })}
                         className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer border border-gray-700 shadow-md">
                         <strong className="text-lg text-blue-400">{q.betting.title}</strong>
-                        <p className="text-gray-400">🔹 Truth Network ID: {q.truth?.id?.toString() || "Not Found"}</p>
+                        <p className="text-gray-500 text-sm">Betting will close on: {new Date(q.betting.closeDate * 1000).toLocaleString()}</p>
                         <p className="text-gray-500 text-sm">PDA: {q.betting.questionPda.toString()}</p>
-                        <p className="text-gray-500 text-sm">Rewards: {(new BN(q.truth.reward)  / 1_000_000_000).toString()}</p>
+                        <p className="text-gray-500 text-sm">Total Bets: {(new BN(q.betting.totalPool)  / 1_000_000_000).toString()} SOL</p>
                     </li>
                 ))}
             </ul>
