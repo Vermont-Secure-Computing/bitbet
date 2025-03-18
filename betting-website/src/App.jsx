@@ -1,39 +1,7 @@
-// import React from "react";
-// import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-// import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-// import { ToastContainer } from "react-toastify";
-// import "react-toastify/dist/ReactToastify.css";
-
-// import FetchQuestion from "./components/FetchQuestion";
-// import CreateQuestion from "./components/CreateQuestion";
-// import CallHelloWorld from "./components/CallHelloWorld";
-// import QuestionDetails from "./components/QuestionDetails";
-
-// function App() {
-//     return (
-//         <Router>
-//             <div className="flex flex-col w-100 justify-center">
-//                 <ToastContainer />
-//                 <h1>Betting Website</h1>
-//                 <WalletMultiButton />
-//                 <CallHelloWorld />
-//                 <CreateQuestion />
-//                 <FetchQuestion />
-
-//                 <Routes>
-//                     <Route path="/question/:questionPda" element={<QuestionDetails />} />
-//                 </Routes>
-//             </div>
-//         </Router>
-//     );
-// }
-
-// export default App;
-
-
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { ToastContainer } from "react-toastify";
 
 import CallHelloWorld from "./components/CallHelloWorld";
 import QuestionDetails from "./components/QuestionDetails";
@@ -59,6 +27,8 @@ function App() {
                 {/* Question Details Page (Completely Separate) */}
                 <Route path="/question/:questionPda" element={<QuestionDetails />} />
             </Routes>
+            {/* Toast Notification */}
+            <ToastContainer />
         </Router>
     );
 }

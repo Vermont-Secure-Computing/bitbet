@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { Program, AnchorProvider, web3, BN } from "@coral-xyz/anchor";
-import { toast } from "react-toastify";
+import { toast, Bounce } from "react-toastify";
 import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
 
@@ -43,25 +43,17 @@ const QuestionDetails = () => {
 
 
     useEffect(() => {
-        // console.log("use effect")
-        // console.log("questionData.betting.vault: ", questionData.betting.vault)
-        // console.log("questionData.truth.vault_address: ", questionData.truth.vaultAddress)
         if (questionData?.betting?.vault && questionData?.truth?.vaultAddress) {
             fetchVaultBalance();
         }
 
         if (questionData?.betting?.closeDate) {
-            //console.log("close date (raw):", questionData.betting.closeDate);
-            
             const parsedCloseDate = new Date(questionData.betting.closeDate * 1000);
-            //console.log("Parsed close date:", parsedCloseDate);
-            
             setCloseDate(parsedCloseDate);
         }
     
         if (questionData?.truth?.revealEndTime) {
             const parsedRevealEndTime = new Date(questionData.truth.revealEndTime * 1000);
-            //console.log("Parsed reveal end time:", parsedRevealEndTime);
             
             setRevealEndTime(parsedRevealEndTime);
         }
@@ -79,20 +71,6 @@ const QuestionDetails = () => {
     const totalBetsOption1 = questionData.betting.totalBetsOption1;
     const totalBetsOption2 = questionData.betting.totalBetsOption2;
 
-    // console.log("totalPool: ", totalPool)
-    // console.log("totalBetsOption1: ", totalBetsOption1)
-    // console.log("totalBetsOption2: ", totalBetsOption2)
-
-
-    
-    // const [bettingQuestion_PDA] = useMemo(() => PublicKey.findProgramAddressSync(
-    //     [
-    //         Buffer.from("betting_question"),
-    //         BETTING_CONTRACT_PROGRAM_ID.toBuffer(), 
-    //         new PublicKey(questionData.truth.questionKey).toBuffer(), 
-    //     ],
-    //     BETTING_CONTRACT_PROGRAM_ID
-    // ));
     const [bettingQuestion_PDA, setBettingQuestion_PDA] = useState(null);
     useEffect(() => {
         if (!questionData || !questionData.truth.questionKey) return;
@@ -113,12 +91,8 @@ const QuestionDetails = () => {
     //console.log("Derived BettingQuestion PDA:", bettingQuestionPDA.toBase58());
 
 
-    if (!questionData) return <p>No question data available</p>; // Handle missing data
+    if (!questionData) return <p>No question data available</p>;
 
-    
-    // useEffect(() => {
-    //     if (bettingQuestion_PDA && publicKey) fetchBettorData();
-    // }, [bettingQuestion_PDA, publicKey]); 
     useEffect(() => {
         if (bettingQuestionPDA && publicKey && !bettorData) {
             console.log("Fetching Bettor Data...");
@@ -349,6 +323,63 @@ const QuestionDetails = () => {
     
         setLoading(false);
     };
+
+
+    const claimCreatorCommission = async () => {
+        if (!publicKey) {
+            return toast.error("Please connect your wallet.");
+        }
+    
+        setLoading(true);
+    
+        try {
+            if (!bettingProgram) {
+                console.error("Betting Program is NOT initialized!");
+                return alert("Betting program is not ready. Try reloading the page.");
+            }
+            
+
+            const [bettingQuestionPDA] = PublicKey.findProgramAddressSync(
+                [
+                    Buffer.from("betting_question"),
+                    BETTING_CONTRACT_PROGRAM_ID.toBuffer(), 
+                    new PublicKey(questionData.truth.questionKey).toBuffer(), 
+                ],
+                BETTING_CONTRACT_PROGRAM_ID
+            );
+            console.log("Claiming Commission for Betting Question PDA:", bettingQuestionPDA.toBase58());
+    
+            const [vaultPDA] = PublicKey.findProgramAddressSync(
+                [
+                    Buffer.from("bet_vault"),
+                    bettingQuestionPDA.toBuffer()
+                ],
+                bettingProgram.programId
+            );
+    
+            console.log("Vault PDA: ", vaultPDA.toBase58());
+    
+            const tx = await bettingProgram.methods
+                .claimCreatorCommission()
+                .accounts({
+                    bettingQuestion: bettingQuestionPDA,
+                    creator: publicKey,
+                    vault: vaultPDA,
+                    systemProgram: web3.SystemProgram.programId,
+                })
+                .rpc();
+    
+            console.log("Commission Claimed! Transaction:", tx);
+            toast.success("Commission claimed successfully!");
+    
+        } catch (error) {
+            console.error("Error claiming commission:", error);
+            toast.error("Failed to claim commission.");
+        }
+    
+        setLoading(false);
+    };
+    
     
     
     
@@ -366,6 +397,11 @@ const QuestionDetails = () => {
     console.log("Question Data Truth Key:", questionData.truth.questionKey);
     console.log("Truth Network Program ID:", truthNetworkProgram.programId.toBase58());
 
+    console.log("user address: ", publicKey?.toBase58())
+    console.log("creator address: ", questionData.betting.creator)
+    console.log("bet creator? : ", publicKey?.toBase58() === questionData.betting.creator)
+    console.log("creator commission: ", questionData.betting.totalCreatorCommission)
+
     return (
         <div className="flex flex-col min-h-screen justify-center items-center bg-gray-900 text-white">  
             <Link to="/">Back to List</Link>
@@ -382,6 +418,24 @@ const QuestionDetails = () => {
                     </p>
                 )}
 
+                {bettorData && (
+                    <div className="mt-6 bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-md">
+                        <p className="text-gray-300 mt-1">
+                        <strong>You have placed your bet on: </strong>
+                        {bettorData.chosenOption ? questionData.betting.option1 : questionData.betting.option2}
+                        </p>
+                        
+                        <p className="text-gray-300 mt-1">
+                        <strong>Bet Amount: </strong> 
+                        {bettorData.betAmount && bettorData.betAmount.toNumber 
+                            ? `${(bettorData.betAmount.toNumber() / 1_000_000_000).toFixed(2)} SOL`
+                            : "Invalid Amount"}
+                        </p>
+                    </div>
+                )}
+
+
+
                 {/* Betting Form */}
                 <div className="mt-4">
                     <input
@@ -395,14 +449,22 @@ const QuestionDetails = () => {
                         <button
                             onClick={() => handleBet(true)}
                             disabled={loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000)}
-                            className="flex-1 !bg-green-500 hover:!bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition"
+                            className={`flex-1 font-bold py-2 px-4 rounded-lg transition 
+                                ${loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000) 
+                                    ? "!bg-gray-500 cursor-not-allowed text-gray-300"
+                                    : "!bg-green-500 hover:bg-green-600 text-white"
+                                }`}
                         >
                             Bet on {questionData.betting.option1} (1: {option1Odds.toFixed(2)})
                         </button>
                         <button
                             onClick={() => handleBet(false)}
                             disabled={loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000)}
-                            className="flex-1 !bg-red-500 hover:!bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition"
+                            className={`flex-1 font-bold py-2 px-4 rounded-lg transition 
+                                ${loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000) 
+                                    ? "!bg-gray-500 cursor-not-allowed text-gray-300"
+                                    : "!bg-red-500 hover:bg-red-600 text-white" 
+                                }`}
                         >
                             Bet on {questionData.betting.option2} (1: {option2Odds.toFixed(2)})
                         </button>
@@ -473,7 +535,7 @@ const QuestionDetails = () => {
                     </button>
                 )}
 
-                {bettorData && questionData.truth.winningOption !== null && questionData.truth.winningPercent > 0 && questionData.truth.winningPercent > 75 && !bettorData.claimed && (
+                {bettorData && questionData.truth.winningOption !== null && questionData.truth.winningPercent > 0 && questionData.truth.winningPercent < 75 && !bettorData.claimed && (
                     <button
                         onClick={claimWinnings}
                         disabled={loading}
@@ -483,6 +545,18 @@ const QuestionDetails = () => {
                     </button>
                 )}
 
+
+                {publicKey?.toBase58() === questionData.betting.creator &&
+                    questionData.betting.totalCreatorCommission > 0 &&
+                    !questionData.betting.creatorCommissionClaimed && (
+                        <button
+                            onClick={claimCreatorCommission}
+                            disabled={loading}
+                            className="w-full mt-4 !bg-orange-500 hover:!bg-orange-600 text-white font-bold py-2 px-4 rounded-lg transition"
+                        >
+                            Claim Commission
+                        </button>
+                )}
 
 
                 {questionData.truth.winningOption !== null && (

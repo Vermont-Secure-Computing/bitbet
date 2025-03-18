@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import FetchQuestion from "./FetchQuestion"
@@ -39,8 +38,7 @@ function Home() {
                 </div>
             </div>
 
-            {/* Toast Notification */}
-            <ToastContainer />
+            
         </div>
     );
 }
