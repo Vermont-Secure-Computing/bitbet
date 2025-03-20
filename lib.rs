@@ -3,6 +3,7 @@ use anchor_lang::solana_program::{program::invoke, program::invoke_signed};
 use anchor_lang::solana_program::instruction::Instruction;
 use anchor_lang::solana_program::system_instruction;
 use anchor_lang::system_program;
+use anchor_lang::solana_program::rent::Rent;
 use std::str::FromStr;
 
 // Import the truth_network program
@@ -22,7 +23,7 @@ use truth_network::accounts::Question;
 
 pub const HOUSE_WALLET: &str = "6tBwNgSW17jiWoEuoGEyqwwH3Jkv86WN61FETFoHonof";
 
-declare_id!("7vVPVGsFoaBWr5GTNQLTgXdi8muHTPQVguijLqJ2sdo6");
+declare_id!("6ChkXsLJ4ux2AherhrdCqXZfEBoLcpBq7QkGfCt3ZdF");
 
 #[program]
 pub mod betting_contract {
@@ -90,12 +91,33 @@ pub mod betting_contract {
         let user = &ctx.accounts.user;
         let vault = &mut ctx.accounts.vault; // Betting vault (owned by Betting Program)
         let truth_vault = &mut ctx.accounts.truth_network_vault; // Truth-Network vault (owned by Truth-Network)
-    
         let system_program = &ctx.accounts.system_program;
-    
+
         // Ensure betting is still open
         let current_time = Clock::get()?.unix_timestamp;
         require!(current_time < betting_question.close_date, BettingError::BettingClosed);
+
+        let bump = ctx.bumps.bettor_account;
+
+        msg!("Bettor PDA: {}", ctx.accounts.bettor_account.key());
+        msg!("Bettor Exists?: {}", ctx.accounts.bettor_account.bettor_address != Pubkey::default());
+
+        if ctx.accounts.bettor_account.bettor_address == Pubkey::default() {
+            msg!("Initializing new Bettor Account...");
+            ctx.accounts.bettor_account.bettor_address = *user.key;
+            ctx.accounts.bettor_account.question_pda = betting_question.key();
+            ctx.accounts.bettor_account.chosen_option = is_option_1;
+            ctx.accounts.bettor_account.bet_amount = 0;
+            ctx.accounts.bettor_account.won = false;
+            ctx.accounts.bettor_account.winnings = 0;
+            ctx.accounts.bettor_account.claimed = false;
+        }
+
+        // Update bet amount
+        ctx.accounts.bettor_account.bet_amount += amount;
+
+        msg!("Bettor {} placed a bet of {} on option {}", user.key(), amount, is_option_1);
+
     
         // Deduct commissions
         let truth_network_commission = amount / 100;
@@ -114,23 +136,6 @@ pub mod betting_contract {
         }
         betting_question.total_pool += bet_after_commissions;
     
-        
-        // **Create BettorAccount**
-        let bettor_account = &mut ctx.accounts.bettor_account;
-
-        msg!("Initializing bettor account: {:?}", bettor_account.key());
-        msg!("Bet Amount: {}", amount);
-        msg!("User: {}", &ctx.accounts.user.key());
-        msg!("Betting Question PDA: {}", betting_question.key());
-
-        bettor_account.bettor_address = *user.key;
-        bettor_account.question_pda = betting_question.key();
-        bettor_account.chosen_option = is_option_1;
-        bettor_account.bet_amount = amount;
-        bettor_account.won = false; // Default false, updated after voting
-        bettor_account.winnings = 0; // Default 0, updated if won
-        msg!("Bettor Account Initialized");
-
     
         // Transfer the user's bet to the vault using System Program
         {
@@ -392,7 +397,8 @@ pub mod betting_contract {
         
                 msg!("Successfully transferred {} lamports to user {}!", user_winnings, user.key());
             }
-        
+
+            bettor_account.winnings = user_winnings;
             msg!("Claim successful! User {} received {} SOL", user.key(), user_winnings);
             
         } else {
@@ -415,6 +421,7 @@ pub mod betting_contract {
             vault.sub_lamports(refund_amount)?;
             user.add_lamports(refund_amount)?;
 
+            bettor_account.winnings = refund_amount;
             msg!("Refund successful! User {} received {} SOL", user.key(), refund_amount);
 
         }
@@ -564,7 +571,7 @@ pub struct PlaceBet<'info> {
     pub betting_question: Account<'info, BettingQuestion>,
     
     #[account(
-        init, 
+        init_if_needed, 
         payer = user, 
         space = 8 + 83, 
         seeds = [b"bettor", user.key().as_ref(), betting_question.key().as_ref()], 

@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import bettingIDL from "../idls/betting.json";
 import truthNetworkIDL from "../idls/truth_network.json";
 
+import { getTimeRemaining } from "../utils/getRemainingTime";
+
 const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
 const TRUTH_NETWORK_PROGRAM_ID = new PublicKey(import.meta.env.VITE_TRUTH_PROGRAM_ID);
 
@@ -147,7 +149,8 @@ const FetchQuestion = () => {
                         onClick={() => navigate(`/question/${q.betting.questionPda.toString()}`, { state: q })}
                         className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer border border-gray-700 shadow-md">
                         <strong className="text-lg text-blue-400">{q.betting.title}</strong>
-                        <p className="text-gray-500 text-sm">Betting will close on: {new Date(q.betting.closeDate * 1000).toLocaleString()}</p>
+                        {/* <p className="text-gray-500 text-sm">Betting will close on: {new Date(q.betting.closeDate * 1000).toLocaleString()}</p> */}
+                        <p className="text-gray-500 text-sm">{getTimeRemaining(q.betting.closeDate)}</p>
                         <p className="text-gray-500 text-sm">PDA: {q.betting.questionPda.toString()}</p>
                         <p className="text-gray-500 text-sm">Total Bets: {(new BN(q.betting.totalPool)  / 1_000_000_000).toString()} SOL</p>
                     </li>
