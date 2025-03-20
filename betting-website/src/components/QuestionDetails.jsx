@@ -202,7 +202,10 @@ const QuestionDetails = () => {
                 BETTING_CONTRACT_PROGRAM_ID
             );
             console.log("Derived Bettor PDA (Frontend):", bettorPda.toBase58());
-            
+
+            // Fetching Sysvar Rent account (Required for new accounts)
+            const sysvarRent = web3.SYSVAR_RENT_PUBKEY;
+
             const tx = await bettingProgram.methods
                 .placeBet(betAmountLamports, isOption1)
                 .accounts({
@@ -215,6 +218,7 @@ const QuestionDetails = () => {
                     truthNetworkProgram: truthNetworkProgram.programId,
                     systemProgram: web3.SystemProgram.programId,
                     truthNetworkVault: new PublicKey(questionData.truth.vaultAddress),
+                    rent: sysvarRent,
                 })
                 .rpc();
 
@@ -408,7 +412,7 @@ const QuestionDetails = () => {
             <div className="w-full max-w-2xl mx-auto p-6 border border-gray-600 rounded-lg shadow-lg bg-gray-800">
                 {/* Title */}
                 <h2 className="text-2xl font-bold text-gray-200">{questionData.betting.title}</h2>
-                <p className="text-gray-400 mt-2"><strong>Status:</strong> {questionData.betting.status}</p>
+                <p className="text-gray-400 mt-2"><strong>Status:</strong> {closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000 ? "Close" : "Open"}</p>
                 <p className="text-gray-300 mt-1"><strong>Options:</strong> {questionData.betting.option1} vs {questionData.betting.option2}</p>
                 <p className="text-gray-400 mt-1"><strong>Truth-Network Question:</strong> {questionData.truth.questionText}</p>
 
@@ -436,7 +440,7 @@ const QuestionDetails = () => {
 
 
 
-                {/* Betting Form */}
+                {/* // Betting Form
                 <div className="mt-4">
                     <input
                         type="number"
@@ -469,7 +473,65 @@ const QuestionDetails = () => {
                             Bet on {questionData.betting.option2} (1: {option2Odds.toFixed(2)})
                         </button>
                     </div>
+                </div> */}
+                {/* Betting Form */}
+                <div className="mt-4">
+                    <input
+                        type="number"
+                        placeholder="Enter bet amount"
+                        value={betAmount}
+                        onChange={(e) => setBetAmount(e.target.value)}
+                        className="w-full p-3 border border-gray-500 bg-gray-800 text-white rounded-md focus:outline-none focus:ring focus:ring-blue-500"
+                    />
+                    
+                    <div className="flex gap-4 mt-4">
+                        {/* Check if user already placed a bet */}
+                        {!bettorData?.chosenOption ? (
+                            // User hasn't placed a bet yet → Show both options
+                            <>
+                                <button
+                                    onClick={() => handleBet(true)}
+                                    disabled={loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000)}
+                                    className={`flex-1 font-bold py-2 px-4 rounded-lg transition 
+                                        ${loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000) 
+                                            ? "!bg-gray-500 cursor-not-allowed text-gray-300"
+                                            : "!bg-green-500 hover:bg-green-600 text-white"
+                                        }`}
+                                >
+                                    Bet on {questionData.betting.option1} (1: {option1Odds.toFixed(2)})
+                                </button>
+
+                                <button
+                                    onClick={() => handleBet(false)}
+                                    disabled={loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000)}
+                                    className={`flex-1 font-bold py-2 px-4 rounded-lg transition 
+                                        ${loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000) 
+                                            ? "!bg-gray-500 cursor-not-allowed text-gray-300"
+                                            : "!bg-red-500 hover:bg-red-600 text-white"
+                                        }`}
+                                >
+                                    Bet on {questionData.betting.option2} (1: {option2Odds.toFixed(2)})
+                                </button>
+                            </>
+                        ) : (
+                            // User already placed a bet → Show only their chosen option
+                            <button
+                                onClick={() => handleBet(bettorData.chosenOption)}
+                                disabled={loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000)}
+                                className={`flex-1 font-bold py-2 px-4 rounded-lg transition 
+                                    ${bettorData.chosenOption 
+                                        ? "!bg-green-500 hover:bg-green-600 text-white"
+                                        : "!bg-red-500 hover:bg-red-600 text-white"
+                                    }`}
+                            >
+                                Add Bet on {bettorData.chosenOption ? questionData.betting.option1 : questionData.betting.option2} 
+                                (1: {bettorData.chosenOption ? option1Odds.toFixed(2) : option2Odds.toFixed(2)})
+                            </button>
+                        )}
+                    </div>
                 </div>
+
+
 
                 {/* Betting Pool & Commissions */}
                 <div className="mt-6 bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-md">
@@ -521,7 +583,7 @@ const QuestionDetails = () => {
                         disabled={loading}
                         className="w-full mt-4 !bg-purple-500 hover:!bg-purple-600 text-white font-bold py-2 px-4 rounded-lg transition"
                     >
-                        Finalize Voting
+                        Get Result
                     </button>
                 )}
 
@@ -546,7 +608,7 @@ const QuestionDetails = () => {
                 )}
 
 
-                {publicKey?.toBase58() === questionData.betting.creator &&
+                {closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000 && publicKey?.toBase58() === questionData.betting.creator &&
                     questionData.betting.totalCreatorCommission > 0 &&
                     !questionData.betting.creatorCommissionClaimed && (
                         <button
