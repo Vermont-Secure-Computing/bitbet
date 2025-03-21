@@ -141,7 +141,7 @@ const FetchQuestion = () => {
 
     return (
         <div className="max-w-2xl mx-auto mt-10 p-6 border border-gray-600 rounded-lg shadow-lg bg-gray-900 text-white">
-            <h2 className="text-2xl font-bold text-gray-200">All Questions</h2>
+            <h2 className="text-2xl font-bold text-gray-200">All Events</h2>
             {loading ? <p className="text-gray-400">Loading...</p> : null}
             <ul className="mt-4 space-y-4">
                 {questions && questions.map((q, index) => (

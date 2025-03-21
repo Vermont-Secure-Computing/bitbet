@@ -23,7 +23,7 @@ use truth_network::accounts::Question;
 
 pub const HOUSE_WALLET: &str = "6tBwNgSW17jiWoEuoGEyqwwH3Jkv86WN61FETFoHonof";
 
-declare_id!("6ChkXsLJ4ux2AherhrdCqXZfEBoLcpBq7QkGfCt3ZdF");
+declare_id!("3S4TU7PyVSfCuwohusDqyww2YGWbB6LcWuh27VbEXN7y");
 
 #[program]
 pub mod betting_contract {
@@ -50,10 +50,23 @@ pub mod betting_contract {
         ctx: Context<CreateBettingQuestion>,
         title: String,
         close_date: i64,
-        reward_date: i64,
     ) -> Result<()> {
         let betting_question = &mut ctx.accounts.betting_question;
         let vault = &mut ctx.accounts.vault;
+
+        let current_timestamp = Clock::get()?.unix_timestamp;
+
+        // Ensure close_date is in the future
+        require!(
+            close_date > current_timestamp,
+            BettingError::InvalidCloseDate
+        );
+
+        // Ensure the title has greater than or equal to 10 and less than or equal to 150 characters
+        require!(
+            (10..=150).contains(&title.len()),
+            BettingError::InvalidTitleLength
+        );
 
         msg!("Creating Betting Question...");
         msg!("Title: {}", title);
@@ -63,15 +76,14 @@ pub mod betting_contract {
         betting_question.creator = *ctx.accounts.creator.key;
         betting_question.title = title;
         betting_question.question_pda = *ctx.accounts.question_pda.key;
-        betting_question.option1 = "Yes".to_string();
-        betting_question.option2 = "No".to_string();
+        betting_question.option1 = "True".to_string();
+        betting_question.option2 = "False".to_string();
         betting_question.total_bets_option1 = 0;
         betting_question.total_bets_option2 = 0;
         betting_question.total_pool = 0;
         betting_question.total_creator_commission = 0;
         betting_question.total_house_commision = 0;
         betting_question.close_date = close_date;
-        betting_question.reward_date = reward_date;
         betting_question.status = "open".to_string();
         betting_question.result = None;
         betting_question.vault = vault.key(); // This will store Vault PDA in BettingQuestion
@@ -96,6 +108,12 @@ pub mod betting_contract {
         // Ensure betting is still open
         let current_time = Clock::get()?.unix_timestamp;
         require!(current_time < betting_question.close_date, BettingError::BettingClosed);
+
+        // Ensure bet amount is at least 0.1 SOL (minimum bet)
+        require!(
+            amount >= 100_000_000, // 0.1 SOL in lamports
+            BettingError::MinimumBetNotMet
+        );
 
         let bump = ctx.bumps.bettor_account;
 
@@ -685,30 +703,52 @@ pub struct ClaimCreatorCommission<'info> {
 
 #[error_code]
 pub enum BettingError {
+
     #[msg("Betting is still active.")]
     BettingActive,
+
     #[msg("Betting is now closed.")]
     BettingClosed,
+
     #[msg("Invalid winning option.")]
     InvalidWinner,
+
     #[msg("Truth Network question not finalize.")]
     WinnerNotFinalized,
+
     #[msg("Winnings already claimed.")]
     AlreadyClaimed,
+
     #[msg("User did not win.")]
     UserDidNotWin,
+
     #[msg("Insufficient vault balance.")]
     InsufficientVaultBalance,
+
     #[msg("No winnings available..")]
     NoWinningsAvailable,
+
     #[msg("User is not authorized to claim winnings.")]
     UnauthorizedBettor,
+
     #[msg("Betting question mismatch.")]
     InvalidBettingQuestion,
+
     #[msg("No commission available to claim.")]
     NoCommissionAvailable,
+
     #[msg("Unathorized question creator.")]
     UnauthorizedCreator,
+
     #[msg("Commission already claimed.")]
-    CommissionAlreadyClaimed
+    CommissionAlreadyClaimed,
+
+    #[msg("Invalid close date. The close date must be in the future.")]
+    InvalidCloseDate,
+
+    #[msg("Invalid title length. Title must be between 10 and 150 characters.")]
+    InvalidTitleLength,
+    
+    #[msg("Minimum bet is 0.1 SOL.")]
+    MinimumBetNotMet,
 }

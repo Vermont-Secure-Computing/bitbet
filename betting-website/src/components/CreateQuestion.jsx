@@ -6,6 +6,8 @@ import truthNetworkIDL from "../idls/truth_network.json";
 import bettingIDL from "../idls/betting.json";
 import { toast } from "react-toastify";
 
+import ConfirmModal from "./ConfirmModal";
+
 const TRUTH_NETWORK_PROGRAM_ID = new PublicKey(import.meta.env.VITE_TRUTH_PROGRAM_ID);
 const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
 
@@ -15,10 +17,10 @@ const CreateQuestion = () => {
     const { wallet, publicKey, signTransaction, signAllTransactions, connected } = useWallet(); 
     const [questionText, setQuestionText] = useState("");
     const [bettingEndTime, setBettingEndTime] = useState(0);
-    const [rewardsTime, setRewardsTime] = useState(0);
     const [loading, setLoading] = useState(false);
     const [bettingProgram, setBettingProgram] = useState(null);
     const [truthNetworkProgram, setTruthNetworkProgram] = useState(null);
+    const [showConfirm, setShowConfirm] = useState(false);
 
     const walletAdapter = {
         publicKey,
@@ -59,6 +61,21 @@ const CreateQuestion = () => {
             console.log("Betting & Truth Network Programs Initialized.");
         }
     }, [connected, publicKey]);
+
+
+    const handleCreateClick = () => {
+        if (questionText.length < 10) 
+            return toast.error("Event must be at least 10 characters.");
+
+        if (questionText.length > 150) 
+            return toast.error("Event must be at max 150 characters.");
+
+        if (!bettingEndTime || new Date(bettingEndTime) <= new Date()) 
+            return toast.error("Close date must be in the future.");
+
+        setShowConfirm(true);
+    };
+
 
     const createQuestion = async () => {
         if (!publicKey) return alert("Please connect your wallet");
@@ -113,7 +130,6 @@ const CreateQuestion = () => {
             );
 
             const bettingEndTimeTimestamp = new BN(Math.floor(new Date(bettingEndTime).getTime() / 1000));
-            const rewardsTimeTimestamp = new BN(Math.floor(new Date(rewardsTime).getTime() / 1000));
 
 
             const rewardLamports = new BN(1_000_000_000); // For now, rewards defaults to 1 sol
@@ -121,10 +137,10 @@ const CreateQuestion = () => {
             const bettingTimestamp = Math.floor(selectedTime.getTime() / 1000);
 
             // Calculate commit and reveal times
-            // const commitEndTimeTimestamp = new BN(bettingTimestamp + 4 * 60 * 60); // +4 hours
-            // const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60 * 60); // +6 hours
-            const commitEndTimeTimestamp = new BN(bettingTimestamp + 3 * 60); // +3 minutes for testing purposes
-            const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60); // +6 minutes for testing purposes
+            const commitEndTimeTimestamp = new BN(bettingTimestamp + 4 * 60 * 60); // +4 hours
+            const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60 * 60); // +6 hours
+            // const commitEndTimeTimestamp = new BN(bettingTimestamp + 3 * 60); // +3 minutes for testing purposes
+            // const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60); // +6 minutes for testing purposes
 
             console.log("calculated commit end time: ", commitEndTimeTimestamp)
             console.log("calculated reveal end time: ", revealEndTimeTimestamp)
@@ -171,30 +187,24 @@ const CreateQuestion = () => {
             console.log("Vault PDA: ", bettingVaultPDA.toBase58());
 
             // Call Betting Smart Contract Create Question
-            console.log("Calling Betting Smart Contract createBettingQuestion function...");
-            console.log("question pda: ", questionPDA.toString())
-            console.log("questionText: ", questionText)
-            console.log("bettingEndTimeTimestamp: ", bettingEndTimeTimestamp)
-            console.log("rewardsTimeTimestamp: ", rewardsTimeTimestamp)
-
-            const walletSigner = wallet && wallet.adapter && signTransaction ? wallet.adapter : null;
-
-            console.log("Expected signer:", publicKey.toString());
-
-            console.log("Wallet Debugging:");
-            console.log("=== Wallet Connected:", connected);
-            console.log("=== Public Key:", publicKey ? publicKey.toString() : "No Public Key");
-            console.log("=== Wallet Object:", wallet ? wallet : "No Wallet");
-            console.log("=== Wallet Adapter:", wallet && wallet.adapter ? wallet.adapter : "No Adapter");
-            console.log("=== Wallet Sign Transaction:", signTransaction ? "Yes" : "No");
-
-            console.log("Final Signing Debug:");
-            console.log("=== BettingQuestion PDA:", bettingQuestionPDA.toString());
-            console.log("=== Creator:", publicKey.toString());
-            console.log("=== Using Signers:", wallet.adapter ? wallet.adapter.publicKey.toString() : "No Signer");
+            // console.log("Calling Betting Smart Contract createBettingQuestion function...");
+            // console.log("question pda: ", questionPDA.toString())
+            // console.log("questionText: ", questionText)
+            // console.log("bettingEndTimeTimestamp: ", bettingEndTimeTimestamp)
+            // console.log("Expected signer:", publicKey.toString());
+            // console.log("Wallet Debugging:");
+            // console.log("=== Wallet Connected:", connected);
+            // console.log("=== Public Key:", publicKey ? publicKey.toString() : "No Public Key");
+            // console.log("=== Wallet Object:", wallet ? wallet : "No Wallet");
+            // console.log("=== Wallet Adapter:", wallet && wallet.adapter ? wallet.adapter : "No Adapter");
+            // console.log("=== Wallet Sign Transaction:", signTransaction ? "Yes" : "No");
+            // console.log("Final Signing Debug:");
+            // console.log("=== BettingQuestion PDA:", bettingQuestionPDA.toString());
+            // console.log("=== Creator:", publicKey.toString());
+            // console.log("=== Using Signers:", wallet.adapter ? wallet.adapter.publicKey.toString() : "No Signer");
 
             const txBet = await bettingProgram.methods
-                .createBettingQuestion(questionText, bettingEndTimeTimestamp, revealEndTimeTimestamp) //rewardTimeTimestamp
+                .createBettingQuestion(questionText, bettingEndTimeTimestamp)
                 .accounts({
                     bettingQuestion: bettingQuestionPDA,
                     creator: publicKey,
@@ -205,21 +215,21 @@ const CreateQuestion = () => {
                 .rpc();
             
 
-            console.log("Betting Smart Contract Question Created! TX:", txBet);
-            console.log("Successfully created question in Betting Contract:", bettingQuestionPDA.toString());
-            toast.success("Question successfully created!");
+            console.log("Betting Smart Contract Event Created! TX:", txBet);
+            console.log("Successfully created event in Betting Contract:", bettingQuestionPDA.toString());
+            toast.success("Event successfully created!");
         } catch (error) {
             console.error("Transaction failed:", error);
-            alert(`Failed to create question. Error: ${error.message}`);
+            alert(`Failed to create event. Error: ${error.message}`);
         }
     };
 
     return (
         <div className="max-w-lg mx-auto p-6 bg-white shadow-lg text-gray-800 rounded-lg">
-            <h2 className="text-xl font-bold mb-4">Create a Betting Question</h2>
+            <h2 className="text-xl font-bold mb-4">Create an Event</h2>
             <input
                 type="text"
-                placeholder="Enter question..."
+                placeholder="Enter event..."
                 value={questionText}
                 onChange={(e) => setQuestionText(e.target.value)}
                 className="w-full p-2 border border-1 border-color-gray-400 text-gray-600 rounded-md mb-3"
@@ -232,21 +242,22 @@ const CreateQuestion = () => {
                 placeholder="Betting End Time" 
                 className="w-full p-2 border border-1 border-color-gray-400 text-gray-600  rounded-md mb-3"
             />
-            {/* <label>Resolution Date</label>
-            <input 
-                type="datetime-local" 
-                value={rewardsTime} 
-                onChange={(e) => setRewardsTime(e.target.value)} 
-                placeholder="Rewards Time" 
-                className="w-full p-2 border border-1 border-color-gray-400 text-gray-600  rounded-md mb-3"
-            /> */}
             <button
-                onClick={createQuestion}
+                onClick={handleCreateClick}
                 className="w-full !bg-blue-600 text-white py-2 rounded-md"
                 disabled={loading}
             >
-                {loading ? "Creating..." : "Create Question"}
+                {loading ? "Creating..." : "Create Event"}
             </button>
+
+            <ConfirmModal
+                isOpen={showConfirm}
+                onClose={() => setShowConfirm(false)}
+                onConfirm={() => {
+                    setShowConfirm(false);
+                    createQuestion();
+                }}
+            />
         </div>
     );
 };
