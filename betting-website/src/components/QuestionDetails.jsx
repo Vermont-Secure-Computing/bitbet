@@ -163,9 +163,17 @@ const QuestionDetails = () => {
 
     const handleBet = async (isOption1) => {
         if (!publicKey) return toast.error("Please connect your wallet.");
-        if (!betAmount || isNaN(betAmount) || betAmount <= 0) {
+        
+        const parsedBet = parseFloat(betAmount);
+
+        if (!parsedBet || isNaN(parsedBet) || parsedBet <= 0) {
             return toast.error("Enter a valid bet amount.", { transition: Bounce });
         }
+
+        if (parsedBet < 0.1) {
+            return toast.error("Minimum bet is 0.1 SOL.", { transition: Bounce });
+        }
+
 
         setLoading(true);
 
@@ -406,6 +414,9 @@ const QuestionDetails = () => {
     console.log("bet creator? : ", publicKey?.toBase58() === questionData.betting.creator)
     console.log("creator commission: ", questionData.betting.totalCreatorCommission)
 
+    console.log("bettor chosen option: ", bettorData?.chosenOption)
+    console.log("typeof: ", typeof bettorData?.chosenOption)
+
     return (
         <div className="flex flex-col min-h-screen justify-center items-center bg-gray-900 text-white">  
             <Link to="/">Back to List</Link>
@@ -439,41 +450,6 @@ const QuestionDetails = () => {
                 )}
 
 
-
-                {/* // Betting Form
-                <div className="mt-4">
-                    <input
-                        type="number"
-                        placeholder="Enter bet amount"
-                        value={betAmount}
-                        onChange={(e) => setBetAmount(e.target.value)}
-                        className="w-full p-3 border border-gray-500 bg-gray-800 text-white rounded-md focus:outline-none focus:ring focus:ring-blue-500"
-                    />
-                    <div className="flex gap-4 mt-4">
-                        <button
-                            onClick={() => handleBet(true)}
-                            disabled={loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000)}
-                            className={`flex-1 font-bold py-2 px-4 rounded-lg transition 
-                                ${loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000) 
-                                    ? "!bg-gray-500 cursor-not-allowed text-gray-300"
-                                    : "!bg-green-500 hover:bg-green-600 text-white"
-                                }`}
-                        >
-                            Bet on {questionData.betting.option1} (1: {option1Odds.toFixed(2)})
-                        </button>
-                        <button
-                            onClick={() => handleBet(false)}
-                            disabled={loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000)}
-                            className={`flex-1 font-bold py-2 px-4 rounded-lg transition 
-                                ${loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000) 
-                                    ? "!bg-gray-500 cursor-not-allowed text-gray-300"
-                                    : "!bg-red-500 hover:bg-red-600 text-white" 
-                                }`}
-                        >
-                            Bet on {questionData.betting.option2} (1: {option2Odds.toFixed(2)})
-                        </button>
-                    </div>
-                </div> */}
                 {/* Betting Form */}
                 <div className="mt-4">
                     <input
@@ -486,7 +462,7 @@ const QuestionDetails = () => {
                     
                     <div className="flex gap-4 mt-4">
                         {/* Check if user already placed a bet */}
-                        {!bettorData?.chosenOption ? (
+                        { typeof bettorData?.chosenOption !== 'boolean' ? (
                             // User hasn't placed a bet yet → Show both options
                             <>
                                 <button
@@ -519,13 +495,13 @@ const QuestionDetails = () => {
                                 onClick={() => handleBet(bettorData.chosenOption)}
                                 disabled={loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000)}
                                 className={`flex-1 font-bold py-2 px-4 rounded-lg transition 
-                                    ${bettorData.chosenOption 
+                                    ${bettorData?.chosenOption 
                                         ? "!bg-green-500 hover:bg-green-600 text-white"
                                         : "!bg-red-500 hover:bg-red-600 text-white"
                                     }`}
                             >
-                                Add Bet on {bettorData.chosenOption ? questionData.betting.option1 : questionData.betting.option2} 
-                                (1: {bettorData.chosenOption ? option1Odds.toFixed(2) : option2Odds.toFixed(2)})
+                                Add Bet on {bettorData?.chosenOption ? questionData.betting.option1 : questionData.betting.option2} 
+                                (1: {bettorData?.chosenOption ? option1Odds.toFixed(2) : option2Odds.toFixed(2)})
                             </button>
                         )}
                     </div>

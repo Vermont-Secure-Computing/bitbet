@@ -21,13 +21,13 @@ function Home() {
                             className={`px-6 py-3 ${activeTab === "fetch" ? "border-b-2 border-blue-500 text-blue-400" : "text-gray-400"} focus:outline-none`}
                             onClick={() => setActiveTab("fetch")}
                         >
-                            View Questions
+                            View Events
                         </button>
                         <button
                             className={`px-6 py-3 ${activeTab === "create" ? "border-b-2 border-green-500 text-green-400" : "text-gray-400"} focus:outline-none`}
                             onClick={() => setActiveTab("create")}
                         >
-                            Create Question
+                            Create Event
                         </button>
                     </div>
 

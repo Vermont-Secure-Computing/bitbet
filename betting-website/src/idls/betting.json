@@ -1,5 +1,5 @@
 {
-  "address": "6ChkXsLJ4ux2AherhrdCqXZfEBoLcpBq7QkGfCt3ZdF",
+  "address": "3S4TU7PyVSfCuwohusDqyww2YGWbB6LcWuh27VbEXN7y",
   "metadata": {
     "name": "betting_contract",
     "version": "0.1.0",
@@ -193,7 +193,7 @@
         },
         {
           "name": "betting_contract",
-          "address": "6ChkXsLJ4ux2AherhrdCqXZfEBoLcpBq7QkGfCt3ZdF"
+          "address": "3S4TU7PyVSfCuwohusDqyww2YGWbB6LcWuh27VbEXN7y"
         },
         {
           "name": "vault",
@@ -233,10 +233,6 @@
         },
         {
           "name": "close_date",
-          "type": "i64"
-        },
-        {
-          "name": "reward_date",
           "type": "i64"
         }
       ]
@@ -498,6 +494,21 @@
       "code": 6012,
       "name": "CommissionAlreadyClaimed",
       "msg": "Commission already claimed."
+    },
+    {
+      "code": 6013,
+      "name": "InvalidCloseDate",
+      "msg": "Invalid close date. The close date must be in the future."
+    },
+    {
+      "code": 6014,
+      "name": "InvalidTitleLength",
+      "msg": "Invalid title length. Title must be between 10 and 150 characters."
+    },
+    {
+      "code": 6015,
+      "name": "MinimumBetNotMet",
+      "msg": "Minimum bet is 0.1 SOL."
     }
   ],
   "types": [
