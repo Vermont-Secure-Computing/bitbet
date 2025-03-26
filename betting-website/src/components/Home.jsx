@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import "react-toastify/dist/ReactToastify.css";
+import { FaGithub } from 'react-icons/fa';
 
-import FetchQuestion from "./FetchQuestion"
+import FetchQuestion from "./FetchQuestion";
 import CreateQuestion from "./CreateQuestion";
 import CallHelloWorld from "./CallHelloWorld";
 
@@ -36,6 +37,18 @@ function Home() {
                         {activeTab === "fetch" ? <FetchQuestion /> : <CreateQuestion />}
                     </div>
                 </div>
+            </div>
+
+            <div className="mt-8 flex justify-center items-center gap-2 text-sm text-gray-400">
+                <FaGithub className="text-xl" />
+                <a
+                    href="https://github.com/Vermont-Secure-Computing/bitbet"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:underline"
+                >
+                    View BitBet on GitHub
+                </a>
             </div>
 
             

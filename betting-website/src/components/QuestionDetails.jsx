@@ -9,6 +9,8 @@ import { Link } from "react-router-dom";
 import bettingIDL from "../idls/betting.json";
 import truthNetworkIDL from "../idls/truth_network.json";
 
+import { getQuestionStatus } from "../utils/eventStatus";
+
 const connection = new web3.Connection("https://api.devnet.solana.com", "confirmed");
 const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
 
@@ -18,8 +20,7 @@ const QuestionDetails = () => {
     const location = useLocation();
     // Retrieve state data
     const questionState = location.state; 
-    const questionData = useMemo(() => questionState, [questionState]);
-    console.log("question details: ", questionData)
+    const [questionData, setQuestionData] = useState(() => questionState);
 
     const { publicKey, signTransaction, signAllTransactions } = useWallet();
     const walletAdapter = publicKey && signTransaction ? { 
@@ -40,6 +41,7 @@ const QuestionDetails = () => {
     const [bettorData, setBettorData] = useState(null);
     const [closeDate, setCloseDate] = useState(null)
     const [revealEndTime, setRevealEndTime] = useState(null)
+    const [status, setStatus] = useState(null);
 
 
     useEffect(() => {
@@ -59,6 +61,18 @@ const QuestionDetails = () => {
         }
     }, [questionData]);
 
+    useEffect(() => {
+        const getStatus = getQuestionStatus({
+            closeDate: new Date(questionData.betting.closeDate * 1000),
+            revealEndTime: questionData.truth.revealEndTime,
+            truthNetworkWinner: questionData.truth.winningOption,
+            winningPercentage: questionData.truth.winningPercent,
+            bettorData
+        });
+
+        setStatus(getStatus);
+    }, [bettorData])
+
 
     // Convert PublicKey back
     const bettingQuestionPDA = new PublicKey(questionData.betting.questionPda);
@@ -67,9 +81,6 @@ const QuestionDetails = () => {
     // convert BN fields back
     const option1Odds = questionData.betting.option1Odds;
     const option2Odds = questionData.betting.option2Odds;
-    const totalPool = questionData.betting.totalPool;
-    const totalBetsOption1 = questionData.betting.totalBetsOption1;
-    const totalBetsOption2 = questionData.betting.totalBetsOption2;
 
     const [bettingQuestion_PDA, setBettingQuestion_PDA] = useState(null);
     useEffect(() => {
@@ -87,9 +98,6 @@ const QuestionDetails = () => {
         setBettingQuestion_PDA(pda);
         console.log("Derived BettingQuestion PDA:", pda.toBase58());
     }, [questionData]);
-
-    //console.log("Derived BettingQuestion PDA:", bettingQuestionPDA.toBase58());
-
 
     if (!questionData) return <p>No question data available</p>;
 
@@ -145,13 +153,13 @@ const QuestionDetails = () => {
     
             const bettingVaultPubKey = new PublicKey(questionData.betting.vault.toString());
             const truthVaultPubKey = new PublicKey(questionData.truth.vaultAddress.toString());
-            console.log("bettinVault pubkey: ", bettingVaultPubKey)
+            //console.log("bettinVault pubkey: ", bettingVaultPubKey)
     
             const bettingVaultLamports = await connection.getBalance(bettingVaultPubKey);
             const truthVaultLamports = await connection.getBalance(truthVaultPubKey);
 
-            console.log("bettingVaultLamports: ", bettingVaultLamports)
-            console.log("truthVaultLamports: ", truthVaultLamports)
+            // console.log("bettingVaultLamports: ", bettingVaultLamports)
+            // console.log("truthVaultLamports: ", truthVaultLamports)
     
             setVaultBalance(Number(new BN(bettingVaultLamports)) / 1_000_000_000);
             setTruthVaultBalance(Number(new BN(truthVaultLamports)) / 1_000_000_000);
@@ -230,15 +238,6 @@ const QuestionDetails = () => {
                 })
                 .rpc();
 
-                
-
-            // Update UI (Re-fetch question details)
-            // const betAmountBN = new BN(betAmountLamports);
-            // const commissionRate = new BN(97);
-            // questionData.betting.totalPool = betAmountBN.mul(commissionRate).div(new BN(100)); // 3% deducted for commissions
-            // questionData.betting.totalHouseCommission += betAmountLamports * 0.01;
-            // questionData.betting.totalCreatorCommission += betAmountLamports * 0.01;
-
             setBetAmount("");
 
             toast.success("Bet placed successfully!", { transition: Bounce });
@@ -251,13 +250,65 @@ const QuestionDetails = () => {
         setLoading(false);
     };
 
+
+    const fetchUpdatedQuestionData = async () => {
+        try {
+            const bettingQuestionAccount = await bettingProgram.account.bettingQuestion.fetch(bettingQuestion_PDA);
+            const truthQuestionAccount = await truthNetworkProgram.account.question.fetch(truthNetworkQuestionPDA);
+    
+            // Convert any necessary fields again
+            const updatedData = {
+                betting: {
+                    ...bettingQuestionAccount,
+                    questionPda: bettingQuestionAccount.questionPda.toBase58(),
+                    totalPool: bettingQuestionAccount.totalPool.toString(),
+                    totalBetsOption1: bettingQuestionAccount.totalBetsOption1.toString(),
+                    totalBetsOption2: bettingQuestionAccount.totalBetsOption2.toString(),
+                    option1Odds: bettingQuestionAccount.option1Odds,
+                    option2Odds: bettingQuestionAccount.option2Odds,
+                    totalHouseCommision: bettingQuestionAccount.totalHouseCommision.toString(),
+                    totalCreatorCommission: bettingQuestionAccount.totalCreatorCommission.toString(),
+                    vault: bettingQuestionAccount.vault.toBase58(),
+                    closeDate: bettingQuestionAccount.closeDate.toNumber(),
+                    creator: bettingQuestionAccount.creator.toBase58(),
+                    houseCommissionClaimed: bettingQuestionAccount.houseCommissionClaimed,
+                    creatorCommissionClaimed: bettingQuestionAccount.creatorCommissionClaimed,
+                },
+                truth: {
+                    ...truthQuestionAccount,
+                    questionKey: truthQuestionAccount.questionKey.toBase58(),
+                    vaultAddress: truthQuestionAccount.vaultAddress.toBase58(),
+                    id: truthQuestionAccount.id.toString(),
+                    revealEndTime: truthQuestionAccount.revealEndTime.toNumber(),
+                    winningOption:
+                        truthQuestionAccount.winningOption === 1
+                            ? true
+                            : truthQuestionAccount.winningOption === 2
+                            ? false
+                            : null,
+                    winningPercent: truthQuestionAccount.winningPercent,
+                    finalized: truthQuestionAccount.finalized,
+                },
+            };
+    
+            // Update local state
+            setBettorData(null);
+            setStatus(null); 
+            setCloseDate(new Date(updatedData.betting.closeDate * 1000));
+            setRevealEndTime(new Date(updatedData.truth.revealEndTime * 1000));
+    
+            // Update overall questionData
+            setQuestionData(updatedData);
+        } catch (error) {
+            console.error("Error fetching updated question data:", error);
+            toast.error("Failed to refresh question data.");
+        }
+    };
+    
+
     const fetchWinner = async () => {
         if (!publicKey) return toast.error("Please connect your wallet.");
 
-        // console.log("truth question id: ", questionData.truth.id)
-        // console.log("betting question: ", questionData.betting.questionPda)
-        // console.log("truthNetworkQuestion: ", questionData.truth.questionKey)
-        // console.log("truthNetworkProgram: ", truthNetworkProgram.programId,)
         try {
             
             const tx = await bettingProgram.methods
@@ -272,8 +323,8 @@ const QuestionDetails = () => {
             console.log("Winner fetched & winners determined:", tx);
             toast.success("Winner fetched & winnings calculated!", { transition: Bounce });
 
-            // Fetch updated question details
-            //await fetchQuestionDetails();
+            await fetchUpdatedQuestionData();
+            await fetchBettorData(); 
         } catch (error) {
             console.error("Error fetching winner & determining winners:", error);
             toast.error("Failed to fetch winner & calculate winnings.", { transition: Bounce });
@@ -401,11 +452,6 @@ const QuestionDetails = () => {
     const option1Percentage = totalBets === 0 ? 50 : (Number(questionData.betting.totalBetsOption1) / totalBets) * 100;
     const option2Percentage = 100 - option1Percentage;
 
-    // console.log("option 1 odds: ", questionData.betting.option1Odds)
-    // console.log("is betting over: ", Date.now() / 1000 >= closeDate)
-    // console.log("close date: ", closeDate)
-    // console.log(revealEndTime)
-
     console.log("Question Data Truth Key:", questionData.truth.questionKey);
     console.log("Truth Network Program ID:", truthNetworkProgram.programId.toBase58());
 
@@ -421,17 +467,14 @@ const QuestionDetails = () => {
         <div className="flex flex-col min-h-screen justify-center items-center bg-gray-900 text-white">  
             <Link to="/">Back to List</Link>
             <div className="w-full max-w-2xl mx-auto p-6 border border-gray-600 rounded-lg shadow-lg bg-gray-800">
-                {/* Title */}
+                
                 <h2 className="text-2xl font-bold text-gray-200">{questionData.betting.title}</h2>
-                <p className="text-gray-400 mt-2"><strong>Status:</strong> {closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000 ? "Close" : "Open"}</p>
+                <p className="text-gray-400 mt-2">
+                    <strong>Status:</strong>{" "}
+                    <span className={status?.className}>{status?.label}</span>
+                </p>
                 <p className="text-gray-300 mt-1"><strong>Options:</strong> {questionData.betting.option1} vs {questionData.betting.option2}</p>
-                <p className="text-gray-400 mt-1"><strong>Truth-Network Question:</strong> {questionData.truth.questionText}</p>
-
-                {bettorData && bettorData.claimed && (
-                    <p className="mt-2 text-green-400 font-bold">
-                        Winnings Claimed!
-                    </p>
-                )}
+                {/* <p className="text-gray-400 mt-1"><strong>Truth-Network Question:</strong> {questionData.truth.questionText}</p> */}
 
                 {bettorData && (
                     <div className="mt-6 bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-md">
@@ -450,28 +493,31 @@ const QuestionDetails = () => {
                 )}
 
 
-                {/* Betting Form */}
-                <div className="mt-4">
-                    <input
-                        type="number"
-                        placeholder="Enter bet amount"
-                        value={betAmount}
-                        onChange={(e) => setBetAmount(e.target.value)}
-                        className="w-full p-3 border border-gray-500 bg-gray-800 text-white rounded-md focus:outline-none focus:ring focus:ring-blue-500"
-                    />
-                    
-                    <div className="flex gap-4 mt-4">
-                        {/* Check if user already placed a bet */}
-                        { typeof bettorData?.chosenOption !== 'boolean' ? (
-                            // User hasn't placed a bet yet → Show both options
-                            <>
+                {/* 
+                    Betting Form 
+                    Hidden when betting is closed    
+                */}
+                {closeDate && Date.now() / 1000 < closeDate.getTime() / 1000 && (
+                    <div className="mt-4">
+                        <input
+                            type="number"
+                            placeholder="Enter bet amount"
+                            value={betAmount}
+                            onChange={(e) => setBetAmount(e.target.value)}
+                            className="w-full p-3 border border-gray-500 bg-gray-800 text-white rounded-md focus:outline-none focus:ring focus:ring-blue-500"
+                        />
+
+                        <div className="flex gap-4 mt-4">
+                            {/* Check if user already placed a bet */}
+                            {typeof bettorData?.chosenOption !== 'boolean' ? (
+                                <>
                                 <button
                                     onClick={() => handleBet(true)}
-                                    disabled={loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000)}
+                                    disabled={loading}
                                     className={`flex-1 font-bold py-2 px-4 rounded-lg transition 
-                                        ${loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000) 
-                                            ? "!bg-gray-500 cursor-not-allowed text-gray-300"
-                                            : "!bg-green-500 hover:bg-green-600 text-white"
+                                        ${loading
+                                        ? "!bg-gray-500 cursor-not-allowed text-gray-300"
+                                        : "!bg-green-500 hover:bg-green-600 text-white"
                                         }`}
                                 >
                                     Bet on {questionData.betting.option1} (1: {option1Odds.toFixed(2)})
@@ -479,34 +525,33 @@ const QuestionDetails = () => {
 
                                 <button
                                     onClick={() => handleBet(false)}
-                                    disabled={loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000)}
+                                    disabled={loading}
                                     className={`flex-1 font-bold py-2 px-4 rounded-lg transition 
-                                        ${loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000) 
-                                            ? "!bg-gray-500 cursor-not-allowed text-gray-300"
-                                            : "!bg-red-500 hover:bg-red-600 text-white"
+                                        ${loading
+                                        ? "!bg-gray-500 cursor-not-allowed text-gray-300"
+                                        : "!bg-red-500 hover:bg-red-600 text-white"
                                         }`}
                                 >
                                     Bet on {questionData.betting.option2} (1: {option2Odds.toFixed(2)})
                                 </button>
-                            </>
-                        ) : (
-                            // User already placed a bet → Show only their chosen option
-                            <button
+                                </>
+                            ) : (
+                                <button
                                 onClick={() => handleBet(bettorData.chosenOption)}
-                                disabled={loading || (closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000)}
+                                disabled={loading}
                                 className={`flex-1 font-bold py-2 px-4 rounded-lg transition 
-                                    ${bettorData?.chosenOption 
-                                        ? "!bg-green-500 hover:bg-green-600 text-white"
-                                        : "!bg-red-500 hover:bg-red-600 text-white"
+                                    ${bettorData?.chosenOption
+                                    ? "!bg-green-500 hover:bg-green-600 text-white"
+                                    : "!bg-red-500 hover:bg-red-600 text-white"
                                     }`}
-                            >
+                                >
                                 Add Bet on {bettorData?.chosenOption ? questionData.betting.option1 : questionData.betting.option2} 
                                 (1: {bettorData?.chosenOption ? option1Odds.toFixed(2) : option2Odds.toFixed(2)})
-                            </button>
-                        )}
+                                </button>
+                            )}
+                        </div>
                     </div>
-                </div>
-
+                )}
 
 
                 {/* Betting Pool & Commissions */}
@@ -604,6 +649,14 @@ const QuestionDetails = () => {
                         </p>
                         <p className="text-gray-400 mt-1">
                             <strong>Winning Percentage:</strong> {questionData.truth.winningPercent.toFixed(2)}%
+                        </p>
+
+                        {/* Informational note */}
+                        <p className="text-yellow-400 text-sm mt-2">
+                            Note: A winner is declared only if the winning percentage is
+                            <strong> 75% or higher</strong>. Otherwise, the event is considered
+                            <strong> unresolved</strong>, and all users can claim a
+                            <strong> refund</strong> of their bet.
                         </p>
                     </>
                 )}
