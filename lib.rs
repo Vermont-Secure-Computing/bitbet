@@ -23,7 +23,7 @@ use truth_network::accounts::Question;
 
 pub const HOUSE_WALLET: &str = "6tBwNgSW17jiWoEuoGEyqwwH3Jkv86WN61FETFoHonof";
 
-declare_id!("3S4TU7PyVSfCuwohusDqyww2YGWbB6LcWuh27VbEXN7y");
+declare_id!("6wTqNTS1AD9Kyb6nHD27Ef93ggJ1jPDeUKZsmcJqxeSu");
 
 #[program]
 pub mod betting_contract {

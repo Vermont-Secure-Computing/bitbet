@@ -7,6 +7,7 @@ import bettingIDL from "../idls/betting.json";
 import truthNetworkIDL from "../idls/truth_network.json";
 
 import { getTimeRemaining } from "../utils/getRemainingTime";
+import { renderPagination } from "../utils/pagination";
 
 const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
 const TRUTH_NETWORK_PROGRAM_ID = new PublicKey(import.meta.env.VITE_TRUTH_PROGRAM_ID);
@@ -15,8 +16,13 @@ const TRUTH_NETWORK_PROGRAM_ID = new PublicKey(import.meta.env.VITE_TRUTH_PROGRA
 const FetchQuestion = () => {
     const { publicKey, connected } = useWallet();
     const navigate = useNavigate();
-    const [questions, setQuestions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [allQuestions, setAllQuestions] = useState([]);
+    const [currentQuestions, setCurrentQuestions] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const questionsPerPage = 10;
+    const totalPages = Math.ceil(allQuestions.length / questionsPerPage);
 
     // Setup Provider & Programs
     const connection = new web3.Connection("https://api.devnet.solana.com", "confirmed");
@@ -27,7 +33,6 @@ const FetchQuestion = () => {
     };
 
     const provider = new AnchorProvider(connection, wallet, { preflightCommitment: "processed" });
-
     const bettingProgram = new Program(bettingIDL, provider);
     const truthNetworkProgram = new Program(truthNetworkIDL, provider);
 
@@ -80,23 +85,10 @@ const FetchQuestion = () => {
                     const betCreator = bettingQuestion.account.creator.toString();
 
                     
-
-                    console.log("totalPool: ", totalPool.toString())
-                    console.log("totalBetsOption1: ", totalBetsOption1.toString())
-                    console.log("option1Odds: ", bettingQuestion.account.option1Odds)
-                    console.log("totalBetsOption2: ", totalBetsOption2.toString())
-                    console.log("option2Odds: ", typeof bettingQuestion.account.option1Odds)
-                    console.log("totalHouseCommission: ", totalHouseCommission.toString())
-                    console.log("totalCreatorCommission: ", totalCreatorCommission.toString())
-                    console.log("bet closing: ", betClosing.toString())
-                    console.log("bet creator: ", bettingQuestion.account.creator.toString())
                     try {
                         const truthQuestion = await truthNetworkProgram.account.question.fetch(
                             bettingQuestion.account.questionPda
                         );
-                        console.log("truthQuestion: ", truthQuestion)
-                        console.log("truth question id: ", truthQuestion.id.toString())
-                        console.log("reveal end time: ", truthQuestion.revealEndTime.toString())
                         
                         return {
                             betting: {
@@ -129,8 +121,21 @@ const FetchQuestion = () => {
                 })
             );
 
-            console.log("Fetched Questions:", questionsWithDetails);
-            setQuestions(questionsWithDetails);
+            /***
+             * Sort the questionsWithDetails from active to closed events
+             * Active - sort open questions by soonest close date
+             */
+            const now = Math.floor(Date.now() / 1000);
+            const openQuestions = questionsWithDetails
+                .filter(q => q && q.betting.closeDate > now)
+                .sort((a, b) => a.betting.closeDate - b.betting.closeDate);
+            const closedQuestions = questionsWithDetails
+                .filter(q => q && q.betting.closeDate <= now)
+                .sort((a, b) => b.betting.closeDate - a.betting.closeDate);
+
+            const sortedQuestions = [...openQuestions, ...closedQuestions];
+            console.log("sortedQuestions: ", sortedQuestions)
+            setAllQuestions(sortedQuestions);
         } catch (error) {
             console.error("Error fetching questions:", error);
             alert("Failed to fetch questions.");
@@ -139,23 +144,44 @@ const FetchQuestion = () => {
         }
     };
 
+    useEffect(() => {
+        const startIndex = (currentPage - 1) * questionsPerPage;
+        const pageSlice = allQuestions.slice(startIndex, startIndex + questionsPerPage);
+        setCurrentQuestions(pageSlice);
+    }, [currentPage, allQuestions]);
+
+    useEffect(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }, [currentPage]);
+
+
     return (
         <div className="max-w-2xl mx-auto mt-10 p-6 border border-gray-600 rounded-lg shadow-lg bg-gray-900 text-white">
             <h2 className="text-2xl font-bold text-gray-200">All Events</h2>
             {loading ? <p className="text-gray-400">Loading...</p> : null}
             <ul className="mt-4 space-y-4">
-                {questions && questions.map((q, index) => (
+                {currentQuestions && currentQuestions.map((q, index) => (
                     <li key={index} 
                         onClick={() => navigate(`/question/${q.betting.questionPda.toString()}`, { state: q })}
-                        className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer border border-gray-700 shadow-md">
-                        <strong className="text-lg text-blue-400">{q.betting.title}</strong>
-                        {/* <p className="text-gray-500 text-sm">Betting will close on: {new Date(q.betting.closeDate * 1000).toLocaleString()}</p> */}
-                        <p className="text-gray-500 text-sm">{getTimeRemaining(q.betting.closeDate)}</p>
-                        <p className="text-gray-500 text-sm">PDA: {q.betting.questionPda.toString()}</p>
+                        className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer border border-gray-700 shadow-md"
+                    >
+                        <strong className="text-lg text-blue-400">
+                            {q.betting.title}
+                            {q.hasBet && <span className="text-green-400 text-xs bg-green-900 px-2 py-1 rounded-md">Bet Placed</span>}
+                        </strong>
+                        <p className="text-sm">
+                            <span className={q.betting.closeDate <= Math.floor(Date.now() / 1000) ? "text-red-500" : "text-green-500"}>
+                                {getTimeRemaining(q.betting.closeDate)}
+                            </span>
+                        </p>
+                        <p className="text-gray-500 text-sm break-all">PDA: {q.betting.questionPda.toString()}</p>
                         <p className="text-gray-500 text-sm">Total Bets: {(new BN(q.betting.totalPool)  / 1_000_000_000).toString()} SOL</p>
                     </li>
                 ))}
             </ul>
+
+            {totalPages > 1 && renderPagination( currentPage, totalPages, setCurrentPage )}
+
         </div>
     );
 };
