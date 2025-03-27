@@ -158,7 +158,8 @@ const FetchQuestion = () => {
     return (
         <div className="max-w-2xl mx-auto mt-10 p-6 border border-gray-600 rounded-lg shadow-lg bg-gray-900 text-white">
             <h2 className="text-2xl font-bold text-gray-200">All Events</h2>
-            {loading ? <p className="text-gray-400">Loading...</p> : null}
+            <p className="text-sm text-gray-400">Note: All bets are resolved two (2) days after betting close date.</p>
+            {loading ? <p className="mt-4 text-gray-400">Loading...</p> : null}
             <ul className="mt-4 space-y-4">
                 {currentQuestions && currentQuestions.map((q, index) => (
                     <li key={index} 

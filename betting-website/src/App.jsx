@@ -14,9 +14,12 @@ function App() {
             {/* Header */}
             <header className="w-full bg-gray-800 py-4 shadow-lg">
                 <div className="container mx-auto flex justify-between items-center px-6">
-                    <Link to="/" className="text-2xl font-bold !text-white">
-                        BitBet
-                    </Link>
+                    <div>
+                        <Link to="/" className="text-2xl font-bold !text-white">
+                            BitBet
+                        </Link>
+                        <p className="text-sm text-gray-300">Running on Devnet</p>
+                    </div>
                     <WalletMultiButton />
                 </div>
             </header>

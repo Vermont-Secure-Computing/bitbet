@@ -131,14 +131,13 @@ const CreateQuestion = () => {
 
             const bettingEndTimeTimestamp = new BN(Math.floor(new Date(bettingEndTime).getTime() / 1000));
 
-
-            const rewardLamports = new BN(1_000_000_000); // For now, rewards defaults to 1 sol
+            const rewardLamports = new BN(100_000_000); // For now, rewards defaults to 0.1 sol
             const selectedTime = new Date(bettingEndTime);
             const bettingTimestamp = Math.floor(selectedTime.getTime() / 1000);
 
             // Calculate commit and reveal times
-            const commitEndTimeTimestamp = new BN(bettingTimestamp + 4 * 60 * 60); // +4 hours
-            const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60 * 60); // +6 hours
+            const commitEndTimeTimestamp = new BN(bettingTimestamp + 24 * 60 * 60); // +one day after betting close date
+            const revealEndTimeTimestamp = new BN(bettingTimestamp + 48 * 60 * 60); // +two days after betting close date
             // const commitEndTimeTimestamp = new BN(bettingTimestamp + 3 * 60); // +3 minutes for testing purposes
             // const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60); // +6 minutes for testing purposes
 

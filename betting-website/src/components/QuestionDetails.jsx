@@ -463,6 +463,8 @@ const QuestionDetails = () => {
     console.log("bettor chosen option: ", bettorData?.chosenOption)
     console.log("typeof: ", typeof bettorData?.chosenOption)
 
+    console.log("question data: ", questionData)
+
     return (
         <div className="flex flex-col min-h-screen justify-center items-center bg-gray-900 text-white">  
             <Link to="/">Back to List</Link>
@@ -618,7 +620,7 @@ const QuestionDetails = () => {
                     </button>
                 )}
 
-                {bettorData && questionData.truth.winningOption !== null && questionData.truth.winningPercent > 0 && questionData.truth.winningPercent < 75 && !bettorData.claimed && (
+                {bettorData && questionData.truth.winningOption !== null && questionData.truth.winningPercent < 75 && !bettorData.claimed && (
                     <button
                         onClick={claimWinnings}
                         disabled={loading}
