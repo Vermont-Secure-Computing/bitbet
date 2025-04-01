@@ -5,6 +5,9 @@ import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
 import { clusterApiUrl } from "@solana/web3.js";
+import { Buffer } from "buffer";
+
+window.Buffer = Buffer;
 
 // Import default styles for Wallet Adapter UI
 import "@solana/wallet-adapter-react-ui/styles.css";

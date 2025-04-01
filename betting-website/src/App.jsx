@@ -6,12 +6,14 @@ import { ToastContainer } from "react-toastify";
 import CallHelloWorld from "./components/CallHelloWorld";
 import QuestionDetails from "./components/QuestionDetails";
 import Home from "./components/Home";
+import UserDashboard from "./components/UserDashboard";
+import Header from "./components/Header";
 
 function App() {
 
     return (
         <Router>
-            {/* Header */}
+            {/* Header 
             <header className="w-full bg-gray-800 py-4 shadow-lg">
                 <div className="container mx-auto flex justify-between items-center px-6">
                     <div>
@@ -22,13 +24,17 @@ function App() {
                     </div>
                     <WalletMultiButton />
                 </div>
-            </header>
+            </header>*/}
+            <Header />
             <Routes>
                 {/* Home Page (Tabs for Viewing & Creating Questions) */}
                 <Route path="/" element={<Home />} />
 
-                {/* Question Details Page (Completely Separate) */}
+                {/* Question Details Page */}
                 <Route path="/question/:questionPda" element={<QuestionDetails />} />
+
+                {/* User Dashboard */}
+                <Route path="/dashboard" element={<UserDashboard />} />
             </Routes>
             {/* Toast Notification */}
             <ToastContainer />

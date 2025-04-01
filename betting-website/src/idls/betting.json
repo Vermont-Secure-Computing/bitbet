@@ -1,5 +1,5 @@
 {
-  "address": "6wTqNTS1AD9Kyb6nHD27Ef93ggJ1jPDeUKZsmcJqxeSu",
+  "address": "EXTe4WJaQHyKew4TWKRPorMenPjbeYdhsXQpypS3oECT",
   "metadata": {
     "name": "betting_contract",
     "version": "0.1.0",
@@ -30,7 +30,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "5CmM5VFJWKDozFLZ27mWEJ2a1dK7ctXVMCwWteKbW2jT"
+          "address": "FU9yzzBojVdo9oX6nYmB7bE3upgfzSfznHuSCaY5ejmJ"
         }
       ],
       "args": []
@@ -193,7 +193,7 @@
         },
         {
           "name": "betting_contract",
-          "address": "6wTqNTS1AD9Kyb6nHD27Ef93ggJ1jPDeUKZsmcJqxeSu"
+          "address": "EXTe4WJaQHyKew4TWKRPorMenPjbeYdhsXQpypS3oECT"
         },
         {
           "name": "vault",
@@ -260,7 +260,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "5CmM5VFJWKDozFLZ27mWEJ2a1dK7ctXVMCwWteKbW2jT"
+          "address": "FU9yzzBojVdo9oX6nYmB7bE3upgfzSfznHuSCaY5ejmJ"
         },
         {
           "name": "house_wallet",
@@ -352,7 +352,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "5CmM5VFJWKDozFLZ27mWEJ2a1dK7ctXVMCwWteKbW2jT"
+          "address": "FU9yzzBojVdo9oX6nYmB7bE3upgfzSfznHuSCaY5ejmJ"
         },
         {
           "name": "system_program",
@@ -371,6 +371,38 @@
         {
           "name": "is_option_1",
           "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "set_claim_tx_id",
+      "discriminator": [
+        36,
+        11,
+        252,
+        3,
+        48,
+        43,
+        238,
+        170
+      ],
+      "accounts": [
+        {
+          "name": "bettor_account",
+          "writable": true
+        },
+        {
+          "name": "bettor_address",
+          "signer": true,
+          "relations": [
+            "bettor_account"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "tx_sig",
+          "type": "string"
         }
       ]
     }
@@ -521,6 +553,10 @@
         "kind": "struct",
         "fields": [
           {
+            "name": "id",
+            "type": "pubkey"
+          },
+          {
             "name": "question_pda",
             "type": "pubkey"
           },
@@ -645,6 +681,15 @@
           {
             "name": "claimed",
             "type": "bool"
+          },
+          {
+            "name": "claim_tx_id",
+            "type": {
+              "array": [
+                "u8",
+                88
+              ]
+            }
           }
         ]
       }

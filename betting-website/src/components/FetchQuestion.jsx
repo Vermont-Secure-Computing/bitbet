@@ -93,6 +93,7 @@ const FetchQuestion = () => {
                         return {
                             betting: {
                                 ...bettingQuestion.account,
+                                id: bettingQuestion.account.id.toBase58(),
                                 questionPda: bettingQuestion.account.questionPda.toBase58(),
                                 totalPool: totalPool.toString(),
                                 totalBetsOption1: totalBetsOption1.toString(),
@@ -163,7 +164,7 @@ const FetchQuestion = () => {
             <ul className="mt-4 space-y-4">
                 {currentQuestions && currentQuestions.map((q, index) => (
                     <li key={index} 
-                        onClick={() => navigate(`/question/${q.betting.questionPda.toString()}`, { state: q })}
+                        onClick={() => navigate(`/question/${q.betting.id.toString()}`, { state: q })}
                         className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer border border-gray-700 shadow-md"
                     >
                         <strong className="text-lg text-blue-400">
@@ -175,7 +176,7 @@ const FetchQuestion = () => {
                                 {getTimeRemaining(q.betting.closeDate)}
                             </span>
                         </p>
-                        <p className="text-gray-500 text-sm break-all">PDA: {q.betting.questionPda.toString()}</p>
+                        <p className="text-gray-500 text-sm break-all">PDA: {q.betting.id.toString()}</p>
                         <p className="text-gray-500 text-sm">Total Bets: {(new BN(q.betting.totalPool)  / 1_000_000_000).toString()} SOL</p>
                     </li>
                 ))}
