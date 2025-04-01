@@ -78,6 +78,9 @@ const CreateQuestion = () => {
 
 
     const createQuestion = async () => {
+
+        setLoading(true);
+
         if (!publicKey) return alert("Please connect your wallet");
         if (!questionText || !bettingEndTime ) return alert("All fields are required");
         if (!connected) {
@@ -185,23 +188,6 @@ const CreateQuestion = () => {
 
             console.log("Vault PDA: ", bettingVaultPDA.toBase58());
 
-            // Call Betting Smart Contract Create Question
-            // console.log("Calling Betting Smart Contract createBettingQuestion function...");
-            // console.log("question pda: ", questionPDA.toString())
-            // console.log("questionText: ", questionText)
-            // console.log("bettingEndTimeTimestamp: ", bettingEndTimeTimestamp)
-            // console.log("Expected signer:", publicKey.toString());
-            // console.log("Wallet Debugging:");
-            // console.log("=== Wallet Connected:", connected);
-            // console.log("=== Public Key:", publicKey ? publicKey.toString() : "No Public Key");
-            // console.log("=== Wallet Object:", wallet ? wallet : "No Wallet");
-            // console.log("=== Wallet Adapter:", wallet && wallet.adapter ? wallet.adapter : "No Adapter");
-            // console.log("=== Wallet Sign Transaction:", signTransaction ? "Yes" : "No");
-            // console.log("Final Signing Debug:");
-            // console.log("=== BettingQuestion PDA:", bettingQuestionPDA.toString());
-            // console.log("=== Creator:", publicKey.toString());
-            // console.log("=== Using Signers:", wallet.adapter ? wallet.adapter.publicKey.toString() : "No Signer");
-
             const txBet = await bettingProgram.methods
                 .createBettingQuestion(questionText, bettingEndTimeTimestamp)
                 .accounts({
@@ -216,8 +202,10 @@ const CreateQuestion = () => {
 
             console.log("Betting Smart Contract Event Created! TX:", txBet);
             console.log("Successfully created event in Betting Contract:", bettingQuestionPDA.toString());
+            setLoading(false)
             toast.success("Event successfully created!");
         } catch (error) {
+            setLoading(false)
             console.error("Transaction failed:", error);
             alert(`Failed to create event. Error: ${error.message}`);
         }
@@ -246,7 +234,17 @@ const CreateQuestion = () => {
                 className="w-full !bg-blue-600 text-white py-2 rounded-md"
                 disabled={loading}
             >
-                {loading ? "Creating..." : "Create Event"}
+                {loading ? 
+                    (
+                        <span className="flex items-center justify-center">
+                            Submitting <span className="dot-animate">.</span>
+                            <span className="dot-animate dot2">.</span>
+                            <span className="dot-animate dot3">.</span>
+                        </span>
+                    ) 
+                    :
+                    "Create Event"
+                }
             </button>
 
             <ConfirmModal

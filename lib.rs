@@ -23,7 +23,7 @@ use truth_network::accounts::Question;
 
 pub const HOUSE_WALLET: &str = "6tBwNgSW17jiWoEuoGEyqwwH3Jkv86WN61FETFoHonof";
 
-declare_id!("6wTqNTS1AD9Kyb6nHD27Ef93ggJ1jPDeUKZsmcJqxeSu");
+declare_id!("EXTe4WJaQHyKew4TWKRPorMenPjbeYdhsXQpypS3oECT");
 
 #[program]
 pub mod betting_contract {
@@ -73,6 +73,7 @@ pub mod betting_contract {
         msg!("Received Truth-Network Question PDA: {}", ctx.accounts.question_pda.key());
 
         // Store betting question details
+        betting_question.id = betting_question.key();
         betting_question.creator = *ctx.accounts.creator.key;
         betting_question.title = title;
         betting_question.question_pda = *ctx.accounts.question_pda.key;
@@ -207,7 +208,8 @@ pub mod betting_contract {
         let cpi_accounts = UpdateReward {
             question: ctx.accounts.truth_network_question.to_account_info(),
             updater: ctx.accounts.bet_program.to_account_info(),
-        };
+            //vault: ctx.accounts.truth_network_vault.to_account_info(), 
+        }; 
         let cpi_context = CpiContext::new(ctx.accounts.truth_network_program.to_account_info(), cpi_accounts);
         update_reward(cpi_context, truth_network_commission)?;
         msg!("Truth network question rewards updated with {}", truth_network_commission);
@@ -451,6 +453,20 @@ pub mod betting_contract {
     }
 
 
+    pub fn set_claim_tx_id(ctx: Context<SetClaimTxId>, tx_sig: String) -> Result<()> {
+        let bettor = &mut ctx.accounts.bettor_account;
+    
+        let bytes = tx_sig.as_bytes();
+        let len = bytes.len().min(88);
+        bettor.claim_tx_id[..len].copy_from_slice(&bytes[..len]);
+        for i in len..88 {
+            bettor.claim_tx_id[i] = 0;
+        }
+    
+        Ok(())
+    }
+
+
     pub fn claim_creator_commission(ctx: Context<ClaimCreatorCommission>) -> Result<()> {
         let betting_question = &mut ctx.accounts.betting_question;
         let creator = &ctx.accounts.creator;
@@ -502,6 +518,7 @@ pub struct Vault {} // PDA for holding bets SOL
 /// Betting Question Struct (Linked to Truth-Network Question)
 #[account]
 pub struct BettingQuestion {
+    pub id: Pubkey, // Betting question id
     pub question_pda: Pubkey, // Reference to Truth-Network Question
     pub creator: Pubkey,
     pub title: String,
@@ -591,7 +608,7 @@ pub struct PlaceBet<'info> {
     #[account(
         init_if_needed, 
         payer = user, 
-        space = 8 + 83, 
+        space = 8 + 179, 
         seeds = [b"bettor", user.key().as_ref(), betting_question.key().as_ref()], 
         bump)]
     pub bettor_account: Account<'info, BettorAccount>,
@@ -627,7 +644,19 @@ pub struct BettorAccount {
     pub bet_amount: u64,
     pub won: bool,
     pub winnings: u64,
-    pub claimed: bool
+    pub claimed: bool,
+    pub claim_tx_id: [u8; 88],
+}
+
+
+#[derive(Accounts)]
+pub struct SetClaimTxId<'info> {
+    #[account(mut, has_one = bettor_address)]
+    pub bettor_account: Account<'info, BettorAccount>,
+
+    /// CHECK: This is safe because we verify it matches `bettor_account.bettor_address` via `has_one`
+    #[account(signer)]
+    pub bettor_address: AccountInfo<'info>,
 }
 
 
