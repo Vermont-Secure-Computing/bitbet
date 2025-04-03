@@ -1,5 +1,5 @@
 {
-  "address": "EXTe4WJaQHyKew4TWKRPorMenPjbeYdhsXQpypS3oECT",
+  "address": "EQfpyvA4SjwBKjVXASyXJfHyYkUTkFHRpCRECDrRHn4v",
   "metadata": {
     "name": "betting_contract",
     "version": "0.1.0",
@@ -30,7 +30,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "FU9yzzBojVdo9oX6nYmB7bE3upgfzSfznHuSCaY5ejmJ"
+          "address": "5eSEdSRgVcv2rfnAw5iY6dTNUGSSFfUVkUSkN55rmezq"
         }
       ],
       "args": []
@@ -193,7 +193,7 @@
         },
         {
           "name": "betting_contract",
-          "address": "EXTe4WJaQHyKew4TWKRPorMenPjbeYdhsXQpypS3oECT"
+          "address": "EQfpyvA4SjwBKjVXASyXJfHyYkUTkFHRpCRECDrRHn4v"
         },
         {
           "name": "vault",
@@ -238,6 +238,37 @@
       ]
     },
     {
+      "name": "delete_bettor_account",
+      "discriminator": [
+        52,
+        186,
+        54,
+        226,
+        98,
+        236,
+        195,
+        175
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "bettor_account",
+          "writable": true
+        },
+        {
+          "name": "truth_question"
+        },
+        {
+          "name": "betting_question"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "fetch_and_store_winner",
       "discriminator": [
         95,
@@ -260,7 +291,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "FU9yzzBojVdo9oX6nYmB7bE3upgfzSfznHuSCaY5ejmJ"
+          "address": "5eSEdSRgVcv2rfnAw5iY6dTNUGSSFfUVkUSkN55rmezq"
         },
         {
           "name": "house_wallet",
@@ -352,7 +383,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "FU9yzzBojVdo9oX6nYmB7bE3upgfzSfznHuSCaY5ejmJ"
+          "address": "5eSEdSRgVcv2rfnAw5iY6dTNUGSSFfUVkUSkN55rmezq"
         },
         {
           "name": "system_program",
@@ -541,6 +572,21 @@
       "code": 6015,
       "name": "MinimumBetNotMet",
       "msg": "Minimum bet is 0.1 SOL."
+    },
+    {
+      "code": 6016,
+      "name": "DeleteUnauthorizedBettor",
+      "msg": "Only the original bettor can delete this record."
+    },
+    {
+      "code": 6017,
+      "name": "NotReadyToDelete",
+      "msg": "You haven't claimed, refunded, or lost the bet."
+    },
+    {
+      "code": 6018,
+      "name": "BettingNotYetFinalized",
+      "msg": "The event is not finalized yet."
     }
   ],
   "types": [
@@ -728,10 +774,6 @@
             "type": "string"
           },
           {
-            "name": "reward",
-            "type": "u64"
-          },
-          {
             "name": "commit_end_time",
             "type": "i64"
           },
@@ -774,6 +816,30 @@
           {
             "name": "reward_fee_taken",
             "type": "bool"
+          },
+          {
+            "name": "snapshot_reward",
+            "type": "u64"
+          },
+          {
+            "name": "original_reward",
+            "type": "u64"
+          },
+          {
+            "name": "claimed_remainder_count",
+            "type": "u64"
+          },
+          {
+            "name": "snapshot_total_weight",
+            "type": "u64"
+          },
+          {
+            "name": "total_distributed",
+            "type": "u64"
+          },
+          {
+            "name": "claimed_voters_count",
+            "type": "u64"
           },
           {
             "name": "bump",
