@@ -102,18 +102,20 @@ const QuestionDetails = () => {
     }, [questionData]);
 
     useEffect(() => {
+        console.log("Fetching event status")
         if (!questionData) return;
 
         const getStatus = getQuestionStatus({
             closeDate: new Date(questionData.betting.closeDate * 1000),
             revealEndTime: questionData.truth.revealEndTime,
+            finalized: questionData.truth.finalized,
             truthNetworkWinner: questionData.truth.winningOption,
             winningPercentage: questionData.truth.winningPercent,
             bettorData
         });
 
         setStatus(getStatus);
-    }, [bettorData])
+    }, [bettorData, questionData])
 
 
     useEffect(() => {
@@ -292,7 +294,9 @@ const QuestionDetails = () => {
                 .rpc();
 
             setBetAmount("");
-
+            
+            await fetchUpdatedQuestionData();
+            await fetchBettorData(); 
             toast.success("Bet placed successfully!", { transition: Bounce });
             console.log("Transaction:", tx);
         } catch (error) {
@@ -442,6 +446,7 @@ const QuestionDetails = () => {
     
             // Fetch updated bettor data
             await fetchBettorData();
+            await fetchVaultBalance();
         } catch (error) {
             console.error("Error claiming winnings:", error);
             toast.error("Failed to claim winnings.");
@@ -505,8 +510,39 @@ const QuestionDetails = () => {
     
         setLoading(false);
     };
-    
-    
+
+
+    const deleteBettorAccount = async () => {
+        try {
+
+            const [bettorPda] = PublicKey.findProgramAddressSync(
+                [
+                    Buffer.from("bettor"),
+                    publicKey.toBuffer(),
+                    bettingQuestion_PDA.toBuffer(),
+                ],
+                BETTING_CONTRACT_PROGRAM_ID
+            );
+
+            const tx = await bettingProgram.methods
+                .deleteBettorAccount()
+                .accounts({
+                    user: publicKey,
+                    bettorAccount: bettorPda,
+                    bettingQuestion: bettingQuestion_PDA,
+                    truthQuestion: truthNetworkQuestionPDA,
+                })
+                .rpc();
+        
+            console.log("Bettor account deleted:", tx);
+            toast.success("Bettor record deleted. Rent refunded!");
+      
+        } catch (err) {
+            console.error("Failed to delete bettor account", err);
+            toast.error("Failed to delete bettor record.");
+        }
+    };
+      
     
     
 
@@ -514,7 +550,6 @@ const QuestionDetails = () => {
     const totalBets = Number(questionData?.betting.totalBetsOption1) + Number(questionData?.betting.totalBetsOption2);
     const option1Percentage = totalBets === 0 ? 50 : (Number(questionData?.betting.totalBetsOption1) / totalBets) * 100;
     const option2Percentage = 100 - option1Percentage;
-
 
     return (
         <div className="flex flex-col min-h-screen justify-center items-center bg-gray-900 text-white">  
@@ -661,13 +696,13 @@ const QuestionDetails = () => {
                     </div>
                 </div>
                 <p className="mt-2 text-gray-400 text-center">
-                    Betting Odds: {questionData?.betting.option1} {questionData?.betting.option1Odds ? option1Percentage.toFixed(2) : 0}% vs {questionData?.betting.option2} {option2Percentage ? option2Percentage.toFixed(2): 0}%
+                    How People Are Betting: {questionData?.betting.option1} {questionData?.betting.option1Odds ? option1Percentage.toFixed(2) : 0}% vs {questionData?.betting.option2} {option2Percentage ? option2Percentage.toFixed(2): 0}%
                 </p>
 
                 <div className="mt-6 bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-md">
                     <h3 className="text-lg font-semibold text-gray-300">Vault Balances</h3>
-                    <p className="text-gray-400">Betting Vault Balance: <span className="text-green-400">{vaultBalance.toFixed(2)} SOL</span></p>
-                    <p className="text-gray-400">Truth-Network Vault Balance: <span className="text-blue-400">{truthVaultBalance.toFixed(2)} SOL</span></p>
+                    <p className="text-gray-400">Betting Vault Balance: <span className="text-green-400">{vaultBalance.toFixed(10)} SOL</span></p>
+                    <p className="text-gray-400">Truth-Network Vault Balance: <span className="text-blue-400">{truthVaultBalance.toFixed(10)} SOL</span></p>
                 </div>
 
 
@@ -699,7 +734,7 @@ const QuestionDetails = () => {
                 {bettorData && 
                     questionData?.truth.finalized && 
                     questionData?.truth.winningOption !== null && 
-                    questionData?.truth.winningPercent < 75 && 
+                    (questionData?.truth.winningPercent < 75 || questionData?.truth.winningPercent == 0) && 
                     !bettorData.claimed && 
                 (
                     <button
@@ -724,25 +759,55 @@ const QuestionDetails = () => {
                         </button>
                 )}
 
-
-                {questionData?.truth.winningOption !== null && questionData?.truth.finalized && (
+                {questionData?.truth.finalized && (
                     <>
-                        <p className="text-gray-400 mt-1">
-                            <strong>Winner:</strong> {questionData?.truth.winningOption === true ? questionData?.betting.option1 : questionData?.betting.option2}
-                        </p>
-                        <p className="text-gray-400 mt-1">
-                            <strong>Winning Percentage:</strong> {questionData?.truth.winningPercent.toFixed(2)}%
-                        </p>
+                        {questionData.truth.winningPercent > 0 ? (
+                            <>
+                                <p className="text-gray-400 mt-1">
+                                    <strong>Winner:</strong> {questionData.truth.winningOption === true ? questionData.betting.option1 : questionData.betting.option2}
+                                </p>
+                                <p className="text-gray-400 mt-1">
+                                    <strong>Winning Percentage:</strong> {questionData.truth.winningPercent.toFixed(2)}%
+                                </p>
 
-                        {/* Informational note */}
-                        <p className="text-yellow-400 text-sm mt-2">
-                            Note: A winner is declared only if the winning percentage is
-                            <strong> 75% or higher</strong>. Otherwise, the event is considered
-                            <strong> unresolved</strong>, and all users can claim a
-                            <strong> refund</strong> of their bet.
-                        </p>
+                                <p className="text-yellow-400 text-sm mt-2">
+                                    Note: A winner is declared only if the winning percentage is
+                                    <strong> 75% or higher</strong>. Otherwise, the event is considered
+                                    <strong> unresolved</strong>, and all users can claim a
+                                    <strong> refund</strong> of their bet.
+                                </p>
+                            </>
+                        ) : (
+                            <p className="text-gray-400 text-sm mt-2">
+                                No votes were cast in the Truth Network. All bets are eligible for a <strong>refund</strong>.
+                            </p>
+                        )}
                     </>
                 )}
+
+                {bettorData && questionData?.truth.finalized && (
+                    <>
+                        {(
+                        // Only show delete button if:
+                        bettorData.claimed ||
+                        (questionData?.truth.finalized &&
+                            questionData?.truth.winningPercentage >= 75 &&
+                            ((questionData?.truth.winningOption === 1 && !bettorData.chosen_option) ||
+                            (questionData?.truth.winningOption === 2 && bettorData.chosen_option))) ||
+                        (questionData?.truth.winningPercent === 0 && questionData?.truth.finalized && bettorData.claimed)
+                        ) && (
+                        <button
+                            onClick={() =>
+                            deleteBettorAccount()
+                            }
+                            className="!bg-red-500 hover:bg-red-600 text-white text-sm py-1 px-3 rounded"
+                        >
+                            Delete Record (Refund Rent)
+                        </button>
+                        )}
+                    </>
+                )}
+
                 
             </div>
         </div>

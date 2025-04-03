@@ -3,6 +3,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { AnchorProvider, Program, web3, BN } from "@coral-xyz/anchor";
 import { useNavigate } from "react-router-dom";
+import { FiLogIn } from "react-icons/fi";
 import bettingIDL from "../idls/betting.json";
 import truthNetworkIDL from "../idls/truth_network.json";
 
@@ -160,27 +161,39 @@ const FetchQuestion = () => {
         <div className="max-w-2xl mx-auto mt-10 p-6 border border-gray-600 rounded-lg shadow-lg bg-gray-900 text-white">
             <h2 className="text-2xl font-bold text-gray-200">All Events</h2>
             <p className="text-sm text-gray-400">Note: All bets are resolved two (2) days after betting close date.</p>
-            {loading ? <p className="mt-4 text-gray-400">Loading...</p> : null}
-            <ul className="mt-4 space-y-4">
-                {currentQuestions && currentQuestions.map((q, index) => (
-                    <li key={index} 
-                        onClick={() => navigate(`/question/${q.betting.id.toString()}`, { state: q })}
-                        className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer border border-gray-700 shadow-md"
-                    >
-                        <strong className="text-lg text-blue-400">
-                            {q.betting.title}
-                            {q.hasBet && <span className="text-green-400 text-xs bg-green-900 px-2 py-1 rounded-md">Bet Placed</span>}
-                        </strong>
-                        <p className="text-sm">
-                            <span className={q.betting.closeDate <= Math.floor(Date.now() / 1000) ? "text-red-500" : "text-green-500"}>
-                                {getTimeRemaining(q.betting.closeDate)}
-                            </span>
-                        </p>
-                        <p className="text-gray-500 text-sm break-all">PDA: {q.betting.id.toString()}</p>
-                        <p className="text-gray-500 text-sm">Total Bets: {(new BN(q.betting.totalPool)  / 1_000_000_000).toString()} SOL</p>
-                    </li>
-                ))}
-            </ul>
+
+            {publicKey && loading ? <p className="mt-4 text-gray-400">Loading...</p> : null}
+            
+            {publicKey ?
+                <ul className="mt-4 space-y-4">
+                    {currentQuestions && currentQuestions.map((q, index) => (
+                        <li key={index} 
+                            onClick={() => navigate(`/question/${q.betting.id.toString()}`, { state: q })}
+                            className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer border border-gray-700 shadow-md"
+                        >
+                            <strong className="text-lg text-blue-400">
+                                {q.betting.title}
+                                {q.hasBet && <span className="text-green-400 text-xs bg-green-900 px-2 py-1 rounded-md">Bet Placed</span>}
+                            </strong>
+                            <p className="text-sm">
+                                <span className={q.betting.closeDate <= Math.floor(Date.now() / 1000) ? "text-red-500" : "text-green-500"}>
+                                    {getTimeRemaining(q.betting.closeDate)}
+                                </span>
+                            </p>
+                            <p className="text-gray-500 text-sm break-all">PDA: {q.betting.id.toString()}</p>
+                            <p className="text-gray-500 text-sm">Total Bets: {(new BN(q.betting.totalPool)  / 1_000_000_000).toString()} SOL</p>
+                        </li>
+                    ))}
+                </ul>
+                :
+                <div className="mt-6 p-4 bg-gray-800 border-l-4 border-yellow-500 text-yellow-300 rounded-md flex items-start gap-3">
+                    <FiLogIn className="text-2xl mt-0.5" />
+                    <div>
+                        <p className="font-medium">Wallet not connected</p>
+                        <p className="text-sm">Connect your wallet to load events and place bets.</p>
+                    </div>
+                </div>
+            }
 
             {totalPages > 1 && renderPagination( currentPage, totalPages, setCurrentPage )}
 

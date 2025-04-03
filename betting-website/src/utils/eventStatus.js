@@ -1,5 +1,5 @@
 
-export function getQuestionStatus({ closeDate, revealEndTime, truthNetworkWinner, winningPercentage, bettorData }) {
+export function getQuestionStatus({ closeDate, revealEndTime, finalized, truthNetworkWinner, winningPercentage, bettorData }) {
     const now = Date.now() / 1000;
   
     if (now < closeDate.getTime() / 1000) {
@@ -19,6 +19,7 @@ export function getQuestionStatus({ closeDate, revealEndTime, truthNetworkWinner
 
     if (
         bettorData && 
+        finalized &&
         truthNetworkWinner !== null && 
         bettorData.chosenOption === truthNetworkWinner && 
         winningPercentage >= 75 && 
@@ -32,6 +33,7 @@ export function getQuestionStatus({ closeDate, revealEndTime, truthNetworkWinner
 
     if (
         bettorData && 
+        finalized &&
         truthNetworkWinner !== null &&
         winningPercentage < 75 && 
         !bettorData.claimed

@@ -118,6 +118,7 @@ const UserDashboard = () => {
                         const status = getQuestionStatus({
                             closeDate: new Date(bettingQuestion.closeDate * 1000),
                             revealEndTime: truthNetworkQuestion.revealEndTime,
+                            finalized: truthNetworkQuestion.finalized,
                             truthNetworkWinner: truthNetworkQuestion.winningOption,
                             winningPercentage: truthNetworkQuestion.winningPercent,
                             bettorData

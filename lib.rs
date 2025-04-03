@@ -11,10 +11,8 @@ declare_program!(truth_network);
 use truth_network::{ 
     program::TruthNetwork,
     cpi::accounts::HelloWorld,
-    cpi::accounts::UpdateReward,
     cpi::accounts::FinalizeVoting,
     cpi::hello_world,
-    cpi::update_reward,
     cpi::finalize_voting,
 };
 
@@ -23,7 +21,7 @@ use truth_network::accounts::Question;
 
 pub const HOUSE_WALLET: &str = "6tBwNgSW17jiWoEuoGEyqwwH3Jkv86WN61FETFoHonof";
 
-declare_id!("EXTe4WJaQHyKew4TWKRPorMenPjbeYdhsXQpypS3oECT");
+declare_id!("EQfpyvA4SjwBKjVXASyXJfHyYkUTkFHRpCRECDrRHn4v");
 
 #[program]
 pub mod betting_contract {
@@ -204,14 +202,6 @@ pub mod betting_contract {
         betting_question.total_creator_commission += creator_commission;
         betting_question.total_house_commision += house_commission;
     
-        // Call Truth-Network to update reward via CPI
-        let cpi_accounts = UpdateReward {
-            question: ctx.accounts.truth_network_question.to_account_info(),
-            updater: ctx.accounts.bet_program.to_account_info(),
-            //vault: ctx.accounts.truth_network_vault.to_account_info(), 
-        }; 
-        let cpi_context = CpiContext::new(ctx.accounts.truth_network_program.to_account_info(), cpi_accounts);
-        update_reward(cpi_context, truth_network_commission)?;
         msg!("Truth network question rewards updated with {}", truth_network_commission);
     
         Ok(())
@@ -508,6 +498,48 @@ pub mod betting_contract {
     
         Ok(())
     }
+
+
+    pub fn delete_bettor_account(ctx: Context<DeleteBettorAccount>) -> Result<()> {
+        let bettor_account = &ctx.accounts.bettor_account;
+        let truth_question = &ctx.accounts.truth_question;
+    
+        require_keys_eq!(
+            bettor_account.bettor_address,
+            ctx.accounts.user.key(),
+            BettingError::DeleteUnauthorizedBettor
+        );
+
+        // Check if the event is finalized
+        require!(
+            truth_question.finalized,
+            BettingError::BettingNotYetFinalized
+        );
+    
+        require!(truth_question.finalized, BettingError::BettingNotYetFinalized);
+    
+        let user_lost = truth_question.winning_percent >= 75.0 &&
+            bettor_account.chosen_option != match truth_question.winning_option {
+                1 => true,
+                2 => false,
+                _ => return Err(error!(BettingError::InvalidWinner)),
+            };
+    
+        let no_voters_case = truth_question.winning_percent == 0.0 && bettor_account.claimed;
+    
+        require!(
+            bettor_account.claimed || user_lost || no_voters_case,
+            BettingError::NotReadyToDelete
+        );
+    
+        msg!(
+            "User {} is closing bettor record {}",
+            ctx.accounts.user.key(),
+            bettor_account.key()
+        );
+    
+        Ok(())
+    }
     
 }
 
@@ -730,6 +762,22 @@ pub struct ClaimCreatorCommission<'info> {
 }
 
 
+#[derive(Accounts)]
+pub struct DeleteBettorAccount<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(mut, close = user)]
+    pub bettor_account: Account<'info, BettorAccount>,
+
+    #[account()]
+    pub truth_question: Account<'info, Question>, // From Truth Network
+
+    pub betting_question: Account<'info, BettingQuestion>,
+}
+
+
+
 #[error_code]
 pub enum BettingError {
 
@@ -780,4 +828,13 @@ pub enum BettingError {
     
     #[msg("Minimum bet is 0.1 SOL.")]
     MinimumBetNotMet,
+
+    #[msg("Only the original bettor can delete this record.")]
+    DeleteUnauthorizedBettor,
+
+    #[msg("You haven't claimed, refunded, or lost the bet.")]
+    NotReadyToDelete,
+
+    #[msg("The event is not finalized yet.")]
+    BettingNotYetFinalized,
 }

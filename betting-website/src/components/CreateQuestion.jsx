@@ -5,6 +5,7 @@ import { AnchorProvider, Program, BN, web3 } from "@coral-xyz/anchor";
 import truthNetworkIDL from "../idls/truth_network.json";
 import bettingIDL from "../idls/betting.json";
 import { toast } from "react-toastify";
+import { BsLock } from "react-icons/bs";
 
 import ConfirmModal from "./ConfirmModal";
 
@@ -214,38 +215,52 @@ const CreateQuestion = () => {
     return (
         <div className="max-w-lg mx-auto p-6 bg-white shadow-lg text-gray-800 rounded-lg">
             <h2 className="text-xl font-bold mb-4">Create an Event</h2>
-            <input
-                type="text"
-                placeholder="Enter event..."
-                value={questionText}
-                onChange={(e) => setQuestionText(e.target.value)}
-                className="w-full p-2 border border-1 border-color-gray-400 text-gray-600 rounded-md mb-3"
-            />
-            <label>Betting Close Date</label>
-            <input 
-                type="datetime-local" 
-                value={bettingEndTime} 
-                onChange={(e) => setBettingEndTime(e.target.value)} 
-                placeholder="Betting End Time" 
-                className="w-full p-2 border border-1 border-color-gray-400 text-gray-600  rounded-md mb-3"
-            />
-            <button
-                onClick={handleCreateClick}
-                className="w-full !bg-blue-600 text-white py-2 rounded-md"
-                disabled={loading}
-            >
-                {loading ? 
-                    (
-                        <span className="flex items-center justify-center">
-                            Submitting <span className="dot-animate">.</span>
-                            <span className="dot-animate dot2">.</span>
-                            <span className="dot-animate dot3">.</span>
-                        </span>
-                    ) 
-                    :
-                    "Create Event"
-                }
-            </button>
+
+            {publicKey ?
+                <>
+                    <input
+                        type="text"
+                        placeholder="Enter event..."
+                        value={questionText}
+                        onChange={(e) => setQuestionText(e.target.value)}
+                        className="w-full p-2 border border-1 border-color-gray-400 text-gray-600 rounded-md mb-3"
+                    />
+                    <label>Betting Close Date</label>
+                    <input 
+                        type="datetime-local" 
+                        value={bettingEndTime} 
+                        onChange={(e) => setBettingEndTime(e.target.value)} 
+                        placeholder="Betting End Time" 
+                        className="w-full p-2 border border-1 border-color-gray-400 text-gray-600  rounded-md mb-3"
+                    />
+                    <button
+                        onClick={handleCreateClick}
+                        className="w-full !bg-blue-600 text-white py-2 rounded-md"
+                        disabled={loading}
+                    >
+                        {loading ? 
+                            (
+                                <span className="flex items-center justify-center">
+                                    Submitting <span className="dot-animate">.</span>
+                                    <span className="dot-animate dot2">.</span>
+                                    <span className="dot-animate dot3">.</span>
+                                </span>
+                            ) 
+                            :
+                            "Create Event"
+                        }
+                    </button>
+                </>
+                :
+                <div className="mt-6 p-4 border-l-4 border-blue-500 text-blue-600 rounded-md flex items-start gap-3">
+                    <BsLock className="text-2xl mt-0.5" />
+                    <div>
+                        <p className="font-medium">Wallet not connected</p>
+                        <p className="text-sm">Connect your wallet to create an Event.</p>
+                    </div>
+                </div>
+
+            }
 
             <ConfirmModal
                 isOpen={showConfirm}
