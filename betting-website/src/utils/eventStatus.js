@@ -50,6 +50,16 @@ export function getQuestionStatus({ closeDate, revealEndTime, finalized, truthNe
             className: "text-green-400",
         }
     }
+
+    if (
+        !bettorData && 
+        finalized
+    ) {
+        return {
+            label: "The Event has closed.",
+            className: "text-blue-400",
+          };
+    }
   
     return {
         label: "Ready for fetching result from the Truth-Network.",

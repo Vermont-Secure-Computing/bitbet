@@ -1,5 +1,5 @@
 {
-  "address": "EQfpyvA4SjwBKjVXASyXJfHyYkUTkFHRpCRECDrRHn4v",
+  "address": "BmBQkSrV2nf8cJUxPfZqFHpoRhuNXvEE2wrnJ2ECQHEx",
   "metadata": {
     "name": "betting_contract",
     "version": "0.1.0",
@@ -30,7 +30,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "5eSEdSRgVcv2rfnAw5iY6dTNUGSSFfUVkUSkN55rmezq"
+          "address": "HcSbVsjuJTV1J5DxEsQTrvRuGARZfPboRARLAQvBC52u"
         }
       ],
       "args": []
@@ -79,7 +79,29 @@
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  101,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "betting_question"
+              }
+            ]
+          }
         },
         {
           "name": "system_program",
@@ -120,7 +142,29 @@
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  101,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "betting_question"
+              }
+            ]
+          }
         },
         {
           "name": "system_program",
@@ -193,7 +237,7 @@
         },
         {
           "name": "betting_contract",
-          "address": "EQfpyvA4SjwBKjVXASyXJfHyYkUTkFHRpCRECDrRHn4v"
+          "address": "BmBQkSrV2nf8cJUxPfZqFHpoRhuNXvEE2wrnJ2ECQHEx"
         },
         {
           "name": "vault",
@@ -291,7 +335,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "5eSEdSRgVcv2rfnAw5iY6dTNUGSSFfUVkUSkN55rmezq"
+          "address": "HcSbVsjuJTV1J5DxEsQTrvRuGARZfPboRARLAQvBC52u"
         },
         {
           "name": "house_wallet",
@@ -301,7 +345,28 @@
         {
           "name": "vault",
           "writable": true,
-          "signer": true
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  101,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "betting_question"
+              }
+            ]
+          }
         },
         {
           "name": "system_program",
@@ -369,10 +434,29 @@
         },
         {
           "name": "vault",
-          "docs": [
-            "Betting Vault (For holding bets)"
-          ],
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  101,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "betting_question"
+              }
+            ]
+          }
         },
         {
           "name": "truth_network_question",
@@ -383,7 +467,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "5eSEdSRgVcv2rfnAw5iY6dTNUGSSFfUVkUSkN55rmezq"
+          "address": "HcSbVsjuJTV1J5DxEsQTrvRuGARZfPboRARLAQvBC52u"
         },
         {
           "name": "system_program",
@@ -476,19 +560,6 @@
         122,
         118,
         127
-      ]
-    },
-    {
-      "name": "Vault",
-      "discriminator": [
-        211,
-        8,
-        232,
-        43,
-        2,
-        152,
-        117,
-        119
       ]
     }
   ],
@@ -846,13 +917,6 @@
             "type": "u8"
           }
         ]
-      }
-    },
-    {
-      "name": "Vault",
-      "type": {
-        "kind": "struct",
-        "fields": []
       }
     }
   ]
