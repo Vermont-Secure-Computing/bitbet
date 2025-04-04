@@ -21,7 +21,7 @@ use truth_network::accounts::Question;
 
 pub const HOUSE_WALLET: &str = "6tBwNgSW17jiWoEuoGEyqwwH3Jkv86WN61FETFoHonof";
 
-declare_id!("EQfpyvA4SjwBKjVXASyXJfHyYkUTkFHRpCRECDrRHn4v");
+declare_id!("BmBQkSrV2nf8cJUxPfZqFHpoRhuNXvEE2wrnJ2ECQHEx");
 
 #[program]
 pub mod betting_contract {
@@ -273,37 +273,37 @@ pub mod betting_contract {
 
 
         // Step 6: Transfer House Commission if Not Yet Claimed
-        if !betting_question.house_commission_claimed {
-            let house_commission = betting_question.total_house_commision;
-            require!(house_commission > 0, BettingError::NoCommissionAvailable);
-
-            msg!(
-                "Transferring {} lamports to House Wallet: {}",
-                house_commission,
-                house_wallet.key()
-            );
-    
-            // Use SystemProgram to Transfer Funds
-            let transfer_instruction = system_instruction::transfer(
-                &vault.key(),
-                &house_wallet.key(),
-                house_commission,
-            );
-    
-            invoke(
-                &transfer_instruction,
-                &[
-                    vault.to_account_info(),
-                    house_wallet.to_account_info(),
-                    ctx.accounts.system_program.to_account_info(),
-                ],
-            )?;
-    
-            // Mark commission as claimed
-            betting_question.house_commission_claimed = true;
-
-        } else {
-            msg!("House commission already claimed.");
+        {
+            if !betting_question.house_commission_claimed {
+                let house_commission = betting_question.total_house_commision;
+                require!(house_commission > 0, BettingError::NoCommissionAvailable);
+            
+                msg!(
+                    "Transferring {} lamports to House Wallet: {}",
+                    house_commission,
+                    house_wallet.key()
+                );
+            
+                let vault_info = ctx.accounts.vault.to_account_info();
+                let house_info = ctx.accounts.house_wallet.to_account_info();
+            
+                let mut vault_lamports = vault_info.try_borrow_mut_lamports()?;
+                let mut house_lamports = house_info.try_borrow_mut_lamports()?;
+            
+                **vault_lamports = vault_lamports
+                    .checked_sub(house_commission)
+                    .ok_or(BettingError::InsufficientVaultBalance)?;
+            
+                **house_lamports = house_lamports
+                    .checked_add(house_commission)
+                    .ok_or(BettingError::NoCommissionAvailable)?;
+            
+                msg!("Successfully transferred manually!");
+            
+                betting_question.house_commission_claimed = true;
+            } else {
+                msg!("House commission already claimed.");
+            }                     
         }
         
     
@@ -544,8 +544,8 @@ pub mod betting_contract {
 }
 
 
-#[account]
-pub struct Vault {} // PDA for holding bets SOL
+// #[account]
+// pub struct Vault {} // PDA for holding bets SOL
 
 /// Betting Question Struct (Linked to Truth-Network Question)
 #[account]
@@ -583,6 +583,7 @@ pub struct CallHelloWorld<'info> {
     pub truth_network_program: Program<'info, TruthNetwork>,
 }
 
+
 #[derive(Accounts)]
 pub struct CreateBettingQuestion<'info> {
     #[account(
@@ -605,14 +606,16 @@ pub struct CreateBettingQuestion<'info> {
     #[account(address = crate::ID)]
     pub betting_contract: AccountInfo<'info>,
 
+    /// CHECK: This vault is system-owned, only used to hold lamports and not deserialized.
     #[account(
         init,
         payer = creator,
-        space = 8,
+        space = 0,
         seeds = [b"bet_vault", betting_question.key().as_ref()],
         bump
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: AccountInfo<'info>,
+    
 
     pub system_program: Program<'info, System>,
 }
@@ -648,9 +651,14 @@ pub struct PlaceBet<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
-    /// Betting Vault (For holding bets)
-    #[account(mut)]
-    pub vault: Account<'info, Vault>,
+    /// CHECK: This vault is system-owned and only used for SOL transfers. No data is read or written.
+    #[account(
+        mut,
+        seeds = [b"bet_vault", betting_question.key().as_ref()],
+        bump
+    )]
+    pub vault: AccountInfo<'info>,
+    
 
     //Truth-Network CPI Accounts
     #[account(mut)]
@@ -714,8 +722,13 @@ pub struct FetchAndStoreWinner<'info> {
     #[account(mut, address = HOUSE_WALLET.parse::<Pubkey>().unwrap())]
     pub house_wallet: AccountInfo<'info>,
 
-    #[account(mut)]
-    pub vault: Signer<'info>, 
+    /// CHECK: This vault is system-owned and only used for SOL transfers. No data is read or written.
+    #[account(
+        mut,
+        seeds = [b"bet_vault", betting_question.key().as_ref()],
+        bump
+    )]
+    pub vault: AccountInfo<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -740,8 +753,14 @@ pub struct ClaimWinnings<'info> {
     #[account(mut)]
     pub truth_network_question: Account<'info, Question>,
 
-    #[account(mut)]
-    pub vault: Account<'info, Vault>, 
+    /// CHECK: This vault is system-owned and only used for SOL transfers. No data is read or written.
+    #[account(
+        mut,
+        seeds = [b"bet_vault", betting_question.key().as_ref()],
+        bump
+    )]
+    pub vault: AccountInfo<'info>,
+    
 
     pub system_program: Program<'info, System>,
 }
@@ -755,8 +774,14 @@ pub struct ClaimCreatorCommission<'info> {
     #[account(mut)]
     pub creator: Signer<'info>, 
 
-    #[account(mut)]
-    pub vault: Account<'info, Vault>, 
+    /// CHECK: This vault is system-owned and only used for SOL transfers. No data is read or written.
+    #[account(
+        mut,
+        seeds = [b"bet_vault", betting_question.key().as_ref()],
+        bump
+    )]
+    pub vault: AccountInfo<'info>,
+     
 
     pub system_program: Program<'info, System>,
 }
