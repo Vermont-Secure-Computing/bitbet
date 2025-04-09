@@ -84,7 +84,6 @@ const FetchQuestion = () => {
                     const totalCreatorCommission = new BN(bettingQuestion.account.totalCreatorCommission);
                     const betClosing = new BN(bettingQuestion.account.closeDate);
                     const betCreator = bettingQuestion.account.creator.toString();
-
                     
                     try {
                         const truthQuestion = await truthNetworkProgram.account.question.fetch(

@@ -367,6 +367,15 @@ pub mod betting_contract {
                 || (winning_option == 2 && !bettor_account.chosen_option);
         
             require!(user_bet_won, BettingError::UserDidNotWin);
+
+            // Check if only one side bet exists (no opponent)
+            let one_side_only = (winning_option == 1 && betting_question.total_bets_option2 == 0)
+                || (winning_option == 2 && betting_question.total_bets_option1 == 0);
+
+            require!(
+                !one_side_only,
+                BettingError::OnlyOneSideBet
+            );
     
             // Compute winnings
             let winning_odds = if winning_option == 1 {
@@ -540,7 +549,7 @@ pub mod betting_contract {
     
         Ok(())
     }
-    
+
 }
 
 
@@ -802,7 +811,6 @@ pub struct DeleteBettorAccount<'info> {
 }
 
 
-
 #[error_code]
 pub enum BettingError {
 
@@ -862,4 +870,7 @@ pub enum BettingError {
 
     #[msg("The event is not finalized yet.")]
     BettingNotYetFinalized,
+
+    #[msg("Only one side placed a bet. No winnings can be claimed.")]
+    OnlyOneSideBet,
 }

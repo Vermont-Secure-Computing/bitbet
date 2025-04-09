@@ -121,7 +121,8 @@ const UserDashboard = () => {
                             finalized: truthNetworkQuestion.finalized,
                             truthNetworkWinner: truthNetworkQuestion.winningOption,
                             winningPercentage: truthNetworkQuestion.winningPercent,
-                            bettorData
+                            bettorData,
+                            bettingQuestion
                         })
 
                         return (

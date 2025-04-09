@@ -48,6 +48,13 @@ const QuestionDetails = () => {
 
     const { questionPda } = useParams();
     const [questionData, setQuestionData] = useState(null);
+    const [rentExemptAmount, setRentExemptAmount] = useState(null)
+
+    // useEffect(async() => {
+    //     const rentExemptAmount = await connection.getMinimumBalanceForRentExemption(dataSize);
+    //     console.log("rent exempt amount: ", rentExemptAmount)
+    //     setRentExemptAmount(rentExemptAmount)
+    // }, [connection])
 
     useEffect(() => {
         if (questionPda) {
@@ -60,22 +67,56 @@ const QuestionDetails = () => {
         const pda = new PublicKey(pdaStr);
         console.log("pda: ", pda)
         const bettingQuestion = await bettingProgram.account.bettingQuestion.fetch(pda);
-        console.log("bettingQuestion: ", bettingQuestion)
         const truthNetworkQuestion = await truthNetworkProgram.account.question.fetch(bettingQuestion.questionPda);
-        console.log("bettingQuestion: ", bettingQuestion)
-        console.log("truthNetworkQuestion: ", truthNetworkQuestion)
+
+        const totalPool = new BN(bettingQuestion.totalPool);
+        const totalBetsOption1 = new BN(bettingQuestion.totalBetsOption1);
+        const totalBetsOption2 = new BN(bettingQuestion.totalBetsOption2);
+        const option1Odds = bettingQuestion.option1Odds
+        const option2Odds = bettingQuestion.option2Odds
+        const totalHouseCommission = new BN(bettingQuestion.totalHouseCommision);
+        const totalCreatorCommission = new BN(bettingQuestion.totalCreatorCommission);
+        const betClosing = new BN(bettingQuestion.closeDate);
+        const betCreator = bettingQuestion.creator.toString();
+
         setQuestionData({
-            betting: bettingQuestion,
-            truth: truthNetworkQuestion,
+            betting: {
+                ...bettingQuestion,
+                id: bettingQuestion.id.toBase58(),
+                questionPda: bettingQuestion.questionPda.toBase58(),
+                totalPool: totalPool.toString(),
+                totalBetsOption1: totalBetsOption1.toString(),
+                totalBetsOption2: totalBetsOption2.toString(),
+                option1Odds: option1Odds,
+                option2Odds: option2Odds,
+                totalHouseCommision: totalHouseCommission.toString(),
+                totalCreatorCommission: totalCreatorCommission.toString(),
+                vault: bettingQuestion.vault.toBase58(),
+                closeDate: betClosing.toNumber(),
+                creator: betCreator
+            },
+            truth: {
+                ...truthNetworkQuestion,
+                questionKey: truthNetworkQuestion.questionKey.toBase58(),
+                vaultAddress: truthNetworkQuestion.vaultAddress.toBase58(),
+                id: truthNetworkQuestion.id.toString(),
+                revealEndTime: truthNetworkQuestion.revealEndTime.toNumber(),
+                winningOption: truthNetworkQuestion.winningOption === 1 ? true : (truthNetworkQuestion.winningOption === 2 ? false : null)
+            },
         });
     };
-
+    console.log("questionData: ", questionData)
     
 
     const [bettingQuestionPDA, setBettingQuestionPDA] = useState(null);
     const [truthNetworkQuestionPDA, setTruthNetworkQuestionPDA] = useState(null);
     const [betAmount, setBetAmount] = useState("");
+
     const [loading, setLoading] = useState(false);
+    const [loadingWinnings, setLoadingWinnings] = useState(false);
+    const [loadingCommission, setLoadingCommission] = useState(false);
+    const [loadingDeleting, setLoadingDeleting] = useState(false);
+
     const [vaultBalance, setVaultBalance] = useState(0);
     const [truthVaultBalance, setTruthVaultBalance] = useState(0);
     const [bettorData, setBettorData] = useState(null);
@@ -104,6 +145,11 @@ const QuestionDetails = () => {
     useEffect(() => {
         console.log("Fetching event status")
         if (!questionData) return;
+        //if (!bettorData) return;
+
+        console.log("truthNetworkWinner: ", questionData.truth.winningOption)
+        console.log("winningPercentage: ", questionData.truth.winningPercent)
+        console.log("bettorData: ", bettorData)
 
         const getStatus = getQuestionStatus({
             closeDate: new Date(questionData.betting.closeDate * 1000),
@@ -111,9 +157,11 @@ const QuestionDetails = () => {
             finalized: questionData.truth.finalized,
             truthNetworkWinner: questionData.truth.winningOption,
             winningPercentage: questionData.truth.winningPercent,
-            bettorData
+            bettorData,
+            bettingData: questionData.betting
         });
 
+        console.log("get status: ", getStatus)
         setStatus(getStatus);
     }, [bettorData, questionData])
 
@@ -365,7 +413,7 @@ const QuestionDetails = () => {
 
     const fetchWinner = async () => {
         if (!publicKey) return toast.error("Please connect your wallet.");
-
+        setLoading(true)
         try {
             
             const tx = await bettingProgram.methods
@@ -383,6 +431,7 @@ const QuestionDetails = () => {
             await fetchUpdatedQuestionData();
             await fetchBettorData(); 
         } catch (error) {
+            setLoading(true)
             console.error("Error fetching winner & determining winners:", error);
             toast.error("Failed to fetch winner & calculate winnings.", { transition: Bounce });
         }
@@ -393,7 +442,7 @@ const QuestionDetails = () => {
         if (!bettorData) return toast.error("No bettor data found.");
         if (bettorData.claimed) return toast.info("Winnings already claimed.");
     
-        setLoading(true);
+        setLoadingWinnings(true);
     
         try {
             console.log("Claiming winnings...");
@@ -447,12 +496,13 @@ const QuestionDetails = () => {
             // Fetch updated bettor data
             await fetchBettorData();
             await fetchVaultBalance();
+            setLoadingWinnings(false);
         } catch (error) {
             console.error("Error claiming winnings:", error);
             toast.error("Failed to claim winnings.");
         }
     
-        setLoading(false);
+        setLoadingWinnings(false);
     };
 
 
@@ -461,7 +511,7 @@ const QuestionDetails = () => {
             return toast.error("Please connect your wallet.");
         }
     
-        setLoading(true);
+        setLoadingCommission(true);
     
         try {
             if (!bettingProgram) {
@@ -501,6 +551,12 @@ const QuestionDetails = () => {
                 .rpc();
     
             console.log("Commission Claimed! Transaction:", tx);
+
+            // Fetch updated bettor data
+            await fetchBettorData();
+            await fetchVaultBalance();
+            await fetchUpdatedQuestionData();
+
             toast.success("Commission claimed successfully!");
     
         } catch (error) {
@@ -508,13 +564,13 @@ const QuestionDetails = () => {
             toast.error("Failed to claim commission.");
         }
     
-        setLoading(false);
+        setLoadingCommission(false);
     };
 
 
     const deleteBettorAccount = async () => {
         try {
-
+            setLoadingDeleting(true);
             const [bettorPda] = PublicKey.findProgramAddressSync(
                 [
                     Buffer.from("bettor"),
@@ -533,23 +589,62 @@ const QuestionDetails = () => {
                     truthQuestion: truthNetworkQuestionPDA,
                 })
                 .rpc();
-        
+                
+                setLoadingDeleting(false);
             console.log("Bettor account deleted:", tx);
             toast.success("Bettor record deleted. Rent refunded!");
-      
+            
+            // Fetch updated bettor data
+            await fetchBettorData();
+            
         } catch (err) {
             console.error("Failed to delete bettor account", err);
             toast.error("Failed to delete bettor record.");
+            setLoadingDeleting(false);
         }
     };
+
+
+    // ⚙️ Check if event is deletable
+    const canDeleteEvent = (vaultBalance, minRent, revealEndTime) => {
+
+        const now = Math.floor(Date.now() / 1000);
+        return Number(vaultBalance) <= Number(minRent) && now >= revealEndTime + 86400;
+    };
+
+    const handleDeleteEvent = async () => {
+        if (!publicKey) return toast.error("Connect your wallet");
+        setLoading(true);
       
-    
-    
+        try {
+          const tx = await bettingProgram.methods
+            .deleteBettingQuestion()
+            .accounts({
+              bettingQuestion: new PublicKey(questionData.betting.id),
+              creator: publicKey,
+              truthNetworkQuestion: new PublicKey(questionData.truth.questionKey),
+              vault: new PublicKey(questionData.betting.vault),
+              systemProgram: web3.SystemProgram.programId,
+            })
+            .rpc();
+      
+          toast.success("Event deleted and rent refunded.");
+          navigate("/");
+        } catch (err) {
+          console.error("Failed to delete event:", err);
+          toast.error("Failed to delete event.");
+        }
+      
+        setLoading(false);
+      };
+      
 
     // Compute odds for progress bar
+    
     const totalBets = Number(questionData?.betting.totalBetsOption1) + Number(questionData?.betting.totalBetsOption2);
     const option1Percentage = totalBets === 0 ? 50 : (Number(questionData?.betting.totalBetsOption1) / totalBets) * 100;
     const option2Percentage = 100 - option1Percentage;
+
 
     return (
         <div className="flex flex-col min-h-screen justify-center items-center bg-gray-900 text-white">  
@@ -572,7 +667,7 @@ const QuestionDetails = () => {
 
                     return (
                         <a
-                            href={`https://solscan.io/tx/${decodedTxId}?cluster=devnet`}
+                            href={`https://explorer.solana.com/tx/${decodedTxId}?cluster=devnet`}
                             className="text-blue-400 underline text-xs mt-2"
                             target="_blank"
                             rel="noreferrer"
@@ -696,7 +791,7 @@ const QuestionDetails = () => {
                     </div>
                 </div>
                 <p className="mt-2 text-gray-400 text-center">
-                    How People Are Betting: {questionData?.betting.option1} {questionData?.betting.option1Odds ? option1Percentage.toFixed(2) : 0}% vs {questionData?.betting.option2} {option2Percentage ? option2Percentage.toFixed(2): 0}%
+                    How People Are Betting: {questionData?.betting.option1} {option1Percentage.toFixed(2)}% vs {questionData?.betting.option2} {option2Percentage.toFixed(2)}%
                 </p>
 
                 <div className="mt-6 bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-md">
@@ -712,50 +807,94 @@ const QuestionDetails = () => {
                         disabled={loading}
                         className="w-full mt-4 !bg-purple-500 hover:!bg-purple-600 text-white font-bold py-2 px-4 rounded-lg transition"
                     >
-                        Get Result
+                        {loading ? 
+                            (
+                                <span className="flex items-center justify-center">
+                                    Getting Result <span className="dot-animate">.</span>
+                                    <span className="dot-animate dot2">.</span>
+                                    <span className="dot-animate dot3">.</span>
+                                </span>
+                            ) 
+                            :
+                            "Get Result"
+                        }
                     </button>
                 )}
 
-                {bettorData && 
-                    questionData?.truth.finalized && 
-                    questionData?.truth.winningOption !== null && 
-                    bettorData.chosenOption === questionData?.truth.winningOption && 
-                    questionData?.truth.winningPercent >= 75 && !bettorData.claimed && 
+                {bettorData &&
+                    questionData?.truth.finalized &&
+                    questionData?.truth.winningOption !== null &&
+                    bettorData.chosenOption === questionData?.truth.winningOption &&
+                    questionData?.truth.winningPercent >= 75 &&
+                    !bettorData.claimed &&
+                    parseFloat(questionData?.betting.totalBetsOption1) > 0 &&
+                    parseFloat(questionData?.betting.totalBetsOption2) > 0 && 
                 (
                     <button
-                        onClick={claimWinnings}
-                        disabled={loading}
-                        className="w-full mt-4 !bg-yellow-500 hover:!bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition"
+                    onClick={claimWinnings}
+                    disabled={loadingWinnings}
+                    className="w-full mt-4 !bg-yellow-500 hover:!bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition"
                     >
-                        Claim Winnings
+                        {loadingWinnings ? 
+                            (
+                                <span className="flex items-center justify-center">
+                                    Claiming Winnings <span className="dot-animate">.</span>
+                                    <span className="dot-animate dot2">.</span>
+                                    <span className="dot-animate dot3">.</span>
+                                </span>
+                            ) 
+                            :
+                            "Claim Winnings"
+                        }
                     </button>
                 )}
 
                 {bettorData && 
                     questionData?.truth.finalized && 
                     questionData?.truth.winningOption !== null && 
-                    (questionData?.truth.winningPercent < 75 || questionData?.truth.winningPercent == 0) && 
+                    ((questionData?.truth.winningPercent < 75 || questionData?.truth.winningPercent == 0) || 
+                        (questionData?.truth.winningPercent >= 75 && (parseFloat(questionData?.betting.totalBetsOption1) == 0 || parseFloat(questionData?.betting.totalBetsOption2) == 0))
+                    ) && 
                     !bettorData.claimed && 
                 (
                     <button
                         onClick={claimWinnings}
-                        disabled={loading}
+                        disabled={loadingWinnings}
                         className="w-full mt-4 !bg-yellow-500 hover:!bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition"
                     >
-                        Refund Bet
+                        {loadingWinnings ? 
+                            (
+                                <span className="flex items-center justify-center">
+                                    Refunding Bet <span className="dot-animate">.</span>
+                                    <span className="dot-animate dot2">.</span>
+                                    <span className="dot-animate dot3">.</span>
+                                </span>
+                            ) 
+                            :
+                            "Refund Bet"
+                        }
                     </button>
                 )}
-
 
                 {closeDate && Date.now() / 1000 >= closeDate.getTime() / 1000 && publicKey?.toBase58() === questionData?.betting.creator &&
                     questionData?.betting.totalCreatorCommission > 0 &&
                     !questionData?.betting.creatorCommissionClaimed && (
                         <button
                             onClick={claimCreatorCommission}
-                            disabled={loading}
+                            disabled={loadingCommission}
                             className="w-full mt-4 !bg-orange-500 hover:!bg-orange-600 text-white font-bold py-2 px-4 rounded-lg transition"
                         >
-                            Claim Commission
+                            {loadingCommission ? 
+                            (
+                                <span className="flex items-center justify-center">
+                                    Claiming Commission <span className="dot-animate">.</span>
+                                    <span className="dot-animate dot2">.</span>
+                                    <span className="dot-animate dot3">.</span>
+                                </span>
+                            ) 
+                            :
+                            "Claim Commission"
+                        }
                         </button>
                 )}
 
@@ -770,12 +909,20 @@ const QuestionDetails = () => {
                                     <strong>Winning Percentage:</strong> {questionData.truth.winningPercent.toFixed(2)}%
                                 </p>
 
-                                <p className="text-yellow-400 text-sm mt-2">
+                                <p className="text-gray-400 text-sm mt-2">
                                     Note: A winner is declared only if the winning percentage is
                                     <strong> 75% or higher</strong>. Otherwise, the event is considered
                                     <strong> unresolved</strong>, and all users can claim a
                                     <strong> refund</strong> of their bet.
                                 </p>
+
+                                {bettorData && (parseFloat(questionData.betting.totalBetsOption1) === 0 || parseFloat(questionData.betting.totalBetsOption2) === 0) ? (
+                                    <p className="text-gray-400 text-sm mt-2">
+                                        <strong>Important:</strong> Only one side placed a bet. Since there was no
+                                        real opponent, <strong>winnings cannot be claimed</strong> even if your
+                                        option was declared the winner. A refund is available.
+                                    </p>
+                                ) : null}
                             </>
                         ) : (
                             <p className="text-gray-400 text-sm mt-2">
@@ -785,28 +932,48 @@ const QuestionDetails = () => {
                     </>
                 )}
 
+
                 {bettorData && questionData?.truth.finalized && (
-                    <>
+                    <div className="mt-2">
                         {(
-                        // Only show delete button if:
-                        bettorData.claimed ||
-                        (questionData?.truth.finalized &&
-                            questionData?.truth.winningPercentage >= 75 &&
-                            ((questionData?.truth.winningOption === 1 && !bettorData.chosen_option) ||
-                            (questionData?.truth.winningOption === 2 && bettorData.chosen_option))) ||
-                        (questionData?.truth.winningPercent === 0 && questionData?.truth.finalized && bettorData.claimed)
-                        ) && (
-                        <button
-                            onClick={() =>
-                            deleteBettorAccount()
-                            }
-                            className="!bg-red-500 hover:bg-red-600 text-white text-sm py-1 px-3 rounded"
-                        >
-                            Delete Record (Refund Rent)
-                        </button>
+                            bettorData.claimed ||
+                            (questionData?.truth.finalized &&
+                                questionData?.truth.winningPercentage >= 75 &&
+                                ((questionData?.truth.winningOption === 1 && !bettorData.chosen_option) ||
+                                (questionData?.truth.winningOption === 2 && bettorData.chosen_option))) ||
+                            (questionData?.truth.winningPercent === 0 && questionData?.truth.finalized && bettorData.claimed)
+                            ) && (
+                            <button
+                                onClick={() => deleteBettorAccount()}
+                                disabled={loadingDeleting}
+                                className="!bg-red-500 hover:bg-red-600 text-white text-sm py-1 px-3 rounded"
+                            >
+                            
+                                {loadingDeleting ? 
+                                    (
+                                        <span className="flex items-center justify-center">
+                                            Deleting Bettor Record <span className="dot-animate">.</span>
+                                            <span className="dot-animate dot2">.</span>
+                                            <span className="dot-animate dot3">.</span>
+                                        </span>
+                                    ) 
+                                    :
+                                    "Delete Bettor Record (Refund rent)"
+                                }
+                            </button>
                         )}
-                    </>
+                    </div>
                 )}
+
+
+                {/* {canDeleteEvent(vaultBalance, rentExemptAmount, questionData?.truth.revealEndTime) && (
+                    <button
+                        onClick={handleDeleteEvent}
+                        className="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md"
+                    >
+                        Delete Event & Reclaim Rent
+                    </button>
+                )} */}
 
                 
             </div>
