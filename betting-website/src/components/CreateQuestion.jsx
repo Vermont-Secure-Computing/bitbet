@@ -145,8 +145,6 @@ const CreateQuestion = () => {
             // const commitEndTimeTimestamp = new BN(bettingTimestamp + 3 * 60); // +3 minutes for testing purposes
             // const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60); // +6 minutes for testing purposes
 
-            console.log("calculated commit end time: ", commitEndTimeTimestamp)
-            console.log("calculated reveal end time: ", revealEndTimeTimestamp)
 
             const [truthVaultPDA] = await PublicKey.findProgramAddress(
                 [Buffer.from("vault"), questionPDA.toBuffer()],
