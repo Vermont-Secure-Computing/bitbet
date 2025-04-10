@@ -313,6 +313,73 @@
       "args": []
     },
     {
+      "name": "delete_event",
+      "discriminator": [
+        103,
+        111,
+        95,
+        106,
+        232,
+        24,
+        190,
+        84
+      ],
+      "accounts": [
+        {
+          "name": "betting_question",
+          "writable": true
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "truth_question",
+          "writable": true
+        },
+        {
+          "name": "betting_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  101,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "betting_question"
+              }
+            ]
+          }
+        },
+        {
+          "name": "truth_vault",
+          "writable": true
+        },
+        {
+          "name": "truth_network_program",
+          "address": "HcSbVsjuJTV1J5DxEsQTrvRuGARZfPboRARLAQvBC52u"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "fetch_and_store_winner",
       "discriminator": [
         95,
@@ -658,6 +725,36 @@
       "code": 6018,
       "name": "BettingNotYetFinalized",
       "msg": "The event is not finalized yet."
+    },
+    {
+      "code": 6019,
+      "name": "RevealNotExpired",
+      "msg": "Reveal end time hasn't expired."
+    },
+    {
+      "code": 6020,
+      "name": "VaultNotEmpty",
+      "msg": "Vault is not empty."
+    },
+    {
+      "code": 6021,
+      "name": "TruthVaultNotEmpty",
+      "msg": "Truth Network vault still holds balance."
+    },
+    {
+      "code": 6022,
+      "name": "QuestionAccountNotEmpty",
+      "msg": "Question account still holds lamports."
+    },
+    {
+      "code": 6023,
+      "name": "RentNotExpired",
+      "msg": "Truth-network rent period has not expired yet."
+    },
+    {
+      "code": 6024,
+      "name": "VaultEmptyAlready",
+      "msg": "Vault has already been emptied."
     }
   ],
   "types": [

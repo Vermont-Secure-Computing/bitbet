@@ -12,8 +12,10 @@ use truth_network::{
     program::TruthNetwork,
     cpi::accounts::HelloWorld,
     cpi::accounts::FinalizeVoting,
+    cpi::accounts::DeleteExpiredQuestion,
     cpi::hello_world,
     cpi::finalize_voting,
+    cpi::delete_expired_question,
 };
 
 // Import the Truth-Network program
@@ -362,20 +364,39 @@ pub mod betting_contract {
 
         // Case 1: If winning percentage is 75% or higher -> Only winners get winnings
         if winning_percentage >= 75.0 {
+
+            // Check if only one side bet exists
+            let one_side_only = (winning_option == 1 && betting_question.total_bets_option2 == 0)
+            || (winning_option == 2 && betting_question.total_bets_option1 == 0);
+
+            if one_side_only {
+                // Treat as unresolved → refund 97%
+                let refund_amount = (bettor_account.bet_amount as f64 * 0.97) as u64;
+                require!(refund_amount > 0, BettingError::NoWinningsAvailable);
+
+                let vault_balance = vault.get_lamports();
+                require!(vault_balance >= refund_amount, BettingError::InsufficientVaultBalance);
+
+                vault.sub_lamports(refund_amount)?;
+                user.add_lamports(refund_amount)?;
+
+                bettor_account.winnings = refund_amount;
+                bettor_account.claimed = true;
+
+                msg!(
+                    "One-sided bet detected. Refunded {} lamports to user {}.",
+                    refund_amount,
+                    user.key()
+                );
+
+                return Ok(());
+            }
+
             // Check if the user placed a bet on the winning option
             let user_bet_won = (winning_option == 1 && bettor_account.chosen_option)
                 || (winning_option == 2 && !bettor_account.chosen_option);
         
             require!(user_bet_won, BettingError::UserDidNotWin);
-
-            // Check if only one side bet exists (no opponent)
-            let one_side_only = (winning_option == 1 && betting_question.total_bets_option2 == 0)
-                || (winning_option == 2 && betting_question.total_bets_option1 == 0);
-
-            require!(
-                !one_side_only,
-                BettingError::OnlyOneSideBet
-            );
     
             // Compute winnings
             let winning_odds = if winning_option == 1 {
@@ -549,6 +570,50 @@ pub mod betting_contract {
     
         Ok(())
     }
+
+
+    pub fn delete_event(ctx: Context<DeleteEvent>) -> Result<()> {
+        let betting_question = &ctx.accounts.betting_question;
+        let betting_vault = &ctx.accounts.betting_vault;
+        let creator = &ctx.accounts.creator;
+        let now = Clock::get()?.unix_timestamp;
+    
+        // 1. Must be finalized
+        require!(betting_question.status == "close", BettingError::BettingActive);
+    
+        // 2. Optional: must be truth-network rent expiration
+        // require!(
+        //     now >= truth_question_data.rent_expiration,
+        //     BettingError::TruthRentNotExpired
+        // );
+    
+        // 3. Drain betting vault → creator
+        let vault_lamports = **betting_vault.lamports.borrow();
+        require!(vault_lamports > 0, BettingError::VaultEmptyAlready);
+    
+        **creator.lamports.borrow_mut() += vault_lamports;
+        **betting_vault.lamports.borrow_mut() = 0;
+    
+        msg!("Drained betting vault: {} lamports sent to creator {}", vault_lamports, creator.key());
+    
+        // 4. CPI: call Truth-Network to drain & delete vault
+        // msg!("Calling truth-network delete question");
+        // let cpi_ctx = CpiContext::new(
+        //     ctx.accounts.truth_network_program.to_account_info(),
+        //     DeleteExpiredQuestion {
+        //         question: ctx.accounts.truth_question.to_account_info(),
+        //         vault: ctx.accounts.truth_vault.to_account_info(),
+        //         asker: ctx.accounts.creator.to_account_info(),
+        //         system_program: ctx.accounts.system_program.to_account_info(),
+        //     },
+        // );
+        // delete_expired_question(cpi_ctx)?;
+    
+        // 5. BettingQuestion will be closed automatically
+        msg!("BettingQuestion deleted. Rents refunded to {}", creator.key());
+    
+        Ok(())
+    }    
 
 }
 
@@ -811,6 +876,37 @@ pub struct DeleteBettorAccount<'info> {
 }
 
 
+#[derive(Accounts)]
+pub struct DeleteEvent<'info> {
+    #[account(mut, close = creator)]
+    pub betting_question: Account<'info, BettingQuestion>,
+
+    #[account(mut)]
+    pub creator: Signer<'info>,
+
+    /// CHECK: Truth-Network question
+    #[account(mut)]
+    pub truth_question: AccountInfo<'info>,
+
+    /// CHECK: Vault used by betting question
+    #[account(
+        mut,
+        seeds = [b"bet_vault", betting_question.key().as_ref()],
+        bump
+    )]
+    pub betting_vault: AccountInfo<'info>,
+
+    /// CHECK: Truth-Network vault (owned by Truth-Network)
+    #[account(mut)]
+    pub truth_vault: AccountInfo<'info>,
+
+    pub truth_network_program: Program<'info, TruthNetwork>,
+
+    pub system_program: Program<'info, System>,
+}
+
+
+
 #[error_code]
 pub enum BettingError {
 
@@ -871,6 +967,21 @@ pub enum BettingError {
     #[msg("The event is not finalized yet.")]
     BettingNotYetFinalized,
 
-    #[msg("Only one side placed a bet. No winnings can be claimed.")]
-    OnlyOneSideBet,
+    #[msg("Reveal end time hasn't expired.")]
+    RevealNotExpired,
+
+    #[msg("Vault is not empty.")]
+    VaultNotEmpty,
+
+    #[msg("Truth Network vault still holds balance.")]
+    TruthVaultNotEmpty,
+
+    #[msg("Question account still holds lamports.")]
+    QuestionAccountNotEmpty,
+
+    #[msg("Truth-network rent period has not expired yet.")]
+    RentNotExpired,
+
+    #[msg("Vault has already been emptied.")]
+    VaultEmptyAlready,
 }

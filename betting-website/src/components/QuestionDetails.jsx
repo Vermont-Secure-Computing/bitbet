@@ -4,7 +4,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { Program, AnchorProvider, web3, BN } from "@coral-xyz/anchor";
 import { toast, Bounce } from "react-toastify";
-import { useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 
 import bettingIDL from "../idls/betting.json";
@@ -16,6 +16,8 @@ const connection = new web3.Connection("https://api.devnet.solana.com", "confirm
 const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
 
 const QuestionDetails = () => {
+
+    const navigate = useNavigate();
 
     const { publicKey, signTransaction, signAllTransactions } = useWallet();
 
@@ -37,7 +39,7 @@ const QuestionDetails = () => {
     }, [walletAdapter]);
 
     const bettingProgram = useMemo(() => {
-    return provider ? new Program(bettingIDL, provider) : null;
+        return provider ? new Program(bettingIDL, provider) : null;
     }, [provider]);
 
     const truthNetworkProgram = useMemo(() => {
@@ -123,6 +125,8 @@ const QuestionDetails = () => {
     const [closeDate, setCloseDate] = useState(null)
     const [revealEndTime, setRevealEndTime] = useState(null)
     const [status, setStatus] = useState(null);
+
+    const [canDeleteEvent, setCanDeleteEvent] = useState(false);
 
 
     useEffect(() => {
@@ -605,46 +609,116 @@ const QuestionDetails = () => {
     };
 
 
-    // ⚙️ Check if event is deletable
-    const canDeleteEvent = (vaultBalance, minRent, revealEndTime) => {
+    useEffect(() => {
+        const checkCanDelete = async () => {
+            console.log("check can delete")
+            if (!questionData || !questionData.truth || !questionData.betting) return;
 
-        const now = Math.floor(Date.now() / 1000);
-        return Number(vaultBalance) <= Number(minRent) && now >= revealEndTime + 86400;
-    };
+            const now = Math.floor(Date.now() / 1000);
+            const oneDayAfterReveal = questionData.truth.revealEndTime + 86400;
+            const isFinalized = questionData.truth.finalized;
+            const isPastRevealEnd = now > oneDayAfterReveal;
+            console.log("isPastRevealEnd: ", isPastRevealEnd)
 
-    const handleDeleteEvent = async () => {
-        if (!publicKey) return toast.error("Connect your wallet");
-        setLoading(true);
-      
+            const vaultAddress = new PublicKey(questionData.betting.vault);
+            const vaultInfo = await connection.getAccountInfo(vaultAddress);
+            const vaultLamports = vaultInfo?.lamports || 0;
+            const minRent = await connection.getMinimumBalanceForRentExemption(0);
+            console.log("vaultLamports: ", vaultLamports)
+            console.log("minRent: ", minRent)
+
+            let hasBettorRecord = true;
+            try {
+                const [bettorPda] = PublicKey.findProgramAddressSync(
+                    [
+                        Buffer.from("bettor"),
+                        publicKey.toBuffer(),
+                        bettingQuestion_PDA.toBuffer(),
+                    ],
+                    BETTING_CONTRACT_PROGRAM_ID
+                );
+                const bettorAccountInfo = await connection.getAccountInfo(bettorPda);
+                console.log("has bettor record, showing bettorAccountInfo: ", bettorAccountInfo)
+
+                if (bettorAccountInfo) hasBettorRecord = true;
+                else hasBettorRecord = false
+            } catch {
+                console.log("Error fetching bettor record");
+            }
+
+            console.log("has voter record: ", hasBettorRecord)
+
+            if (
+                isFinalized &&
+                isPastRevealEnd &&
+                vaultLamports <= minRent &&
+                publicKey?.toBase58() === questionData.betting.creator &&
+                !hasBettorRecord
+                // questionData.truth.revealEnded &&
+                // questionData.truth.vaultOnlyHasRent &&
+                // questionData.truth.rentExpired &&
+                // publicKey.toString() === questionData.truth.asker &&
+                // (
+                //     // Allow delete if either:
+                //     // no one committed
+                //     questionData.truth.committedVoters === 0 ||
+                //     // all rent + rewards are cleaned
+                //     (
+                //         questionData.truth.voterRecordsCount === 0 || questionData.truth.voterRecordsClosed === questionData.truth.voterRecordsCount
+                //     ) &&
+                //     (
+                //         questionData.truth.totalDistributed >= questionData.truth.snapshotReward || questionData.truth.originalReward === 0
+                //     )                
+                // )
+            ) {
+                console.log("user can delete the event")
+                setCanDeleteEvent(true);
+            }else{
+                console.log("user cannot delete the event")
+                setCanDeleteEvent(false);
+            }
+        };
+
+        checkCanDelete();
+    }, [questionData, publicKey]);
+
+    const deleteEvent = async () => {
+        if (!publicKey) return toast.error("Connect wallet first");
+    
         try {
-          const tx = await bettingProgram.methods
-            .deleteBettingQuestion()
-            .accounts({
-              bettingQuestion: new PublicKey(questionData.betting.id),
-              creator: publicKey,
-              truthNetworkQuestion: new PublicKey(questionData.truth.questionKey),
-              vault: new PublicKey(questionData.betting.vault),
-              systemProgram: web3.SystemProgram.programId,
-            })
-            .rpc();
-      
-          toast.success("Event deleted and rent refunded.");
-          navigate("/");
+            setLoading(true);
+    
+            const tx = await bettingProgram.methods
+                .deleteEvent()
+                .accounts({
+                    bettingQuestion: new PublicKey(questionData.betting.id),
+                    vault: new PublicKey(questionData.betting.vault),
+                    user: publicKey,
+                    truthQuestion: new PublicKey(questionData.truth.questionKey),
+                    truthVault: new PublicKey(questionData.truth.vaultAddress),
+                    systemProgram: web3.SystemProgram.programId,
+                    truthNetworkProgram: truthNetworkProgram.programId
+                })
+                .rpc();
+    
+            toast.success("Event deleted successfully!");
+            console.log("TX:", tx);
+            navigate("/"); 
         } catch (err) {
-          console.error("Failed to delete event:", err);
-          toast.error("Failed to delete event.");
+            console.error("Failed to delete event:", err);
+            toast.error("Error deleting event.");
+        } finally {
+            setLoading(false);
         }
-      
-        setLoading(false);
-      };
-      
+    };
+    
+    console.log("show delete event button: ", canDeleteEvent)
 
     // Compute odds for progress bar
     
     const totalBets = Number(questionData?.betting.totalBetsOption1) + Number(questionData?.betting.totalBetsOption2);
     const option1Percentage = totalBets === 0 ? 50 : (Number(questionData?.betting.totalBetsOption1) / totalBets) * 100;
     const option2Percentage = 100 - option1Percentage;
-
 
     return (
         <div className="flex flex-col min-h-screen justify-center items-center bg-gray-900 text-white">  
@@ -936,44 +1010,57 @@ const QuestionDetails = () => {
                 {bettorData && questionData?.truth.finalized && (
                     <div className="mt-2">
                         {(
-                            bettorData.claimed ||
-                            (questionData?.truth.finalized &&
-                                questionData?.truth.winningPercentage >= 75 &&
-                                ((questionData?.truth.winningOption === 1 && !bettorData.chosen_option) ||
-                                (questionData?.truth.winningOption === 2 && bettorData.chosen_option))) ||
-                            (questionData?.truth.winningPercent === 0 && questionData?.truth.finalized && bettorData.claimed)
-                            ) && (
+                            bettorData.claimed || // already claimed
+                            (
+                                questionData.truth.winningPercent >= 75 &&
+                                questionData.truth.winningOption !== bettorData.chosenOption
+                            ) || // user lost
+                            (
+                                questionData.truth.winningPercent === 0 &&
+                                bettorData.claimed
+                            ) // no voters, claimed refund
+                        ) && (
                             <button
                                 onClick={() => deleteBettorAccount()}
                                 disabled={loadingDeleting}
                                 className="!bg-red-500 hover:bg-red-600 text-white text-sm py-1 px-3 rounded"
                             >
-                            
-                                {loadingDeleting ? 
-                                    (
-                                        <span className="flex items-center justify-center">
-                                            Deleting Bettor Record <span className="dot-animate">.</span>
-                                            <span className="dot-animate dot2">.</span>
-                                            <span className="dot-animate dot3">.</span>
-                                        </span>
-                                    ) 
-                                    :
+                                {loadingDeleting ? (
+                                    <span className="flex items-center justify-center">
+                                        Deleting Bettor Record <span className="dot-animate">.</span>
+                                        <span className="dot-animate dot2">.</span>
+                                        <span className="dot-animate dot3">.</span>
+                                    </span>
+                                ) : (
                                     "Delete Bettor Record (Refund rent)"
-                                }
+                                )}
                             </button>
                         )}
                     </div>
                 )}
 
 
-                {/* {canDeleteEvent(vaultBalance, rentExemptAmount, questionData?.truth.revealEndTime) && (
-                    <button
-                        onClick={handleDeleteEvent}
-                        className="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md"
-                    >
-                        Delete Event & Reclaim Rent
-                    </button>
-                )} */}
+
+                {canDeleteEvent && (
+                    <div className="mt-4">
+                        <button
+                            onClick={deleteEvent}
+                            disabled={loading}
+                            className="!bg-red-500 hover:!bg-red-600 text-white py-2 px-4 rounded"
+                        >
+
+                            {loadingDeleting ? (
+                                <span className="flex items-center justify-center">
+                                    Deleting Event <span className="dot-animate">.</span>
+                                    <span className="dot-animate dot2">.</span>
+                                    <span className="dot-animate dot3">.</span>
+                                </span>
+                            ) : (
+                                "Delete Event (Refund rent)"
+                            )}
+                        </button>
+                    </div>
+                )}
 
                 
             </div>

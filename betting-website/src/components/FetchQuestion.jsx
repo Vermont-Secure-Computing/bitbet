@@ -74,7 +74,6 @@ const FetchQuestion = () => {
             // Fetch associated questions from the Truth Network
             const questionsWithDetails = await Promise.all(
                 accounts.map(async (bettingQuestion) => {
-                    console.log("Fetching Truth-Network Question for PDA:", bettingQuestion.account.questionPda.toString());
                     const totalPool = new BN(bettingQuestion.account.totalPool);
                     const totalBetsOption1 = new BN(bettingQuestion.account.totalBetsOption1);
                     const totalBetsOption2 = new BN(bettingQuestion.account.totalBetsOption2);
