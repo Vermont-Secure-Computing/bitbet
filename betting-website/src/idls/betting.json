@@ -1,5 +1,5 @@
 {
-  "address": "BmBQkSrV2nf8cJUxPfZqFHpoRhuNXvEE2wrnJ2ECQHEx",
+  "address": "Eeqw8JUQc1G25iVbMerRmVsZypZQLR5oBUR4YAw9HiC6",
   "metadata": {
     "name": "betting_contract",
     "version": "0.1.0",
@@ -30,7 +30,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "HcSbVsjuJTV1J5DxEsQTrvRuGARZfPboRARLAQvBC52u"
+          "address": "4YJdjqejHUL99JUi7YJPtZQsQAyqbaYEpGdwNWTfAWq9"
         }
       ],
       "args": []
@@ -237,7 +237,7 @@
         },
         {
           "name": "betting_contract",
-          "address": "BmBQkSrV2nf8cJUxPfZqFHpoRhuNXvEE2wrnJ2ECQHEx"
+          "address": "Eeqw8JUQc1G25iVbMerRmVsZypZQLR5oBUR4YAw9HiC6"
         },
         {
           "name": "vault",
@@ -370,7 +370,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "HcSbVsjuJTV1J5DxEsQTrvRuGARZfPboRARLAQvBC52u"
+          "address": "4YJdjqejHUL99JUi7YJPtZQsQAyqbaYEpGdwNWTfAWq9"
         },
         {
           "name": "system_program",
@@ -402,7 +402,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "HcSbVsjuJTV1J5DxEsQTrvRuGARZfPboRARLAQvBC52u"
+          "address": "4YJdjqejHUL99JUi7YJPtZQsQAyqbaYEpGdwNWTfAWq9"
         },
         {
           "name": "house_wallet",
@@ -534,7 +534,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "HcSbVsjuJTV1J5DxEsQTrvRuGARZfPboRARLAQvBC52u"
+          "address": "4YJdjqejHUL99JUi7YJPtZQsQAyqbaYEpGdwNWTfAWq9"
         },
         {
           "name": "system_program",
@@ -755,6 +755,31 @@
       "code": 6024,
       "name": "VaultEmptyAlready",
       "msg": "Vault has already been emptied."
+    },
+    {
+      "code": 6025,
+      "name": "Unauthorized",
+      "msg": "Unauthorized: Only the creator can delete this event."
+    },
+    {
+      "code": 6026,
+      "name": "TruthRentNotExpired",
+      "msg": "Truth Network rent has not expired yet."
+    },
+    {
+      "code": 6027,
+      "name": "RevealNotEnded",
+      "msg": "Reveal end time hasn't expired."
+    },
+    {
+      "code": 6028,
+      "name": "RemainingRewardExists",
+      "msg": "Truth Network vault still contains rewards."
+    },
+    {
+      "code": 6029,
+      "name": "RemainingBettingBalance",
+      "msg": "Betting vault still contains rewards."
     }
   ],
   "types": [
@@ -1007,6 +1032,18 @@
           },
           {
             "name": "claimed_voters_count",
+            "type": "u64"
+          },
+          {
+            "name": "claimed_weight",
+            "type": "u64"
+          },
+          {
+            "name": "voter_records_count",
+            "type": "u64"
+          },
+          {
+            "name": "voter_records_closed",
             "type": "u64"
           },
           {
