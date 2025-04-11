@@ -23,7 +23,7 @@ use truth_network::accounts::Question;
 
 pub const HOUSE_WALLET: &str = "6tBwNgSW17jiWoEuoGEyqwwH3Jkv86WN61FETFoHonof";
 
-declare_id!("BmBQkSrV2nf8cJUxPfZqFHpoRhuNXvEE2wrnJ2ECQHEx");
+declare_id!("Eeqw8JUQc1G25iVbMerRmVsZypZQLR5oBUR4YAw9HiC6");
 
 #[program]
 pub mod betting_contract {
@@ -576,18 +576,58 @@ pub mod betting_contract {
         let betting_question = &ctx.accounts.betting_question;
         let betting_vault = &ctx.accounts.betting_vault;
         let creator = &ctx.accounts.creator;
+        let truth_question_info = &ctx.accounts.truth_question.to_account_info();
+
+        let truth_data = &mut truth_question_info.try_borrow_data()?;
+        let truth_question: Question = Question::try_deserialize(&mut truth_data.as_ref())?;
+
+        let truth_vault_info = &ctx.accounts.truth_vault;
         let now = Clock::get()?.unix_timestamp;
     
         // 1. Must be finalized
         require!(betting_question.status == "close", BettingError::BettingActive);
+
+        // 2. Must be event creator
+        require!(betting_question.creator == creator.key(), BettingError::UnauthorizedCreator);
+
+        // 3. Must be truth-network asker
+        require!(truth_question.asker == creator.key(), BettingError::UnauthorizedCreator);
+
+        // 4. Check truth network finalized
+        require!(truth_question.finalized, BettingError::WinnerNotFinalized);
+
+        // 5. Reveal phase should have ended
+        require!(now >= truth_question.reveal_end_time, BettingError::RevealNotEnded);
+
+
+        // 6. Rent must have expired on Truth Network
+        require!(now >= truth_question.rent_expiration, BettingError::TruthRentNotExpired);
+
+        // 7. Truth vault must only have rent remaining
+        let rent = Rent::get()?;
+        let truth_min_balance = rent.minimum_balance(truth_vault_info.data_len());
+        let truth_vault_balance = **truth_vault_info.lamports.borrow();
+        require!(truth_vault_balance <= truth_min_balance, BettingError::RemainingRewardExists);
+
+        // 8. Betting vault must only have rent remaining
+        let betting_min_balance = rent.minimum_balance(betting_vault.data_len());
+        let betting_vault_balance = **betting_vault.lamports.borrow();
+        require!(betting_vault_balance <= betting_min_balance, BettingError::RemainingBettingBalance);
+
+        // 9. CPI: call Truth-Network to drain & delete vault
+        msg!("Calling truth-network delete question");
+        let cpi_ctx = CpiContext::new(
+            ctx.accounts.truth_network_program.to_account_info(),
+            DeleteExpiredQuestion {
+                question: ctx.accounts.truth_question.to_account_info(),
+                vault: ctx.accounts.truth_vault.to_account_info(),
+                asker: ctx.accounts.creator.to_account_info(),
+                system_program: ctx.accounts.system_program.to_account_info(),
+            },
+        );
+        delete_expired_question(cpi_ctx)?;
     
-        // 2. Optional: must be truth-network rent expiration
-        // require!(
-        //     now >= truth_question_data.rent_expiration,
-        //     BettingError::TruthRentNotExpired
-        // );
-    
-        // 3. Drain betting vault → creator
+        // 10. Drain betting vault → creator
         let vault_lamports = **betting_vault.lamports.borrow();
         require!(vault_lamports > 0, BettingError::VaultEmptyAlready);
     
@@ -596,20 +636,7 @@ pub mod betting_contract {
     
         msg!("Drained betting vault: {} lamports sent to creator {}", vault_lamports, creator.key());
     
-        // 4. CPI: call Truth-Network to drain & delete vault
-        // msg!("Calling truth-network delete question");
-        // let cpi_ctx = CpiContext::new(
-        //     ctx.accounts.truth_network_program.to_account_info(),
-        //     DeleteExpiredQuestion {
-        //         question: ctx.accounts.truth_question.to_account_info(),
-        //         vault: ctx.accounts.truth_vault.to_account_info(),
-        //         asker: ctx.accounts.creator.to_account_info(),
-        //         system_program: ctx.accounts.system_program.to_account_info(),
-        //     },
-        // );
-        // delete_expired_question(cpi_ctx)?;
-    
-        // 5. BettingQuestion will be closed automatically
+        // 11. BettingQuestion will be closed automatically
         msg!("BettingQuestion deleted. Rents refunded to {}", creator.key());
     
         Ok(())
@@ -984,4 +1011,20 @@ pub enum BettingError {
 
     #[msg("Vault has already been emptied.")]
     VaultEmptyAlready,
+
+    #[msg("Unauthorized: Only the creator can delete this event.")]
+    Unauthorized,
+
+    #[msg("Truth Network rent has not expired yet.")]
+    TruthRentNotExpired,
+
+    #[msg("Reveal end time hasn't expired.")]
+    RevealNotEnded,
+
+    #[msg("Truth Network vault still contains rewards.")]
+    RemainingRewardExists,
+    
+    #[msg("Betting vault still contains rewards.")]
+    RemainingBettingBalance, 
+
 }

@@ -50,13 +50,6 @@ const QuestionDetails = () => {
 
     const { questionPda } = useParams();
     const [questionData, setQuestionData] = useState(null);
-    const [rentExemptAmount, setRentExemptAmount] = useState(null)
-
-    // useEffect(async() => {
-    //     const rentExemptAmount = await connection.getMinimumBalanceForRentExemption(dataSize);
-    //     console.log("rent exempt amount: ", rentExemptAmount)
-    //     setRentExemptAmount(rentExemptAmount)
-    // }, [connection])
 
     useEffect(() => {
         if (questionPda) {
@@ -70,6 +63,7 @@ const QuestionDetails = () => {
         console.log("pda: ", pda)
         const bettingQuestion = await bettingProgram.account.bettingQuestion.fetch(pda);
         const truthNetworkQuestion = await truthNetworkProgram.account.question.fetch(bettingQuestion.questionPda);
+        console.log("truthNetworkQuestion: ", truthNetworkQuestion)
 
         const totalPool = new BN(bettingQuestion.totalPool);
         const totalBetsOption1 = new BN(bettingQuestion.totalBetsOption1);
@@ -80,6 +74,7 @@ const QuestionDetails = () => {
         const totalCreatorCommission = new BN(bettingQuestion.totalCreatorCommission);
         const betClosing = new BN(bettingQuestion.closeDate);
         const betCreator = bettingQuestion.creator.toString();
+        const truthAsker = truthNetworkQuestion.asker.toString();
 
         setQuestionData({
             betting: {
@@ -99,6 +94,7 @@ const QuestionDetails = () => {
             },
             truth: {
                 ...truthNetworkQuestion,
+                asker: truthAsker,
                 questionKey: truthNetworkQuestion.questionKey.toBase58(),
                 vaultAddress: truthNetworkQuestion.vaultAddress.toBase58(),
                 id: truthNetworkQuestion.id.toString(),
@@ -260,13 +256,9 @@ const QuestionDetails = () => {
     
             const bettingVaultPubKey = new PublicKey(questionData.betting.vault.toString());
             const truthVaultPubKey = new PublicKey(questionData.truth.vaultAddress.toString());
-            //console.log("bettinVault pubkey: ", bettingVaultPubKey)
     
             const bettingVaultLamports = await connection.getBalance(bettingVaultPubKey);
             const truthVaultLamports = await connection.getBalance(truthVaultPubKey);
-
-            // console.log("bettingVaultLamports: ", bettingVaultLamports)
-            // console.log("truthVaultLamports: ", truthVaultLamports)
     
             setVaultBalance(Number(new BN(bettingVaultLamports)) / 1_000_000_000);
             setTruthVaultBalance(Number(new BN(truthVaultLamports)) / 1_000_000_000);
@@ -615,17 +607,39 @@ const QuestionDetails = () => {
             if (!questionData || !questionData.truth || !questionData.betting) return;
 
             const now = Math.floor(Date.now() / 1000);
-            const oneDayAfterReveal = questionData.truth.revealEndTime + 86400;
-            const isFinalized = questionData.truth.finalized;
-            const isPastRevealEnd = now > oneDayAfterReveal;
-            console.log("isPastRevealEnd: ", isPastRevealEnd)
 
+
+            /**
+             * Truth-network validation
+             */
+            const isFinalized = questionData.truth.finalized;
+            const revealEnded = questionData.truth.revealEndTime <= Date.now() / 1000;
+            const truthVaultPubkey = new PublicKey(questionData.truth.vaultAddress);
+            const truthVaultAccountInfo = await connection.getAccountInfo(truthVaultPubkey);
+            const truthRentExemption = await connection.getMinimumBalanceForRentExemption(8);
+            const truthVaultBalance = truthVaultAccountInfo?.lamports ?? 0;
+
+            const vaultOnlyHasRent = (truthVaultBalance - truthRentExemption) < 1000;
+            const rentExpired = questionData.truth.rentExpiration <= now;
+
+            console.log("truth network validation")
+            console.log("isFinalized: ", isFinalized)
+            console.log("revealEnded: ", revealEnded)
+            console.log("truthVaultBalance: ", truthVaultBalance)
+            console.log("truthRentExemption: ", truthRentExemption)
+            console.log("vaultOnlyHasRent: ", vaultOnlyHasRent)
+            console.log("rentExpired: ", rentExpired)
+            console.log("asker: ", questionData.truth.asker)
+            console.log("truth creator: ", publicKey?.toBase58() === questionData.truth.asker)
+            console.log("other check: ", (questionData.truth.committedVoters === 0 || (questionData.truth.voterRecordsCount === 0 || questionData.truth.voterRecordsClosed === questionData.truth.voterRecordsCount) &&(questionData.truth.totalDistributed >= questionData.truth.snapshotReward || questionData.truth.originalReward === 0)))
+
+            /**
+             * Bitbet validation
+             */
             const vaultAddress = new PublicKey(questionData.betting.vault);
             const vaultInfo = await connection.getAccountInfo(vaultAddress);
             const vaultLamports = vaultInfo?.lamports || 0;
             const minRent = await connection.getMinimumBalanceForRentExemption(0);
-            console.log("vaultLamports: ", vaultLamports)
-            console.log("minRent: ", minRent)
 
             let hasBettorRecord = true;
             try {
@@ -646,30 +660,27 @@ const QuestionDetails = () => {
                 console.log("Error fetching bettor record");
             }
 
-            console.log("has voter record: ", hasBettorRecord)
-
             if (
                 isFinalized &&
-                isPastRevealEnd &&
                 vaultLamports <= minRent &&
                 publicKey?.toBase58() === questionData.betting.creator &&
-                !hasBettorRecord
-                // questionData.truth.revealEnded &&
-                // questionData.truth.vaultOnlyHasRent &&
-                // questionData.truth.rentExpired &&
-                // publicKey.toString() === questionData.truth.asker &&
-                // (
-                //     // Allow delete if either:
-                //     // no one committed
-                //     questionData.truth.committedVoters === 0 ||
-                //     // all rent + rewards are cleaned
-                //     (
-                //         questionData.truth.voterRecordsCount === 0 || questionData.truth.voterRecordsClosed === questionData.truth.voterRecordsCount
-                //     ) &&
-                //     (
-                //         questionData.truth.totalDistributed >= questionData.truth.snapshotReward || questionData.truth.originalReward === 0
-                //     )                
-                // )
+                !hasBettorRecord &&
+                publicKey?.toBase58() === questionData.truth.asker &&
+                revealEnded &&
+                vaultOnlyHasRent &&
+                rentExpired //&&
+                (
+                    // Allow delete if either:
+                    // no one committed
+                    questionData.truth.committedVoters === 0 ||
+                    // all rent + rewards are cleaned
+                    (
+                        questionData.truth.voterRecordsCount === 0 || questionData.truth.voterRecordsClosed === questionData.truth.voterRecordsCount
+                    ) &&
+                    (
+                        questionData.truth.totalDistributed >= questionData.truth.snapshotReward || questionData.truth.originalReward === 0
+                    )                
+                )
             ) {
                 console.log("user can delete the event")
                 setCanDeleteEvent(true);
@@ -713,6 +724,11 @@ const QuestionDetails = () => {
     };
     
     console.log("show delete event button: ", canDeleteEvent)
+
+    console.log("is creator: ", publicKey?.toBase58() === questionData?.betting.creator)
+    console.log("is finalized: ", questionData?.truth.finalized)
+    console.log("creator commission claime: ", publicKey?.toBase58() !== questionData?.betting.creator)
+    
 
     // Compute odds for progress bar
     
@@ -1010,15 +1026,22 @@ const QuestionDetails = () => {
                 {bettorData && questionData?.truth.finalized && (
                     <div className="mt-2">
                         {(
-                            bettorData.claimed || // already claimed
                             (
-                                questionData.truth.winningPercent >= 75 &&
-                                questionData.truth.winningOption !== bettorData.chosenOption
-                            ) || // user lost
+                                bettorData.claimed || // already claimed
+                                (
+                                    questionData.truth.winningPercent >= 75 &&
+                                    questionData.truth.winningOption !== bettorData.chosenOption
+                                ) || // user lost
+                                (
+                                    questionData.truth.winningPercent === 0 &&
+                                    bettorData.claimed
+                                ) // no voters, claimed refund
+                            )
+                            && 
                             (
-                                questionData.truth.winningPercent === 0 &&
-                                bettorData.claimed
-                            ) // no voters, claimed refund
+                                publicKey?.toBase58() !== questionData?.betting.creator ||
+                                (publicKey?.toBase58() === questionData?.betting.creator && questionData?.betting.creatorCommissionClaimed)
+                            )
                         ) && (
                             <button
                                 onClick={() => deleteBettorAccount()}
@@ -1049,7 +1072,7 @@ const QuestionDetails = () => {
                             className="!bg-red-500 hover:!bg-red-600 text-white py-2 px-4 rounded"
                         >
 
-                            {loadingDeleting ? (
+                            {loading ? (
                                 <span className="flex items-center justify-center">
                                     Deleting Event <span className="dot-animate">.</span>
                                     <span className="dot-animate dot2">.</span>
