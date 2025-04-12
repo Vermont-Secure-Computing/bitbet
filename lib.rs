@@ -576,10 +576,11 @@ pub mod betting_contract {
         let betting_question = &ctx.accounts.betting_question;
         let betting_vault = &ctx.accounts.betting_vault;
         let creator = &ctx.accounts.creator;
-        let truth_question_info = &ctx.accounts.truth_question.to_account_info();
 
-        let truth_data = &mut truth_question_info.try_borrow_data()?;
+        let truth_question_info = &ctx.accounts.truth_question.to_account_info();
+        let mut truth_data = truth_question_info.try_borrow_data()?;
         let truth_question: Question = Question::try_deserialize(&mut truth_data.as_ref())?;
+        drop(truth_data); 
 
         let truth_vault_info = &ctx.accounts.truth_vault;
         let now = Clock::get()?.unix_timestamp;
@@ -626,7 +627,7 @@ pub mod betting_contract {
             },
         );
         delete_expired_question(cpi_ctx)?;
-    
+
         // 10. Drain betting vault → creator
         let vault_lamports = **betting_vault.lamports.borrow();
         require!(vault_lamports > 0, BettingError::VaultEmptyAlready);
@@ -644,9 +645,6 @@ pub mod betting_contract {
 
 }
 
-
-// #[account]
-// pub struct Vault {} // PDA for holding bets SOL
 
 /// Betting Question Struct (Linked to Truth-Network Question)
 #[account]
