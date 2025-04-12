@@ -2,10 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey, Connection, clusterApiUrl } from "@solana/web3.js";
 import { AnchorProvider, Program, BN, web3 } from "@coral-xyz/anchor";
-import truthNetworkIDL from "../idls/truth_network.json";
-import bettingIDL from "../idls/betting.json";
 import { toast } from "react-toastify";
 import { BsLock } from "react-icons/bs";
+import { useNavigate } from "react-router-dom";
+import truthNetworkIDL from "../idls/truth_network.json";
+import bettingIDL from "../idls/betting.json";
+
 
 import ConfirmModal from "./ConfirmModal";
 
@@ -15,6 +17,7 @@ const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_P
 const connection = new web3.Connection(clusterApiUrl("devnet"), "confirmed");
 
 const CreateQuestion = () => {
+    const navigate = useNavigate();
     const { wallet, publicKey, signTransaction, signAllTransactions, connected } = useWallet(); 
     const [questionText, setQuestionText] = useState("");
     const [bettingEndTime, setBettingEndTime] = useState(0);
@@ -203,6 +206,8 @@ const CreateQuestion = () => {
             console.log("Successfully created event in Betting Contract:", bettingQuestionPDA.toString());
             setLoading(false)
             toast.success("Event successfully created!");
+
+            navigate('/')
         } catch (error) {
             setLoading(false)
             console.error("Transaction failed:", error);

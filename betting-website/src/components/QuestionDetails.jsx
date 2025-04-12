@@ -60,10 +60,8 @@ const QuestionDetails = () => {
 
     const fetchQuestionDetails = async (pdaStr) => {
         const pda = new PublicKey(pdaStr);
-        console.log("pda: ", pda)
         const bettingQuestion = await bettingProgram.account.bettingQuestion.fetch(pda);
         const truthNetworkQuestion = await truthNetworkProgram.account.question.fetch(bettingQuestion.questionPda);
-        console.log("truthNetworkQuestion: ", truthNetworkQuestion)
 
         const totalPool = new BN(bettingQuestion.totalPool);
         const totalBetsOption1 = new BN(bettingQuestion.totalBetsOption1);
@@ -99,7 +97,13 @@ const QuestionDetails = () => {
                 vaultAddress: truthNetworkQuestion.vaultAddress.toBase58(),
                 id: truthNetworkQuestion.id.toString(),
                 revealEndTime: truthNetworkQuestion.revealEndTime.toNumber(),
-                winningOption: truthNetworkQuestion.winningOption === 1 ? true : (truthNetworkQuestion.winningOption === 2 ? false : null)
+                winningOption: truthNetworkQuestion.winningOption === 1 ? true : (truthNetworkQuestion.winningOption === 2 ? false : null),
+                committedVoters: truthNetworkQuestion.committedVoters.toNumber(),
+                voterRecordsCount: truthNetworkQuestion.voterRecordsCount.toNumber(),
+                voterRecordsClosed: truthNetworkQuestion.voterRecordsClosed.toNumber(),
+                totalDistributed: truthNetworkQuestion.totalDistributed.toNumber(),
+                originalReward: truthNetworkQuestion.originalReward.toNumber(),
+                snapshotReward: truthNetworkQuestion.snapshotReward.toNumber(),
             },
         });
     };
@@ -389,6 +393,12 @@ const QuestionDetails = () => {
                             : null,
                     winningPercent: truthQuestionAccount.winningPercent,
                     finalized: truthQuestionAccount.finalized,
+                    committedVoters: truthQuestionAccount.committedVoters.toNumber(),
+                    voterRecordsCount: truthQuestionAccount.voterRecordsCount.toNumber(),
+                    voterRecordsClosed: truthQuestionAccount.voterRecordsClosed.toNumber(),
+                    totalDistributed: truthQuestionAccount.totalDistributed.toNumber(),
+                    originalReward: truthQuestionAccount.originalReward.toNumber(),
+                    snapshotReward: truthQuestionAccount.snapshotReward.toNumber(),
                 },
             };
     
@@ -668,7 +678,7 @@ const QuestionDetails = () => {
                 publicKey?.toBase58() === questionData.truth.asker &&
                 revealEnded &&
                 vaultOnlyHasRent &&
-                rentExpired //&&
+                rentExpired &&
                 (
                     // Allow delete if either:
                     // no one committed
