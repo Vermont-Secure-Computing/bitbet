@@ -10,6 +10,7 @@ const UserDashboard = () => {
     const { publicKey } = useWallet();
     const [userBets, setUserBets] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [userBettorRecords, setUserBettorRecords] = useState(null);
 
     useEffect(() => {
         if (publicKey) fetchUserBets();
@@ -18,57 +19,100 @@ const UserDashboard = () => {
     const fetchUserBets = async () => {
         setLoading(true);
         try {
-        const bettorAccounts = await bettingProgram.account.bettorAccount.all([
-            {
-            memcmp: {
-                offset: 8,
-                bytes: publicKey.toBase58(),
-            },
-            },
-        ]);
+            const bettorAccounts = await bettingProgram.account.bettorAccount.all([
+                {
+                memcmp: {
+                    offset: 8,
+                    bytes: publicKey.toBase58(),
+                },
+                },
+            ]);
 
-        const enriched = await Promise.all(
-            bettorAccounts.map(async (bet) => {
-            const bettorData = bet.account;
-            const questionPDA = bettorData.questionPda;
+            const enriched = await Promise.all(
+                bettorAccounts.map(async (bet) => {
+                    console.log("bet: ", bet)
+                    const bettorData = bet.account;
+                    const questionPDA = bettorData.questionPda;
 
-            const bettingQuestion = await bettingProgram.account.bettingQuestion.fetch(questionPDA);
+                    const bettingQuestion = await bettingProgram.account.bettingQuestion.fetch(questionPDA);
 
-            let truthNetworkQuestion = null;
-            try {
-                truthNetworkQuestion = await truthProgram.account.question.fetch(
-                bettingQuestion.questionPda
-                );
-            } catch (err) {
-                console.warn("Truth question not found or failed to load.");
-            }
+                    let truthNetworkQuestion = null;
+                    try {
+                        truthNetworkQuestion = await truthProgram.account.question.fetch(
+                            bettingQuestion.questionPda
+                        );
+                    } catch (err) {
+                        console.warn("Truth question not found or failed to load.");
+                    }
 
-            return {
-                bettorPDA: bet.publicKey,
-                bettorData,
-                bettingQuestion,
-                truthNetworkQuestion,
-            };
-            })
-        );
+                    return {
+                        bettorPDA: bet.publicKey,
+                        bettorData,
+                        bettingQuestion,
+                        truthNetworkQuestion,
+                    };
+                })
+            );
 
-        setUserBets(enriched);
+            setUserBets(enriched);
         } catch (err) {
-        console.error("Error fetching bettor accounts:", err);
+            console.error("Error fetching bettor accounts:", err);
         } finally {
-        setLoading(false);
+            setLoading(false);
         }
     };
 
-    const getStatusText = (bettorData, bettingQuestion, truthNetworkQuestion ) => {
-        if (bettorData.claimed) return "Claimed";
-        if (bettingQuestion.status === "open") return "Open";
-        if (truthNetworkQuestion?.finalized) {
-          return truthNetworkQuestion.winningPercent >= 75
-            ? "Ready to Claim"
-            : "Refund Available";
+
+    const fetchBettorRecords = async () => {
+        if (!publicKey || !bettingProgram) return;
+    
+        try {
+            const allBettors = await bettingProgram.account.bettorAccount.all([
+                {
+                    memcmp: {
+                        offset: 8, // Skip the 8-byte discriminator
+                        bytes: publicKey.toBase58(),
+                    },
+                },
+            ]);
+    
+            console.log("Bettor records for user:", allBettors);
+            setUserBettorRecords(allBettors);
+        } catch (err) {
+            console.error("Failed to fetch bettor records:", err);
         }
-        return "Waiting for Resolution";
+    };
+
+    useEffect(() => {
+        fetchBettorRecords();
+    }, [publicKey]);
+
+    const deleteBettorRecord = async (bettorPda, bitbetPda) => {
+        try {
+            setDeleting(true);
+            const dummyPDA = new PublicKey("11111111111111111111111111111111");
+            const tx = await bettingProgram.methods
+                .deleteBettorAccount()
+                .accounts({
+                    user: publicKey,
+                    bettorAccount: bettorPda,
+                    bettingQuestion: bitbetPda,
+                    truthQuestion: dummyPDA,
+                })
+                .rpc();
+                
+                setLoadingDeleting(false);
+            console.log("Bettor account deleted:", tx);
+            toast.success("Bettor record deleted. Rent refunded!");
+            
+            // Fetch updated bettor data
+            await fetchBettorData();
+            
+        } catch (err) {
+            console.error("Failed to delete bettor account", err);
+            toast.error("Failed to delete bettor record.");
+            setLoadingDeleting(false);
+        }
     };
 
 
@@ -163,6 +207,25 @@ const UserDashboard = () => {
                     })}
                 </div>
             </div>
+
+
+            {/* 
+                Not yet working
+                {userBettorRecords.map((record, index) => (
+                    <div key={index} className="p-4 border border-gray-700 rounded mb-3 bg-gray-800">
+                        <p><strong>Question PDA:</strong> {record.account.questionPda.toBase58()}</p>
+                        <p><strong>Bet result:</strong> {record.account.won ? "Won" : "Loss"}</p>
+                        {record.account.won && <p><strong>Claimed:</strong> {record.account.claimed ? "Yes" : "No"}</p>}
+
+                        <button
+                            className="!bg-red-600 text-white py-1 px-3 mt-2 rounded hover:!bg-red-700"
+                            onClick={() => deleteBettorRecord(record.publicKey, record.account.questionPda)}
+                        >
+                            Delete Bettor Record
+                        </button>
+                    </div>
+                ))} 
+             */}
         </div>
 
     )

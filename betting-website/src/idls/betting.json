@@ -1,5 +1,5 @@
 {
-  "address": "Eeqw8JUQc1G25iVbMerRmVsZypZQLR5oBUR4YAw9HiC6",
+  "address": "9yimi3EkS3RrXtpML6TkCHFUWsQFpSiZk4NhoyeGznGt",
   "metadata": {
     "name": "betting_contract",
     "version": "0.1.0",
@@ -30,7 +30,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "4YJdjqejHUL99JUi7YJPtZQsQAyqbaYEpGdwNWTfAWq9"
+          "address": "7JE57i5fbS4qNhEdW9EQAo2GamPqioTQSbCBJqtY2Wsc"
         }
       ],
       "args": []
@@ -237,7 +237,7 @@
         },
         {
           "name": "betting_contract",
-          "address": "Eeqw8JUQc1G25iVbMerRmVsZypZQLR5oBUR4YAw9HiC6"
+          "address": "9yimi3EkS3RrXtpML6TkCHFUWsQFpSiZk4NhoyeGznGt"
         },
         {
           "name": "vault",
@@ -370,7 +370,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "4YJdjqejHUL99JUi7YJPtZQsQAyqbaYEpGdwNWTfAWq9"
+          "address": "7JE57i5fbS4qNhEdW9EQAo2GamPqioTQSbCBJqtY2Wsc"
         },
         {
           "name": "system_program",
@@ -402,7 +402,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "4YJdjqejHUL99JUi7YJPtZQsQAyqbaYEpGdwNWTfAWq9"
+          "address": "7JE57i5fbS4qNhEdW9EQAo2GamPqioTQSbCBJqtY2Wsc"
         },
         {
           "name": "house_wallet",
@@ -534,7 +534,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "4YJdjqejHUL99JUi7YJPtZQsQAyqbaYEpGdwNWTfAWq9"
+          "address": "7JE57i5fbS4qNhEdW9EQAo2GamPqioTQSbCBJqtY2Wsc"
         },
         {
           "name": "system_program",
@@ -1044,6 +1044,10 @@
           },
           {
             "name": "voter_records_closed",
+            "type": "u64"
+          },
+          {
+            "name": "revealed_correct_voters",
             "type": "u64"
           },
           {

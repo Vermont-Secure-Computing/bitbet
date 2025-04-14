@@ -16,7 +16,7 @@ const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_P
 
 const connection = new web3.Connection(clusterApiUrl("devnet"), "confirmed");
 
-const CreateQuestion = () => {
+const CreateQuestion = ({setActiveTab}) => {
     const navigate = useNavigate();
     const { wallet, publicKey, signTransaction, signAllTransactions, connected } = useWallet(); 
     const [questionText, setQuestionText] = useState("");
@@ -143,10 +143,10 @@ const CreateQuestion = () => {
             const bettingTimestamp = Math.floor(selectedTime.getTime() / 1000);
 
             // Calculate commit and reveal times
-            const commitEndTimeTimestamp = new BN(bettingTimestamp + 24 * 60 * 60); // +one day after betting close date
-            const revealEndTimeTimestamp = new BN(bettingTimestamp + 48 * 60 * 60); // +two days after betting close date
-            // const commitEndTimeTimestamp = new BN(bettingTimestamp + 3 * 60); // +3 minutes for testing purposes
-            // const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60); // +6 minutes for testing purposes
+            // const commitEndTimeTimestamp = new BN(bettingTimestamp + 24 * 60 * 60); // +one day after betting close date
+            // const revealEndTimeTimestamp = new BN(bettingTimestamp + 48 * 60 * 60); // +two days after betting close date
+            const commitEndTimeTimestamp = new BN(bettingTimestamp + 3 * 60); // +3 minutes for testing purposes
+            const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60); // +6 minutes for testing purposes
 
 
             const [truthVaultPDA] = await PublicKey.findProgramAddress(
@@ -207,7 +207,7 @@ const CreateQuestion = () => {
             setLoading(false)
             toast.success("Event successfully created!");
 
-            navigate('/')
+            setActiveTab("fetch")
         } catch (error) {
             setLoading(false)
             console.error("Transaction failed:", error);

@@ -48,7 +48,7 @@ function Home() {
 
                     {/* Render Active Tab */}
                     <div className="mt-6">
-                        {activeTab === "fetch" ? <FetchQuestion /> : <CreateQuestion />}
+                        {activeTab === "fetch" ? <FetchQuestion /> : <CreateQuestion setActiveTab={setActiveTab} />}
                     </div>
                 </div>
             </div>
