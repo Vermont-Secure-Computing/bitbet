@@ -54,13 +54,12 @@ const QuestionDetails = () => {
     useEffect(() => {
         if (questionPda) {
             console.log("fetching question details")
-            fetchQuestionDetails(questionPda);
+            fetchQuestionDetails();
         }
     }, [questionPda]);
 
-    const fetchQuestionDetails = async (pdaStr) => {
-        const pda = new PublicKey(pdaStr);
-        const bettingQuestion = await bettingProgram.account.bettingQuestion.fetch(pda);
+    const fetchQuestionDetails = async () => {
+        const bettingQuestion = await bettingProgram.account.bettingQuestion.fetch(questionPda);
         const truthNetworkQuestion = await truthNetworkProgram.account.question.fetch(bettingQuestion.questionPda);
 
         const totalPool = new BN(bettingQuestion.totalPool);
@@ -98,6 +97,7 @@ const QuestionDetails = () => {
                 id: truthNetworkQuestion.id.toString(),
                 revealEndTime: truthNetworkQuestion.revealEndTime.toNumber(),
                 winningOption: truthNetworkQuestion.winningOption === 1 ? true : (truthNetworkQuestion.winningOption === 2 ? false : null),
+                winningPercent: truthNetworkQuestion.winningPercent,
                 committedVoters: truthNetworkQuestion.committedVoters.toNumber(),
                 voterRecordsCount: truthNetworkQuestion.voterRecordsCount.toNumber(),
                 voterRecordsClosed: truthNetworkQuestion.voterRecordsClosed.toNumber(),
@@ -343,8 +343,9 @@ const QuestionDetails = () => {
 
             setBetAmount("");
             
-            await fetchUpdatedQuestionData();
+            await fetchQuestionDetails();
             await fetchBettorData(); 
+            await fetchVaultBalance();
             toast.success("Bet placed successfully!", { transition: Bounce });
             console.log("Transaction:", tx);
         } catch (error) {
@@ -355,67 +356,6 @@ const QuestionDetails = () => {
         setLoading(false);
     };
 
-
-    const fetchUpdatedQuestionData = async () => {
-        try {
-            const bettingQuestionAccount = await bettingProgram.account.bettingQuestion.fetch(bettingQuestion_PDA);
-            const truthQuestionAccount = await truthNetworkProgram.account.question.fetch(truthNetworkQuestionPDA);
-    
-            // Convert any necessary fields again
-            const updatedData = {
-                betting: {
-                    ...bettingQuestionAccount,
-                    questionPda: bettingQuestionAccount.questionPda.toBase58(),
-                    totalPool: bettingQuestionAccount.totalPool.toString(),
-                    totalBetsOption1: bettingQuestionAccount.totalBetsOption1.toString(),
-                    totalBetsOption2: bettingQuestionAccount.totalBetsOption2.toString(),
-                    option1Odds: bettingQuestionAccount.option1Odds,
-                    option2Odds: bettingQuestionAccount.option2Odds,
-                    totalHouseCommision: bettingQuestionAccount.totalHouseCommision.toString(),
-                    totalCreatorCommission: bettingQuestionAccount.totalCreatorCommission.toString(),
-                    vault: bettingQuestionAccount.vault.toBase58(),
-                    closeDate: bettingQuestionAccount.closeDate.toNumber(),
-                    creator: bettingQuestionAccount.creator.toBase58(),
-                    houseCommissionClaimed: bettingQuestionAccount.houseCommissionClaimed,
-                    creatorCommissionClaimed: bettingQuestionAccount.creatorCommissionClaimed,
-                },
-                truth: {
-                    ...truthQuestionAccount,
-                    questionKey: truthQuestionAccount.questionKey.toBase58(),
-                    vaultAddress: truthQuestionAccount.vaultAddress.toBase58(),
-                    id: truthQuestionAccount.id.toString(),
-                    revealEndTime: truthQuestionAccount.revealEndTime.toNumber(),
-                    winningOption:
-                        truthQuestionAccount.winningOption === 1
-                            ? true
-                            : truthQuestionAccount.winningOption === 2
-                            ? false
-                            : null,
-                    winningPercent: truthQuestionAccount.winningPercent,
-                    finalized: truthQuestionAccount.finalized,
-                    committedVoters: truthQuestionAccount.committedVoters.toNumber(),
-                    voterRecordsCount: truthQuestionAccount.voterRecordsCount.toNumber(),
-                    voterRecordsClosed: truthQuestionAccount.voterRecordsClosed.toNumber(),
-                    totalDistributed: truthQuestionAccount.totalDistributed.toNumber(),
-                    originalReward: truthQuestionAccount.originalReward.toNumber(),
-                    snapshotReward: truthQuestionAccount.snapshotReward.toNumber(),
-                },
-            };
-    
-            // Update local state
-            setBettorData(null);
-            setStatus(null); 
-            setCloseDate(new Date(updatedData.betting.closeDate * 1000));
-            setRevealEndTime(new Date(updatedData.truth.revealEndTime * 1000));
-    
-            // Update overall questionData
-            setQuestionData(updatedData);
-        } catch (error) {
-            console.error("Error fetching updated question data:", error);
-            toast.error("Failed to refresh question data.");
-        }
-    };
-    
 
     const fetchWinner = async () => {
         if (!publicKey) return toast.error("Please connect your wallet.");
@@ -434,7 +374,7 @@ const QuestionDetails = () => {
             console.log("Winner fetched & winners determined:", tx);
             toast.success("Winner fetched & winnings calculated!", { transition: Bounce });
 
-            await fetchUpdatedQuestionData();
+            await fetchQuestionDetails();
             await fetchBettorData(); 
         } catch (error) {
             setLoading(true)
@@ -561,7 +501,7 @@ const QuestionDetails = () => {
             // Fetch updated bettor data
             await fetchBettorData();
             await fetchVaultBalance();
-            await fetchUpdatedQuestionData();
+            await fetchQuestionDetails();
 
             toast.success("Commission claimed successfully!");
     
@@ -632,17 +572,7 @@ const QuestionDetails = () => {
             const vaultOnlyHasRent = (truthVaultBalance - truthRentExemption) < 1000;
             const rentExpired = questionData.truth.rentExpiration <= now;
 
-            console.log("truth network validation")
-            console.log("isFinalized: ", isFinalized)
-            console.log("revealEnded: ", revealEnded)
-            console.log("truthVaultBalance: ", truthVaultBalance)
-            console.log("truthRentExemption: ", truthRentExemption)
-            console.log("vaultOnlyHasRent: ", vaultOnlyHasRent)
-            console.log("rentExpired: ", rentExpired)
-            console.log("asker: ", questionData.truth.asker)
-            console.log("truth creator: ", publicKey?.toBase58() === questionData.truth.asker)
-            console.log("other check: ", (questionData.truth.committedVoters === 0 || (questionData.truth.voterRecordsCount === 0 || questionData.truth.voterRecordsClosed === questionData.truth.voterRecordsCount) &&(questionData.truth.totalDistributed >= questionData.truth.snapshotReward || questionData.truth.originalReward === 0)))
-
+            
             /**
              * Bitbet validation
              */
@@ -670,9 +600,24 @@ const QuestionDetails = () => {
                 console.log("Error fetching bettor record");
             }
 
+
+            console.log("truth network validation")
+            console.log("isFinalized: ", isFinalized)
+            console.log("vault lamports: ", vaultLamports - minRent < 1000)
+            console.log("minRent: ", minRent)
+            console.log("revealEnded: ", revealEnded)
+            console.log("truthVaultBalance: ", truthVaultBalance)
+            console.log("truthRentExemption: ", truthRentExemption)
+            console.log("vaultOnlyHasRent: ", vaultOnlyHasRent)
+            console.log("rentExpired: ", rentExpired)
+            console.log("asker: ", questionData.truth.asker)
+            console.log("truth creator: ", publicKey?.toBase58() === questionData.truth.asker)
+            console.log("other check: ", (questionData.truth.committedVoters === 0 || (questionData.truth.voterRecordsCount === 0 || questionData.truth.voterRecordsClosed === questionData.truth.voterRecordsCount) &&(questionData.truth.totalDistributed >= questionData.truth.snapshotReward || questionData.truth.originalReward === 0)))
+
+
             if (
                 isFinalized &&
-                vaultLamports <= minRent &&
+                vaultLamports - minRent < 1000 &&
                 publicKey?.toBase58() === questionData.betting.creator &&
                 !hasBettorRecord &&
                 publicKey?.toBase58() === questionData.truth.asker &&

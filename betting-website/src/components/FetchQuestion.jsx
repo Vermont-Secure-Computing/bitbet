@@ -4,6 +4,8 @@ import { PublicKey } from "@solana/web3.js";
 import { AnchorProvider, Program, web3, BN } from "@coral-xyz/anchor";
 import { useNavigate } from "react-router-dom";
 import { FiLogIn } from "react-icons/fi";
+import { toast } from "react-toastify";
+
 import bettingIDL from "../idls/betting.json";
 import truthNetworkIDL from "../idls/truth_network.json";
 
@@ -38,9 +40,19 @@ const FetchQuestion = () => {
     const truthNetworkProgram = new Program(truthNetworkIDL, provider);
 
     useEffect(() => {
-        if (connected) {
+        if (!connected) return;
+
+        // Initial fetch on load
+        fetchAllQuestions();
+    
+        // Refresh events list after 5 minutes
+        const intervalId = setInterval(() => {
+            toast.info("Refreshing questions list ...");
             fetchAllQuestions();
-        }
+        }, 3 * 60 * 1000);
+        
+        // Cleanup on unmount
+        return () => clearInterval(intervalId); 
     }, [connected]);
 
     const fetchAllQuestions = async () => {

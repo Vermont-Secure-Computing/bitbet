@@ -23,7 +23,7 @@ use truth_network::accounts::Question;
 
 pub const HOUSE_WALLET: &str = "6tBwNgSW17jiWoEuoGEyqwwH3Jkv86WN61FETFoHonof";
 
-declare_id!("Eeqw8JUQc1G25iVbMerRmVsZypZQLR5oBUR4YAw9HiC6");
+declare_id!("9yimi3EkS3RrXtpML6TkCHFUWsQFpSiZk4NhoyeGznGt");
 
 #[program]
 pub mod betting_contract {
@@ -278,29 +278,33 @@ pub mod betting_contract {
         {
             if !betting_question.house_commission_claimed {
                 let house_commission = betting_question.total_house_commision;
-                require!(house_commission > 0, BettingError::NoCommissionAvailable);
-            
-                msg!(
-                    "Transferring {} lamports to House Wallet: {}",
-                    house_commission,
-                    house_wallet.key()
-                );
-            
-                let vault_info = ctx.accounts.vault.to_account_info();
-                let house_info = ctx.accounts.house_wallet.to_account_info();
-            
-                let mut vault_lamports = vault_info.try_borrow_mut_lamports()?;
-                let mut house_lamports = house_info.try_borrow_mut_lamports()?;
-            
-                **vault_lamports = vault_lamports
-                    .checked_sub(house_commission)
-                    .ok_or(BettingError::InsufficientVaultBalance)?;
-            
-                **house_lamports = house_lamports
-                    .checked_add(house_commission)
-                    .ok_or(BettingError::NoCommissionAvailable)?;
-            
-                msg!("Successfully transferred manually!");
+                
+                if house_commission > 0 {
+                    msg!(
+                        "Transferring {} lamports to House Wallet: {}",
+                        house_commission,
+                        house_wallet.key()
+                    );
+                
+                    let vault_info = ctx.accounts.vault.to_account_info();
+                    let house_info = ctx.accounts.house_wallet.to_account_info();
+                
+                    let mut vault_lamports = vault_info.try_borrow_mut_lamports()?;
+                    let mut house_lamports = house_info.try_borrow_mut_lamports()?;
+                
+                    **vault_lamports = vault_lamports
+                        .checked_sub(house_commission)
+                        .ok_or(BettingError::InsufficientVaultBalance)?;
+                
+                    **house_lamports = house_lamports
+                        .checked_add(house_commission)
+                        .ok_or(BettingError::NoCommissionAvailable)?;
+                
+                    msg!("Successfully transferred manually!");
+                
+                } else {
+                    msg!("No house commission to transfer.");
+                }
             
                 betting_question.house_commission_claimed = true;
             } else {
@@ -585,37 +589,39 @@ pub mod betting_contract {
         let truth_vault_info = &ctx.accounts.truth_vault;
         let now = Clock::get()?.unix_timestamp;
     
-        // 1. Must be finalized
+        // Event must not be active
         require!(betting_question.status == "close", BettingError::BettingActive);
 
-        // 2. Must be event creator
+        // Must be event creator
         require!(betting_question.creator == creator.key(), BettingError::UnauthorizedCreator);
 
-        // 3. Must be truth-network asker
+        // Check truth network asker field
         require!(truth_question.asker == creator.key(), BettingError::UnauthorizedCreator);
 
-        // 4. Check truth network finalized
+        // Check truth network finalized
         require!(truth_question.finalized, BettingError::WinnerNotFinalized);
 
-        // 5. Reveal phase should have ended
+        // Reveal phase should have ended
         require!(now >= truth_question.reveal_end_time, BettingError::RevealNotEnded);
 
 
-        // 6. Rent must have expired on Truth Network
+        // Rent must have expired on Truth Network
         require!(now >= truth_question.rent_expiration, BettingError::TruthRentNotExpired);
 
-        // 7. Truth vault must only have rent remaining
+        // Truth vault must only have rent remaining
+        // allow a buffer of 1000 lamports to ensure lamports rounding
         let rent = Rent::get()?;
         let truth_min_balance = rent.minimum_balance(truth_vault_info.data_len());
         let truth_vault_balance = **truth_vault_info.lamports.borrow();
-        require!(truth_vault_balance <= truth_min_balance, BettingError::RemainingRewardExists);
+        require!(truth_vault_balance <= truth_min_balance + 1000, BettingError::RemainingRewardExists);
 
-        // 8. Betting vault must only have rent remaining
+        // Betting vault must only have rent remaining
+        // allow a buffer of 1000 lamports to ensure lamports rounding
         let betting_min_balance = rent.minimum_balance(betting_vault.data_len());
         let betting_vault_balance = **betting_vault.lamports.borrow();
-        require!(betting_vault_balance <= betting_min_balance, BettingError::RemainingBettingBalance);
+        require!(betting_vault_balance <= betting_min_balance + 1000, BettingError::RemainingBettingBalance);
 
-        // 9. CPI: call Truth-Network to drain & delete vault
+        // CPI: call Truth-Network to drain & delete vault
         msg!("Calling truth-network delete question");
         let cpi_ctx = CpiContext::new(
             ctx.accounts.truth_network_program.to_account_info(),
@@ -628,7 +634,7 @@ pub mod betting_contract {
         );
         delete_expired_question(cpi_ctx)?;
 
-        // 10. Drain betting vault → creator
+        // Drain betting vault → creator
         let vault_lamports = **betting_vault.lamports.borrow();
         require!(vault_lamports > 0, BettingError::VaultEmptyAlready);
     
@@ -637,7 +643,7 @@ pub mod betting_contract {
     
         msg!("Drained betting vault: {} lamports sent to creator {}", vault_lamports, creator.key());
     
-        // 11. BettingQuestion will be closed automatically
+        // Betting Question will be closed automatically
         msg!("BettingQuestion deleted. Rents refunded to {}", creator.key());
     
         Ok(())
