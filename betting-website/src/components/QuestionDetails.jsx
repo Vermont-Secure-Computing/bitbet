@@ -582,23 +582,49 @@ const QuestionDetails = () => {
             const minRent = await connection.getMinimumBalanceForRentExemption(0);
 
             let hasBettorRecord = true;
-            try {
-                const [bettorPda] = PublicKey.findProgramAddressSync(
-                    [
-                        Buffer.from("bettor"),
-                        publicKey.toBuffer(),
-                        bettingQuestion_PDA.toBuffer(),
-                    ],
-                    BETTING_CONTRACT_PROGRAM_ID
-                );
-                const bettorAccountInfo = await connection.getAccountInfo(bettorPda);
-                console.log("has bettor record, showing bettorAccountInfo: ", bettorAccountInfo)
+            // try {
+            //     const [bettorPda] = PublicKey.findProgramAddressSync(
+            //         [
+            //             Buffer.from("bettor"),
+            //             publicKey.toBuffer(),
+            //             bettingQuestion_PDA.toBuffer(),
+            //         ],
+            //         BETTING_CONTRACT_PROGRAM_ID
+            //     );
+            //     const bettorAccountInfo = await connection.getAccountInfo(bettorPda);
+            //     console.log("has bettor record, showing bettorAccountInfo: ", bettorAccountInfo)
 
-                if (bettorAccountInfo) hasBettorRecord = true;
-                else hasBettorRecord = false
-            } catch {
-                console.log("Error fetching bettor record");
+            //     if (bettorAccountInfo) hasBettorRecord = true;
+            //     else hasBettorRecord = false
+            // } catch {
+            //     console.log("Error fetching bettor record");
+            //     hasBettorRecord = false
+            // }
+
+            if (!publicKey || !bettingQuestion_PDA) {
+                console.warn("Wallet or question PDA not available.");
+                hasBettorRecord = false;
+            } else {
+                try {
+                    const [bettorPda] = PublicKey.findProgramAddressSync(
+                        [
+                            Buffer.from("bettor"),
+                            publicKey.toBuffer(),
+                            bettingQuestion_PDA.toBuffer(),
+                        ],
+                        BETTING_CONTRACT_PROGRAM_ID
+                    );
+            
+                    const bettorAccountInfo = await connection.getAccountInfo(bettorPda);
+                    hasBettorRecord = !!bettorAccountInfo;
+            
+                    console.log("Has bettor record:", hasBettorRecord);
+                } catch (err) {
+                    console.warn("Error checking bettor record:", err);
+                    hasBettorRecord = false;
+                }
             }
+            
 
 
             console.log("truth network validation")
