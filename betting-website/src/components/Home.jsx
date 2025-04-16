@@ -16,8 +16,9 @@ function Home() {
             
 
             {/* Main Content */}
-            <div className="w-full flex justify-center mt-6">
-                <div className="w-full max-w-4xl bg-gray-800 rounded-lg shadow-md p-6">
+            <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 mt-6">
+                <div className="w-full max-w-[1600px] bg-gray-800 rounded-lg shadow-md p-6">
+
                     {/* Tabs for Create & View Questions */}
                     <div className="bg-gray-800 rounded-t-xl shadow-sm">
                         <div className="flex justify-around">
