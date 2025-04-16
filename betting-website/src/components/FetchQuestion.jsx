@@ -19,12 +19,14 @@ const TRUTH_NETWORK_PROGRAM_ID = new PublicKey(import.meta.env.VITE_TRUTH_PROGRA
 const FetchQuestion = () => {
     const { publicKey, connected } = useWallet();
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(true);
+    const [refreshingList, setRefreshingList] = useState(false);
     const [allQuestions, setAllQuestions] = useState([]);
+    const [filter, setFilter] = useState("all");
+
     const [currentQuestions, setCurrentQuestions] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
 
-    const questionsPerPage = 10;
+    const questionsPerPage = 12;
     const totalPages = Math.ceil(allQuestions.length / questionsPerPage);
 
     // Setup Provider & Programs
@@ -47,13 +49,12 @@ const FetchQuestion = () => {
     
         // Refresh events list after 5 minutes
         const intervalId = setInterval(() => {
-            toast.info("Refreshing questions list ...");
             fetchAllQuestions();
-        }, 3 * 60 * 1000);
+        }, 1 * 60 * 1000);
         
         // Cleanup on unmount
         return () => clearInterval(intervalId); 
-    }, [connected]);
+    }, [connected, filter]);
 
     const fetchAllQuestions = async () => {
         console.log("Betting Program:", bettingProgram);
@@ -65,7 +66,7 @@ const FetchQuestion = () => {
         }
 
         try {
-            setLoading(true);
+            setRefreshingList(true);
 
             // Check if bettingProgram is initialized
             if (!bettingProgram.account?.bettingQuestion) {
@@ -79,7 +80,7 @@ const FetchQuestion = () => {
 
             if (!accounts.length) {
                 console.warn("No betting questions found!");
-                setLoading(false);
+                setRefreshingList(false);
                 return;
             }
 
@@ -100,7 +101,8 @@ const FetchQuestion = () => {
                         const truthQuestion = await truthNetworkProgram.account.question.fetch(
                             bettingQuestion.account.questionPda
                         );
-                        
+
+                        setRefreshingList(false)
                         return {
                             betting: {
                                 ...bettingQuestion.account,
@@ -126,6 +128,7 @@ const FetchQuestion = () => {
                                 winningOption: truthQuestion.winningOption === 1 ? true : (truthQuestion.winningOption === 2 ? false : null)
                             },
                         };
+
                     } catch (error) {
                         console.error("Error fetching Truth-Network question:", error);
                         return null;
@@ -138,21 +141,31 @@ const FetchQuestion = () => {
              * Active - sort open questions by soonest close date
              */
             const now = Math.floor(Date.now() / 1000);
-            const openQuestions = questionsWithDetails
+
+            const filteredQuestions = questionsWithDetails.filter((q) => {
+                if (!q) return false;
+                if (filter === "active") return q.betting.closeDate > now;
+                if (filter === "closed") return q.betting.closeDate <= now;
+                return true; // for "all"
+            });
+
+            const openQuestions = filteredQuestions
                 .filter(q => q && q.betting.closeDate > now)
                 .sort((a, b) => a.betting.closeDate - b.betting.closeDate);
-            const closedQuestions = questionsWithDetails
+            const closedQuestions = filteredQuestions
                 .filter(q => q && q.betting.closeDate <= now)
                 .sort((a, b) => b.betting.closeDate - a.betting.closeDate);
 
             const sortedQuestions = [...openQuestions, ...closedQuestions];
             console.log("sortedQuestions: ", sortedQuestions)
             setAllQuestions(sortedQuestions);
+
+            
         } catch (error) {
             console.error("Error fetching questions:", error);
             alert("Failed to fetch questions.");
         } finally {
-            setLoading(false);
+            setRefreshingList(false);
         }
     };
 
@@ -167,34 +180,93 @@ const FetchQuestion = () => {
     }, [currentPage]);
 
 
+    const refreshingListLoader = () => {
+        return (
+            <div className="mt-4 flex items-center gap-2 text-sm text-blue-400">
+                <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a10 10 0 00-10 10h4z"></path>
+                </svg>
+                Refreshing questions list...
+            </div>
+        )
+    }
+
+
+    const filterButtons = () => {
+        const baseClasses = "w-[120px] text-xs py-1.5 rounded !text-sm transition-colors";
+    
+        return (
+            <div className="flex gap-3 my-4 justify-center sm:justify-start">
+                <button
+                    onClick={() => setFilter("all")}
+                    className={`${baseClasses} ${filter === "all" ? "!bg-blue-600 text-white" : "!bg-gray-700 hover:!bg-gray-600 text-gray-300"}`}
+                >
+                    All
+                </button>
+                <button
+                    onClick={() => setFilter("active")}
+                    className={`${baseClasses} ${filter === "active" ? "!bg-green-600 text-white" : "!bg-gray-700 hover:!bg-gray-600 text-gray-300"}`}
+                >
+                    Active
+                </button>
+                <button
+                    onClick={() => setFilter("closed")}
+                    className={`${baseClasses} ${filter === "closed" ? "!bg-red-600 text-white" : "!bg-gray-700 hover:!bg-gray-600 text-gray-300"}`}
+                >
+                    Closed
+                </button>
+            </div>
+        );
+    };
+    
+
+
     return (
-        <div className="max-w-2xl mx-auto mt-10 p-6 border border-gray-600 rounded-lg shadow-lg bg-gray-900 text-white">
+        <div className="w-full flex-1 mt-6 p-4 sm:p-6 lg:p-8 border border-gray-600 rounded-lg shadow-lg bg-gray-900 text-white">
+
             <h2 className="text-2xl font-bold text-gray-200">All Events</h2>
             <p className="text-sm text-gray-400">Note: All bets are resolved two (2) days after betting close date.</p>
 
-            {publicKey && loading ? <p className="mt-4 text-gray-400">Loading...</p> : null}
+            {filterButtons()}
+
+            {refreshingList && refreshingListLoader()}
+
+
             
             {publicKey ?
-                <ul className="mt-4 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                     {currentQuestions && currentQuestions.map((q, index) => (
-                        <li key={index} 
+                        <div
+                            key={index}
                             onClick={() => navigate(`/question/${q.betting.id.toString()}`, { state: q })}
-                            className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer border border-gray-700 shadow-md"
+                            className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer border border-gray-700 shadow-md transition-all"
                         >
                             <strong className="text-lg text-blue-400">
                                 {q.betting.title}
-                                {q.hasBet && <span className="text-green-400 text-xs bg-green-900 px-2 py-1 rounded-md">Bet Placed</span>}
+                                {q.hasBet && (
+                                    <span className="text-green-400 text-xs bg-green-900 px-2 py-1 ml-2 rounded-md">
+                                        Bet Placed
+                                    </span>
+                                )}
                             </strong>
                             <p className="text-sm">
-                                <span className={q.betting.closeDate <= Math.floor(Date.now() / 1000) ? "text-red-500" : "text-green-500"}>
+                                <span className={q.betting.closeDate <= Math.floor(Date.now() / 1000)
+                                    ? "text-red-500"
+                                    : "text-green-500"}>
                                     {getTimeRemaining(q.betting.closeDate)}
                                 </span>
                             </p>
-                            <p className="text-gray-500 text-sm break-all">PDA: {q.betting.id.toString()}</p>
-                            <p className="text-gray-500 text-sm">Total Bets: {(new BN(q.betting.totalPool)  / 1_000_000_000).toString()} SOL</p>
-                        </li>
+                            <p className="text-gray-500 text-sm break-all">
+                                PDA: {q.betting.id.toString()}
+                            </p>
+                            <p className="text-gray-500 text-sm">
+                                Total Bets: {(new BN(q.betting.totalPool) / 1_000_000_000).toString()} SOL
+                            </p>
+                        </div>
                     ))}
-                </ul>
+                </div>
+
                 :
                 <div className="mt-6 p-4 bg-gray-800 border-l-4 border-yellow-500 text-yellow-300 rounded-md flex items-start gap-3">
                     <FiLogIn className="text-2xl mt-0.5" />
