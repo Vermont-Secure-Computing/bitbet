@@ -6,6 +6,7 @@ import { Program, AnchorProvider, web3, BN } from "@coral-xyz/anchor";
 import { toast, Bounce } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
+import { FaRegCopy } from "react-icons/fa";
 
 import bettingIDL from "../idls/betting.json";
 import truthNetworkIDL from "../idls/truth_network.json";
@@ -723,6 +724,20 @@ const QuestionDetails = () => {
             <div className="w-full max-w-2xl mx-auto p-6 border border-gray-600 rounded-lg shadow-lg bg-gray-800">
                 
                 <h2 className="text-2xl font-bold text-gray-200">{questionData?.betting.title}</h2>
+                {publicKey?.toBase58() === questionData?.betting?.creator &&
+                    <div className="mt-1 flex items-center gap-1 text-sm text-gray-500 cursor-pointer hover:underline"
+                        onClick={() => {
+                            const eventUrl = `${window.location.origin}/event/${questionData?.betting.id}`;
+                            navigator.clipboard.writeText(eventUrl);
+                            toast.success("Event link copied to clipboard!");
+                        }}
+                    >
+                        <FaRegCopy className="w-4 h-4" />
+                        Copy event link
+                    </div>
+                }
+
+
                 <p className="text-gray-400 mt-2">
                     <strong>Status:</strong>{" "}
                     <span className={status?.className}>{status?.label}</span>

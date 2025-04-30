@@ -1,5 +1,5 @@
 {
-  "address": "9yimi3EkS3RrXtpML6TkCHFUWsQFpSiZk4NhoyeGznGt",
+  "address": "4VwT7aqbwpHhfQiXuERA89pqaqw7U99kbDyKMUVQ7czS",
   "metadata": {
     "name": "betting_contract",
     "version": "0.1.0",
@@ -30,7 +30,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "7JE57i5fbS4qNhEdW9EQAo2GamPqioTQSbCBJqtY2Wsc"
+          "address": "3QE4hfmAMHPSqcfqimYzyuXU8HyYn7tHBR6mfSuVWZQG"
         }
       ],
       "args": []
@@ -237,7 +237,7 @@
         },
         {
           "name": "betting_contract",
-          "address": "9yimi3EkS3RrXtpML6TkCHFUWsQFpSiZk4NhoyeGznGt"
+          "address": "4VwT7aqbwpHhfQiXuERA89pqaqw7U99kbDyKMUVQ7czS"
         },
         {
           "name": "vault",
@@ -370,7 +370,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "7JE57i5fbS4qNhEdW9EQAo2GamPqioTQSbCBJqtY2Wsc"
+          "address": "3QE4hfmAMHPSqcfqimYzyuXU8HyYn7tHBR6mfSuVWZQG"
         },
         {
           "name": "system_program",
@@ -402,7 +402,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "7JE57i5fbS4qNhEdW9EQAo2GamPqioTQSbCBJqtY2Wsc"
+          "address": "3QE4hfmAMHPSqcfqimYzyuXU8HyYn7tHBR6mfSuVWZQG"
         },
         {
           "name": "house_wallet",
@@ -534,7 +534,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "7JE57i5fbS4qNhEdW9EQAo2GamPqioTQSbCBJqtY2Wsc"
+          "address": "3QE4hfmAMHPSqcfqimYzyuXU8HyYn7tHBR6mfSuVWZQG"
         },
         {
           "name": "system_program",
@@ -627,6 +627,86 @@
         122,
         118,
         127
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "BetPlaced",
+      "discriminator": [
+        88,
+        88,
+        145,
+        226,
+        126,
+        206,
+        32,
+        0
+      ]
+    },
+    {
+      "name": "BettorRecordDeleted",
+      "discriminator": [
+        82,
+        207,
+        184,
+        141,
+        80,
+        254,
+        151,
+        157
+      ]
+    },
+    {
+      "name": "CreatorCommissionClaimed",
+      "discriminator": [
+        62,
+        232,
+        108,
+        8,
+        248,
+        215,
+        65,
+        109
+      ]
+    },
+    {
+      "name": "EventCreated",
+      "discriminator": [
+        59,
+        186,
+        199,
+        175,
+        242,
+        25,
+        238,
+        94
+      ]
+    },
+    {
+      "name": "EventDeleted",
+      "discriminator": [
+        140,
+        28,
+        249,
+        192,
+        46,
+        170,
+        15,
+        241
+      ]
+    },
+    {
+      "name": "WinningsClaimed",
+      "discriminator": [
+        187,
+        184,
+        29,
+        196,
+        54,
+        117,
+        70,
+        150
       ]
     }
   ],
@@ -780,9 +860,38 @@
       "code": 6029,
       "name": "RemainingBettingBalance",
       "msg": "Betting vault still contains rewards."
+    },
+    {
+      "code": 6030,
+      "name": "ActionInProgress",
+      "msg": "Function already being processed. Try again."
     }
   ],
   "types": [
+    {
+      "name": "BetPlaced",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bettor",
+            "type": "pubkey"
+          },
+          {
+            "name": "question",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "option",
+            "type": "bool"
+          }
+        ]
+      }
+    },
     {
       "name": "BettingQuestion",
       "docs": [
@@ -884,6 +993,10 @@
           {
             "name": "house_commission_claimed",
             "type": "bool"
+          },
+          {
+            "name": "action_in_progress",
+            "type": "bool"
           }
         ]
       }
@@ -929,6 +1042,82 @@
                 88
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "BettorRecordDeleted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bettor",
+            "type": "pubkey"
+          },
+          {
+            "name": "betting_question",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreatorCommissionClaimed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "betting_question",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EventCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "betting_question",
+            "type": "pubkey"
+          },
+          {
+            "name": "close_date",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EventDeleted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "betting_question",
+            "type": "pubkey"
+          },
+          {
+            "name": "refund_amount",
+            "type": "u64"
           }
         ]
       }
@@ -1051,8 +1240,36 @@
             "type": "u64"
           },
           {
+            "name": "reward_drained",
+            "type": "bool"
+          },
+          {
             "name": "bump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WinningsClaimed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bettor",
+            "type": "pubkey"
+          },
+          {
+            "name": "question",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "won",
+            "type": "bool"
           }
         ]
       }

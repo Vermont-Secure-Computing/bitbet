@@ -23,8 +23,56 @@ use truth_network::accounts::Question;
 
 pub const HOUSE_WALLET: &str = "6tBwNgSW17jiWoEuoGEyqwwH3Jkv86WN61FETFoHonof";
 
-declare_id!("9yimi3EkS3RrXtpML6TkCHFUWsQFpSiZk4NhoyeGznGt");
+declare_id!("4VwT7aqbwpHhfQiXuERA89pqaqw7U99kbDyKMUVQ7czS");
 
+
+
+// Used for adding on-chain event logs
+#[event]
+pub struct EventCreated {
+    pub creator: Pubkey,
+    pub betting_question: Pubkey,
+    pub close_date: i64,
+}
+
+#[event]
+pub struct BetPlaced {
+    pub bettor: Pubkey,
+    pub question: Pubkey,
+    pub amount: u64,
+    pub option: bool,
+}
+
+#[event]
+pub struct WinningsClaimed {
+    pub bettor: Pubkey,
+    pub question: Pubkey,
+    pub amount: u64,
+    pub won: bool,
+}
+
+#[event]
+pub struct EventDeleted {
+    pub creator: Pubkey,
+    pub betting_question: Pubkey,
+    pub refund_amount: u64,
+}
+
+#[event]
+pub struct CreatorCommissionClaimed {
+    pub creator: Pubkey,
+    pub betting_question: Pubkey,
+    pub amount: u64,
+}
+
+#[event]
+pub struct BettorRecordDeleted {
+    pub bettor: Pubkey,
+    pub betting_question: Pubkey,
+}
+
+
+// Main program
 #[program]
 pub mod betting_contract {
     use super::*;
@@ -95,6 +143,12 @@ pub mod betting_contract {
         msg!("Stored Truth-Network Question PDA: {}", betting_question.question_pda);
         msg!("Bet Vault PDA: {}", vault.key());
 
+        emit!(EventCreated {
+            creator: *ctx.accounts.creator.key,
+            betting_question: betting_question.key(),
+            close_date,
+        });
+
         Ok(())
     }
 
@@ -105,6 +159,10 @@ pub mod betting_contract {
         let vault = &mut ctx.accounts.vault; // Betting vault (owned by Betting Program)
         let truth_vault = &mut ctx.accounts.truth_network_vault; // Truth-Network vault (owned by Truth-Network)
         let system_program = &ctx.accounts.system_program;
+
+        // Reentrancy guard check
+        require!(!betting_question.action_in_progress, BettingError::ActionInProgress);
+        betting_question.action_in_progress = true;
 
         // Ensure betting is still open
         let current_time = Clock::get()?.unix_timestamp;
@@ -205,6 +263,15 @@ pub mod betting_contract {
         betting_question.total_house_commision += house_commission;
     
         msg!("Truth network question rewards updated with {}", truth_network_commission);
+
+        emit!(BetPlaced {
+            bettor: *ctx.accounts.user.key,
+            question: betting_question.key(),
+            amount,
+            option: is_option_1,
+        });
+
+        betting_question.action_in_progress = false;
     
         Ok(())
     }
@@ -239,7 +306,6 @@ pub mod betting_contract {
             finalize_voting(cpi_context, question_id)?;
         }
         
-        msg!("Called finalize_voting on Truth-Network for Question ID: {}", question_id);
         msg!("Called finalize_voting on Truth-Network for Question ID: {}", question_id);
 
         // Step 2: Manually Re-fetch the Truth-Network Question
@@ -318,13 +384,17 @@ pub mod betting_contract {
 
 
     pub fn claim_winnings(ctx: Context<ClaimWinnings>) -> Result<()> {
-        let betting_question = &ctx.accounts.betting_question;
+        let betting_question = &mut ctx.accounts.betting_question;
         let truth_network_question = &ctx.accounts.truth_network_question;
         let bettor_account = &mut ctx.accounts.bettor_account;
         let user = &ctx.accounts.user;
         let vault = &mut ctx.accounts.vault; // Betting Vault
     
         msg!("User {} is attempting to claim winnings", user.key());
+
+        // Reentrancy guard check
+        require!(!betting_question.action_in_progress, BettingError::ActionInProgress);
+        betting_question.action_in_progress = true;
 
         // Ensure the bettor is the caller
         require!(
@@ -444,6 +514,13 @@ pub mod betting_contract {
 
             bettor_account.winnings = user_winnings;
             msg!("Claim successful! User {} received {} SOL", user.key(), user_winnings);
+
+            emit!(WinningsClaimed {
+                bettor: *ctx.accounts.user.key,
+                question: betting_question.key(),
+                amount: user_winnings,
+                won: true,
+            });
             
         } else {
             // Case 2: If winning percentage is below 75% -> Refund 97% of bet amount to all bettors
@@ -468,10 +545,19 @@ pub mod betting_contract {
             bettor_account.winnings = refund_amount;
             msg!("Refund successful! User {} received {} SOL", user.key(), refund_amount);
 
+            emit!(WinningsClaimed {
+                bettor: *ctx.accounts.user.key,
+                question: betting_question.key(),
+                amount: refund_amount,
+                won: false,
+            });
+
         }
 
         // Mark bettor winnings as claimed
         bettor_account.claimed = true;
+
+        betting_question.action_in_progress = false;
 
         Ok(())
     }
@@ -497,6 +583,10 @@ pub mod betting_contract {
         let vault = &mut ctx.accounts.vault;
     
         msg!("Creator {} is attempting to claim commission", creator.key());
+
+        // Reentrancy guard check
+        require!(!betting_question.action_in_progress, BettingError::ActionInProgress);
+        betting_question.action_in_progress = true;
     
         require!(
             betting_question.creator == *creator.key,
@@ -529,6 +619,14 @@ pub mod betting_contract {
         betting_question.creator_commission_claimed = true;
     
         msg!("Creator commission of {} lamports claimed by {}", commission_amount, creator.key());
+
+        emit!(CreatorCommissionClaimed {
+            creator: creator.key(),
+            betting_question: betting_question.key(),
+            amount: commission_amount,
+        });
+
+        betting_question.action_in_progress = false;
     
         Ok(())
     }
@@ -571,13 +669,18 @@ pub mod betting_contract {
             ctx.accounts.user.key(),
             bettor_account.key()
         );
+
+        emit!(BettorRecordDeleted {
+            bettor: ctx.accounts.user.key(),
+            betting_question: ctx.accounts.betting_question.key(),
+        });
     
         Ok(())
     }
 
 
     pub fn delete_event(ctx: Context<DeleteEvent>) -> Result<()> {
-        let betting_question = &ctx.accounts.betting_question;
+        let betting_question = &mut ctx.accounts.betting_question;
         let betting_vault = &ctx.accounts.betting_vault;
         let creator = &ctx.accounts.creator;
 
@@ -588,6 +691,10 @@ pub mod betting_contract {
 
         let truth_vault_info = &ctx.accounts.truth_vault;
         let now = Clock::get()?.unix_timestamp;
+
+        // Reentrancy guard check
+        require!(!betting_question.action_in_progress, BettingError::ActionInProgress);
+        betting_question.action_in_progress = true;
     
         // Event must not be active
         require!(betting_question.status == "close", BettingError::BettingActive);
@@ -645,6 +752,14 @@ pub mod betting_contract {
     
         // Betting Question will be closed automatically
         msg!("BettingQuestion deleted. Rents refunded to {}", creator.key());
+
+        emit!(EventDeleted {
+            creator: creator.key(),
+            betting_question: betting_question.key(),
+            refund_amount: vault_lamports,
+        });
+
+        betting_question.action_in_progress = false;
     
         Ok(())
     }    
@@ -678,6 +793,7 @@ pub struct BettingQuestion {
     pub vault: Pubkey,
     pub creator_commission_claimed: bool,
     pub house_commission_claimed: bool,
+    pub action_in_progress: bool, // false = free, true = in-use
 }
 
 /// Account Structs
@@ -694,7 +810,7 @@ pub struct CreateBettingQuestion<'info> {
     #[account(
         init,
         payer = creator,
-        space = 800,
+        space = 800 + 1,
         seeds = [b"betting_question", betting_contract.key().as_ref(), question_pda.key().as_ref()],
         bump
     )]
@@ -1030,5 +1146,8 @@ pub enum BettingError {
     
     #[msg("Betting vault still contains rewards.")]
     RemainingBettingBalance, 
+
+    #[msg("Function already being processed. Try again.")]
+    ActionInProgress,
 
 }
