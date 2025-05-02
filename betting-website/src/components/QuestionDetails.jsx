@@ -6,7 +6,7 @@ import { Program, AnchorProvider, web3, BN } from "@coral-xyz/anchor";
 import { toast, Bounce } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
-import { FaRegCopy } from "react-icons/fa";
+import { FaRegCopy, FaTwitter, FaFacebookF, FaTelegramPlane } from "react-icons/fa";
 
 import bettingIDL from "../idls/betting.json";
 import truthNetworkIDL from "../idls/truth_network.json";
@@ -20,23 +20,24 @@ const QuestionDetails = () => {
 
     const navigate = useNavigate();
 
-    const { publicKey, signTransaction, signAllTransactions } = useWallet();
+    const { publicKey, connected, signTransaction, signAllTransactions } = useWallet();
+    console.log("Wallet status:", publicKey?.toBase58(), connected);
 
     const walletAdapter = useMemo(() => {
-    return publicKey && signTransaction
-        ? {
-            publicKey,
-            signTransaction,
-            signAllTransactions,
-            network: "devnet",
-        }
-        : null;
+        return publicKey && signTransaction
+            ? {
+                publicKey,
+                signTransaction,
+                signAllTransactions,
+                network: "devnet",
+            }
+            : null;
     }, [publicKey, signTransaction, signAllTransactions]);
 
     const provider = useMemo(() => {
-    return walletAdapter
-        ? new AnchorProvider(connection, walletAdapter, { preflightCommitment: "processed" })
-        : null;
+        return walletAdapter
+            ? new AnchorProvider(connection, walletAdapter, { preflightCommitment: "processed" })
+            : null;
     }, [walletAdapter]);
 
     const bettingProgram = useMemo(() => {
@@ -44,7 +45,7 @@ const QuestionDetails = () => {
     }, [provider]);
 
     const truthNetworkProgram = useMemo(() => {
-    return provider ? new Program(truthNetworkIDL, provider) : null;
+        return provider ? new Program(truthNetworkIDL, provider) : null;
     }, [provider]);
 
 
@@ -57,9 +58,10 @@ const QuestionDetails = () => {
             console.log("fetching question details")
             fetchQuestionDetails();
         }
-    }, [questionPda]);
+    }, [questionPda, bettingProgram, truthNetworkProgram]);
 
     const fetchQuestionDetails = async () => {
+        console.log("fetchQuestionDetails function ========>")
         const bettingQuestion = await bettingProgram.account.bettingQuestion.fetch(questionPda);
         const truthNetworkQuestion = await truthNetworkProgram.account.question.fetch(bettingQuestion.questionPda);
 
@@ -704,6 +706,63 @@ const QuestionDetails = () => {
             setLoading(false);
         }
     };
+
+
+    const sharingComponent = () => {
+        return (
+            <div className="mt-1 flex flex-col gap-1 text-sm text-gray-500">
+    
+            {/* Copy to clipboard */}
+            <div
+                className="flex items-center gap-1 cursor-pointer hover:underline"
+                onClick={() => {
+                    const eventUrl = `${window.location.origin}/question/${questionData?.betting.id}`;
+                    navigator.clipboard.writeText(eventUrl);
+                    toast.success("Event link copied to clipboard!");
+                }}
+            >
+                <FaRegCopy className="w-4 h-4" />
+                Copy event link
+            </div>
+
+            {/* Social sharing buttons */}
+            <div className="flex items-center gap-3 mt-1">
+                {/* Twitter */}
+                <a
+                    href={`https://twitter.com/intent/tweet?text=Check out this event!&url=${encodeURIComponent(`${window.location.origin}/question/${questionData?.betting.id}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:text-blue-600"
+                    title="Share on Twitter"
+                >
+                    <FaTwitter className="w-4 h-4" />
+                </a>
+
+                {/* Facebook */}
+                <a
+                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${window.location.origin}/question/${questionData?.betting.id}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-700 hover:text-blue-800"
+                    title="Share on Facebook"
+                >
+                    <FaFacebookF className="w-4 h-4" />
+                </a>
+
+                {/* Telegram */}
+                <a
+                    href={`https://t.me/share/url?url=${encodeURIComponent(`${window.location.origin}/question/${questionData?.betting.id}`)}&text=Bitbet - Check out this event!`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sky-500 hover:text-sky-600"
+                    title="Share on Telegram"
+                >
+                    <FaTelegramPlane className="w-4 h-4" />
+                </a>
+            </div>
+        </div>
+        )
+    }
     
     console.log("show delete event button: ", canDeleteEvent)
 
@@ -725,16 +784,7 @@ const QuestionDetails = () => {
                 
                 <h2 className="text-2xl font-bold text-gray-200">{questionData?.betting.title}</h2>
                 {publicKey?.toBase58() === questionData?.betting?.creator &&
-                    <div className="mt-1 flex items-center gap-1 text-sm text-gray-500 cursor-pointer hover:underline"
-                        onClick={() => {
-                            const eventUrl = `${window.location.origin}/event/${questionData?.betting.id}`;
-                            navigator.clipboard.writeText(eventUrl);
-                            toast.success("Event link copied to clipboard!");
-                        }}
-                    >
-                        <FaRegCopy className="w-4 h-4" />
-                        Copy event link
-                    </div>
+                    sharingComponent()
                 }
 
 
