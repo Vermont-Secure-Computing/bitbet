@@ -14,7 +14,7 @@ const Header = () => {
                 {/* Logo + Label */}
                 <div>
                     <Link to="/" className="text-2xl font-bold text-white hover:underline block">
-                        BitBet
+                        SolBetX
                     </Link>
                     <p className="text-sm text-gray-300">Smart contract betting platform using Truth.it network</p>
                 </div>

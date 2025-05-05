@@ -62,7 +62,7 @@ function Home() {
                     rel="noopener noreferrer"
                     className="text-blue-400 hover:underline"
                 >
-                    View BitBet on GitHub
+                    View SolBetX on GitHub
                 </a>
             </div>
 

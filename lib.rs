@@ -10,10 +10,8 @@ use std::str::FromStr;
 declare_program!(truth_network);
 use truth_network::{ 
     program::TruthNetwork,
-    cpi::accounts::HelloWorld,
     cpi::accounts::FinalizeVoting,
     cpi::accounts::DeleteExpiredQuestion,
-    cpi::hello_world,
     cpi::finalize_voting,
     cpi::delete_expired_question,
 };
@@ -23,7 +21,7 @@ use truth_network::accounts::Question;
 
 pub const HOUSE_WALLET: &str = "6tBwNgSW17jiWoEuoGEyqwwH3Jkv86WN61FETFoHonof";
 
-declare_id!("4VwT7aqbwpHhfQiXuERA89pqaqw7U99kbDyKMUVQ7czS");
+declare_id!("4217UHxavjB7w4VHzFVrrL7sw1457KCgaBTffKXTHiKe");
 
 
 
@@ -76,22 +74,6 @@ pub struct BettorRecordDeleted {
 #[program]
 pub mod betting_contract {
     use super::*;
-
-    /// CPI Call to `helloWorld` in Truth Network
-    pub fn call_hello_world(ctx: Context<CallHelloWorld>) -> Result<()> {
-        msg!("Calling HelloWorld function from Truth Network...");
-
-        let cpi_program = ctx.accounts.truth_network_program.to_account_info();
-        let cpi_accounts = HelloWorld {
-            user: ctx.accounts.user.to_account_info(),
-        };
-        let cpi_context = CpiContext::new(cpi_program, cpi_accounts);
-
-        truth_network::cpi::hello_world(cpi_context)?;
-
-        msg!("Successfully called HelloWorld in Truth Network!");
-        Ok(())
-    }
 
     /// Create Betting Question (References the Truth-Network Question)
     pub fn create_betting_question(
