@@ -1,5 +1,5 @@
 {
-  "address": "4VwT7aqbwpHhfQiXuERA89pqaqw7U99kbDyKMUVQ7czS",
+  "address": "4217UHxavjB7w4VHzFVrrL7sw1457KCgaBTffKXTHiKe",
   "metadata": {
     "name": "betting_contract",
     "version": "0.1.0",
@@ -7,34 +7,6 @@
     "description": "Created with Anchor"
   },
   "instructions": [
-    {
-      "name": "call_hello_world",
-      "docs": [
-        "CPI Call to `helloWorld` in Truth Network"
-      ],
-      "discriminator": [
-        152,
-        33,
-        126,
-        169,
-        12,
-        54,
-        122,
-        3
-      ],
-      "accounts": [
-        {
-          "name": "user",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "truth_network_program",
-          "address": "3QE4hfmAMHPSqcfqimYzyuXU8HyYn7tHBR6mfSuVWZQG"
-        }
-      ],
-      "args": []
-    },
     {
       "name": "check_betting_question",
       "discriminator": [
@@ -237,7 +209,7 @@
         },
         {
           "name": "betting_contract",
-          "address": "4VwT7aqbwpHhfQiXuERA89pqaqw7U99kbDyKMUVQ7czS"
+          "address": "4217UHxavjB7w4VHzFVrrL7sw1457KCgaBTffKXTHiKe"
         },
         {
           "name": "vault",
@@ -370,7 +342,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "3QE4hfmAMHPSqcfqimYzyuXU8HyYn7tHBR6mfSuVWZQG"
+          "address": "6JWjb73VpTRtq2Dq8iS5W3TbFJxjhgrJtdeyrcFtf9QB"
         },
         {
           "name": "system_program",
@@ -402,7 +374,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "3QE4hfmAMHPSqcfqimYzyuXU8HyYn7tHBR6mfSuVWZQG"
+          "address": "6JWjb73VpTRtq2Dq8iS5W3TbFJxjhgrJtdeyrcFtf9QB"
         },
         {
           "name": "house_wallet",
@@ -534,7 +506,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "3QE4hfmAMHPSqcfqimYzyuXU8HyYn7tHBR6mfSuVWZQG"
+          "address": "6JWjb73VpTRtq2Dq8iS5W3TbFJxjhgrJtdeyrcFtf9QB"
         },
         {
           "name": "system_program",
@@ -1233,10 +1205,6 @@
           },
           {
             "name": "voter_records_closed",
-            "type": "u64"
-          },
-          {
-            "name": "revealed_correct_voters",
             "type": "u64"
           },
           {
