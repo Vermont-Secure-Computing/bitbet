@@ -263,7 +263,6 @@ const QuestionDetails = () => {
     
             const bettingVaultPubKey = new PublicKey(questionData.betting.vault.toString());
             const truthVaultPubKey = new PublicKey(questionData.truth.vaultAddress.toString());
-    
             const bettingVaultLamports = await connection.getBalance(bettingVaultPubKey);
             const truthVaultLamports = await connection.getBalance(truthVaultPubKey);
     
