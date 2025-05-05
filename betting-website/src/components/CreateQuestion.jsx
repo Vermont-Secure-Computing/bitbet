@@ -156,18 +156,25 @@ const CreateQuestion = ({setActiveTab}) => {
             console.log("Truth network Vault PDA: ", truthVaultPDA)
 
             console.log("Calling truth network create question function")
-            const tx = await truthNetworkProgram.methods
-                .createQuestion(questionText, rewardLamports, commitEndTimeTimestamp, revealEndTimeTimestamp)
-                .accounts({
-                    asker: publicKey,
-                    questionCounter: questionCounterPDA,
-                    question: questionPDA,
-                    vault: truthVaultPDA,
-                    systemProgram: web3.SystemProgram.programId,
-                })
-                .rpc();
-            console.log("Successfully created question in the truth network with tx: ", tx)
-            console.log("Successfully created question in Truth Network:", questionPDA.toString());
+
+            try {
+                const tx = await truthNetworkProgram.methods
+                    .createQuestion(questionText, rewardLamports, commitEndTimeTimestamp, revealEndTimeTimestamp)
+                    .accounts({
+                        asker: publicKey,
+                        questionCounter: questionCounterPDA,
+                        question: questionPDA,
+                        vault: truthVaultPDA,
+                        systemProgram: web3.SystemProgram.programId,
+                    })
+                    .rpc();
+                console.log("Successfully created question in the truth network with tx: ", tx)
+                console.log("Successfully created question in Truth Network:", questionPDA.toString());
+            } catch (err) {
+                // Check if already exists
+                const exists = await truthNetworkProgram.account.question.fetch(questionPDA).catch(() => null);
+                if (!exists) throw err;
+            }
 
             const [bettingQuestionPDA] = PublicKey.findProgramAddressSync(
                 [

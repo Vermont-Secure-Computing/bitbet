@@ -16,7 +16,7 @@ const Header = () => {
                     <Link to="/" className="text-2xl font-bold text-white hover:underline block">
                         BitBet
                     </Link>
-                    <p className="text-sm text-gray-300">Running on Devnet</p>
+                    <p className="text-sm text-gray-300">Smart contract betting platform using Truth.it network</p>
                 </div>
 
                 {/* Desktop Navigation */}
