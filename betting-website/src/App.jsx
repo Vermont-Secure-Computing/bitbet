@@ -8,6 +8,7 @@ import QuestionDetails from "./components/QuestionDetails";
 import Home from "./components/Home";
 import UserDashboard from "./components/UserDashboard";
 import Header from "./components/Header";
+import InstructionsPage from "./components/Instructions";
 
 function App() {
 
@@ -35,6 +36,9 @@ function App() {
 
                 {/* User Dashboard */}
                 <Route path="/dashboard" element={<UserDashboard />} />
+
+                {/* Instructions */}
+                <Route path="/instructions" element={<InstructionsPage />} />
             </Routes>
             {/* Toast Notification */}
             <ToastContainer />
