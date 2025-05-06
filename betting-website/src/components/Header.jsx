@@ -24,6 +24,9 @@ const Header = () => {
                     <Link to="/" className="text-white text-sm hover:text-yellow-400 transition">
                         Home
                     </Link>
+                    <Link to="/instructions" className="text-white text-sm hover:text-yellow-400 transition">
+                        Instructions
+                    </Link>
                     {publicKey && (
                         <Link
                             to="/dashboard"

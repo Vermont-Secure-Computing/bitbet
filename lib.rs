@@ -20,6 +20,7 @@ use truth_network::{
 use truth_network::accounts::Question;
 
 pub const HOUSE_WALLET: &str = "6tBwNgSW17jiWoEuoGEyqwwH3Jkv86WN61FETFoHonof";
+// squad vault = DmBS1YJi4zHm69Y35etwExAqLNhi6qJGT5W6HQ6nQhHH
 
 declare_id!("4217UHxavjB7w4VHzFVrrL7sw1457KCgaBTffKXTHiKe");
 

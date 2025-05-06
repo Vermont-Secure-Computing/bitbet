@@ -1034,7 +1034,8 @@ const QuestionDetails = () => {
                 )}
 
                 {questionData?.truth.finalized && (
-                    <>
+                    <div className="mt-6 bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-md">
+                        <p className="text-lg font-semibold text-gray-300">Result from truth.it network</p>   
                         {questionData.truth.winningPercent > 0 ? (
                             <>
                                 <p className="text-gray-400 mt-1">
@@ -1061,10 +1062,10 @@ const QuestionDetails = () => {
                             </>
                         ) : (
                             <p className="text-gray-400 text-sm mt-2">
-                                No votes were cast in the Truth Network. All bets are eligible for a <strong>refund</strong>.
+                                No votes were cast in the Truth.it Network. All bets are eligible for a <strong>refund</strong>.
                             </p>
                         )}
-                    </>
+                    </div>
                 )}
 
 
