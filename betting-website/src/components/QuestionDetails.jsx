@@ -7,6 +7,7 @@ import { toast, Bounce } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { FaRegCopy, FaTwitter, FaFacebookF, FaTelegramPlane } from "react-icons/fa";
+import { FiLogIn } from "react-icons/fi";
 
 import bettingIDL from "../idls/betting.json";
 import truthNetworkIDL from "../idls/truth_network.json";
@@ -23,6 +24,7 @@ const QuestionDetails = () => {
     const { publicKey, connected, signTransaction, signAllTransactions } = useWallet();
     console.log("Wallet status:", publicKey?.toBase58(), connected);
 
+    const dummyWallet = new PublicKey("11111111111111111111111111111111")
     const walletAdapter = useMemo(() => {
         return publicKey && signTransaction
             ? {
@@ -31,8 +33,14 @@ const QuestionDetails = () => {
                 signAllTransactions,
                 network: "devnet",
             }
-            : null;
+            : {
+                dummyWallet,
+                signTransaction,
+                signAllTransactions,
+                network: "devnet",
+            };
     }, [publicKey, signTransaction, signAllTransactions]);
+
 
     const provider = useMemo(() => {
         return walletAdapter
@@ -55,7 +63,6 @@ const QuestionDetails = () => {
 
     useEffect(() => {
         if (questionPda) {
-            console.log("fetching question details")
             fetchQuestionDetails();
         }
     }, [questionPda, bettingProgram, truthNetworkProgram]);
@@ -110,7 +117,7 @@ const QuestionDetails = () => {
             },
         });
     };
-    console.log("questionData: ", questionData)
+    //console.log("questionData: ", questionData)
     
 
     const [bettingQuestionPDA, setBettingQuestionPDA] = useState(null);
@@ -555,7 +562,6 @@ const QuestionDetails = () => {
 
     useEffect(() => {
         const checkCanDelete = async () => {
-            console.log("check can delete")
             if (!questionData || !questionData.truth || !questionData.betting) return;
 
             const now = Math.floor(Date.now() / 1000);
@@ -584,24 +590,6 @@ const QuestionDetails = () => {
             const minRent = await connection.getMinimumBalanceForRentExemption(0);
 
             let hasBettorRecord = true;
-            // try {
-            //     const [bettorPda] = PublicKey.findProgramAddressSync(
-            //         [
-            //             Buffer.from("bettor"),
-            //             publicKey.toBuffer(),
-            //             bettingQuestion_PDA.toBuffer(),
-            //         ],
-            //         BETTING_CONTRACT_PROGRAM_ID
-            //     );
-            //     const bettorAccountInfo = await connection.getAccountInfo(bettorPda);
-            //     console.log("has bettor record, showing bettorAccountInfo: ", bettorAccountInfo)
-
-            //     if (bettorAccountInfo) hasBettorRecord = true;
-            //     else hasBettorRecord = false
-            // } catch {
-            //     console.log("Error fetching bettor record");
-            //     hasBettorRecord = false
-            // }
 
             if (!publicKey || !bettingQuestion_PDA) {
                 console.warn("Wallet or question PDA not available.");
@@ -779,8 +767,21 @@ const QuestionDetails = () => {
     return (
         <div className="flex flex-col min-h-screen justify-center items-center bg-gray-900 text-white">  
             <Link to="/">Back to List</Link>
+
+            
+
             <div className="w-full max-w-2xl mx-auto p-6 border border-gray-600 rounded-lg shadow-lg bg-gray-800">
                 
+                {!publicKey && 
+                    <div className="mt-6 mb-6 p-4 bg-gray-800 border-l-4 border-yellow-500 text-yellow-300 rounded-md flex items-start gap-3">
+                        <FiLogIn className="text-2xl mt-0.5" />
+                        <div>
+                            <p className="font-medium">Wallet not connected</p>
+                            <p className="text-sm">Connect your wallet to interact with this event (bet, claim winnings, etc.).</p>
+                        </div>
+                    </div>
+                }
+
                 <h2 className="text-2xl font-bold text-gray-200">{questionData?.betting.title}</h2>
                 {publicKey?.toBase58() === questionData?.betting?.creator &&
                     sharingComponent()
@@ -984,7 +985,8 @@ const QuestionDetails = () => {
                     </button>
                 )}
 
-                {bettorData && 
+                {bettorData &&
+                    publicKey &&
                     questionData?.truth.finalized && 
                     questionData?.truth.winningOption !== null && 
                     ((questionData?.truth.winningPercent < 75 || questionData?.truth.winningPercent == 0) || 

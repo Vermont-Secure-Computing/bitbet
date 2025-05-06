@@ -3,8 +3,6 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { AnchorProvider, Program, web3, BN } from "@coral-xyz/anchor";
 import { useNavigate } from "react-router-dom";
-import { FiLogIn } from "react-icons/fi";
-import { toast } from "react-toastify";
 
 import bettingIDL from "../idls/betting.json";
 import truthNetworkIDL from "../idls/truth_network.json";
@@ -42,7 +40,7 @@ const FetchQuestion = () => {
     const truthNetworkProgram = new Program(truthNetworkIDL, provider);
 
     useEffect(() => {
-        if (!connected) return;
+        //if (!connected) return;
 
         // Initial fetch on load
         fetchAllQuestions();
@@ -57,13 +55,8 @@ const FetchQuestion = () => {
     }, [connected, filter]);
 
     const fetchAllQuestions = async () => {
-        console.log("Betting Program:", bettingProgram);
+        //console.log("Betting Program:", bettingProgram);
         console.log("Fetching Questions...");
-        
-        if (!publicKey) {
-            alert("Please connect your wallet");
-            return;
-        }
 
         try {
             setRefreshingList(true);
@@ -76,7 +69,7 @@ const FetchQuestion = () => {
 
             // Fetch all betting questions
             const accounts = await bettingProgram.account.bettingQuestion.all();
-            console.log("Fetched Betting Questions:", accounts);
+            //console.log("Fetched Betting Questions:", accounts);
 
             if (!accounts.length) {
                 console.warn("No betting questions found!");
@@ -157,7 +150,7 @@ const FetchQuestion = () => {
                 .sort((a, b) => b.betting.closeDate - a.betting.closeDate);
 
             const sortedQuestions = [...openQuestions, ...closedQuestions];
-            console.log("sortedQuestions: ", sortedQuestions)
+            //console.log("sortedQuestions: ", sortedQuestions)
             setAllQuestions(sortedQuestions);
 
             
@@ -232,50 +225,37 @@ const FetchQuestion = () => {
 
             {refreshingList && refreshingListLoader()}
 
-
-            
-            {publicKey ?
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                    {currentQuestions && currentQuestions.map((q, index) => (
-                        <div
-                            key={index}
-                            onClick={() => navigate(`/question/${q.betting.id.toString()}`, { state: q })}
-                            className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer border border-gray-700 shadow-md transition-all"
-                        >
-                            <strong className="text-lg text-blue-400">
-                                {q.betting.title}
-                                {q.hasBet && (
-                                    <span className="text-green-400 text-xs bg-green-900 px-2 py-1 ml-2 rounded-md">
-                                        Bet Placed
-                                    </span>
-                                )}
-                            </strong>
-                            <p className="text-sm">
-                                <span className={q.betting.closeDate <= Math.floor(Date.now() / 1000)
-                                    ? "text-red-500"
-                                    : "text-green-500"}>
-                                    {getTimeRemaining(q.betting.closeDate)}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                {currentQuestions && currentQuestions.map((q, index) => (
+                    <div
+                        key={index}
+                        onClick={() => navigate(`/question/${q.betting.id.toString()}`, { state: q })}
+                        className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer border border-gray-700 shadow-md transition-all"
+                    >
+                        <strong className="text-lg text-blue-400">
+                            {q.betting.title}
+                            {q.hasBet && (
+                                <span className="text-green-400 text-xs bg-green-900 px-2 py-1 ml-2 rounded-md">
+                                    Bet Placed
                                 </span>
-                            </p>
-                            <p className="text-gray-500 text-sm break-all">
-                                PDA: {q.betting.id.toString()}
-                            </p>
-                            <p className="text-gray-500 text-sm">
-                                Total Bets: {(new BN(q.betting.totalPool) / 1_000_000_000).toString()} SOL
-                            </p>
-                        </div>
-                    ))}
-                </div>
-
-                :
-                <div className="mt-6 p-4 bg-gray-800 border-l-4 border-yellow-500 text-yellow-300 rounded-md flex items-start gap-3">
-                    <FiLogIn className="text-2xl mt-0.5" />
-                    <div>
-                        <p className="font-medium">Wallet not connected</p>
-                        <p className="text-sm">Connect your wallet to load events and place bets.</p>
+                            )}
+                        </strong>
+                        <p className="text-sm">
+                            <span className={q.betting.closeDate <= Math.floor(Date.now() / 1000)
+                                ? "text-red-500"
+                                : "text-green-500"}>
+                                {getTimeRemaining(q.betting.closeDate)}
+                            </span>
+                        </p>
+                        <p className="text-gray-500 text-sm break-all">
+                            PDA: {q.betting.id.toString()}
+                        </p>
+                        <p className="text-gray-500 text-sm">
+                            Total Bets: {(new BN(q.betting.totalPool) / 1_000_000_000).toString()} SOL
+                        </p>
                     </div>
-                </div>
-            }
+                ))}
+            </div>
 
             {totalPages > 1 && renderPagination( currentPage, totalPages, setCurrentPage )}
 
