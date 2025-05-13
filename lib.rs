@@ -19,12 +19,9 @@ use truth_network::{
 // Import the Truth-Network program
 use truth_network::accounts::Question;
 
-pub const HOUSE_WALLET: &str = "6tBwNgSW17jiWoEuoGEyqwwH3Jkv86WN61FETFoHonof";
-// squad vault = DmBS1YJi4zHm69Y35etwExAqLNhi6qJGT5W6HQ6nQhHH
+pub const HOUSE_WALLET: &str = "DmBS1YJi4zHm69Y35etwExAqLNhi6qJGT5W6HQ6nQhHH";
 
-declare_id!("4217UHxavjB7w4VHzFVrrL7sw1457KCgaBTffKXTHiKe");
-
-
+declare_id!("GetLZXqSLKCwWDA6ksw4WE7R8X2LTm8apXzkBcVKe883");
 
 // Used for adding on-chain event logs
 #[event]

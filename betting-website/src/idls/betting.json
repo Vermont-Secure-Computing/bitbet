@@ -1,5 +1,5 @@
 {
-  "address": "4217UHxavjB7w4VHzFVrrL7sw1457KCgaBTffKXTHiKe",
+  "address": "GetLZXqSLKCwWDA6ksw4WE7R8X2LTm8apXzkBcVKe883",
   "metadata": {
     "name": "betting_contract",
     "version": "0.1.0",
@@ -209,7 +209,7 @@
         },
         {
           "name": "betting_contract",
-          "address": "4217UHxavjB7w4VHzFVrrL7sw1457KCgaBTffKXTHiKe"
+          "address": "GetLZXqSLKCwWDA6ksw4WE7R8X2LTm8apXzkBcVKe883"
         },
         {
           "name": "vault",
@@ -379,7 +379,7 @@
         {
           "name": "house_wallet",
           "writable": true,
-          "address": "6tBwNgSW17jiWoEuoGEyqwwH3Jkv86WN61FETFoHonof"
+          "address": "DmBS1YJi4zHm69Y35etwExAqLNhi6qJGT5W6HQ6nQhHH"
         },
         {
           "name": "vault",
