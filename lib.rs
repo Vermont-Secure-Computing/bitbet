@@ -19,9 +19,9 @@ use truth_network::{
 // Import the Truth-Network program
 use truth_network::accounts::Question;
 
-pub const HOUSE_WALLET: &str = "DmBS1YJi4zHm69Y35etwExAqLNhi6qJGT5W6HQ6nQhHH";
+pub const HOUSE_WALLET: &str = "CQaZgx5jqQrz7c8shCG3vJLiiPGPrawSGhvkgXtGyxL";
 
-declare_id!("GetLZXqSLKCwWDA6ksw4WE7R8X2LTm8apXzkBcVKe883");
+declare_id!("2UcxFiqH8yxSD17fFAtxC4nGeUxCDECSogLKVTkbowcF");
 
 // Used for adding on-chain event logs
 #[event]
@@ -1130,4 +1130,25 @@ pub enum BettingError {
     #[msg("Function already being processed. Try again.")]
     ActionInProgress,
 
+}
+
+
+#[cfg(not(feature = "no-entrypoint"))]
+use solana_security_txt::security_txt;
+
+#[cfg(not(feature = "no-entrypoint"))]
+security_txt! {
+    name: "SolBetX",
+    project_url: "https://solbetx.com/",
+    contacts: "mailto:office@vtscc.org,https://vtscc.org/contact.html",
+    policy: "https://solbetx.com/security-policy",
+
+    // Optional Fields
+    preferred_languages: "en",
+    source_code: "https://github.com/Vermont-Secure-Computing/bitbet",
+    source_revision: "2UcxFiqH8yxSD17fFAtxC4nGeUxCDECSogLKVTkbowcF",
+    source_release: "",
+    encryption: "",
+    auditors: "vtscc.org",
+    acknowledgements: "Bet big - Win big!"
 }
