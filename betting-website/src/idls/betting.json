@@ -1,5 +1,5 @@
 {
-  "address": "GetLZXqSLKCwWDA6ksw4WE7R8X2LTm8apXzkBcVKe883",
+  "address": "2UcxFiqH8yxSD17fFAtxC4nGeUxCDECSogLKVTkbowcF",
   "metadata": {
     "name": "betting_contract",
     "version": "0.1.0",
@@ -209,7 +209,7 @@
         },
         {
           "name": "betting_contract",
-          "address": "GetLZXqSLKCwWDA6ksw4WE7R8X2LTm8apXzkBcVKe883"
+          "address": "2UcxFiqH8yxSD17fFAtxC4nGeUxCDECSogLKVTkbowcF"
         },
         {
           "name": "vault",
@@ -342,7 +342,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "6JWjb73VpTRtq2Dq8iS5W3TbFJxjhgrJtdeyrcFtf9QB"
+          "address": "AWYhLHrQr1dwCBYL7UzevGRdnkTpvK2NwkQ9xghiYnRN"
         },
         {
           "name": "system_program",
@@ -374,12 +374,12 @@
         },
         {
           "name": "truth_network_program",
-          "address": "6JWjb73VpTRtq2Dq8iS5W3TbFJxjhgrJtdeyrcFtf9QB"
+          "address": "AWYhLHrQr1dwCBYL7UzevGRdnkTpvK2NwkQ9xghiYnRN"
         },
         {
           "name": "house_wallet",
           "writable": true,
-          "address": "DmBS1YJi4zHm69Y35etwExAqLNhi6qJGT5W6HQ6nQhHH"
+          "address": "CQaZgx5jqQrz7c8shCG3vJLiiPGPrawSGhvkgXtGyxL"
         },
         {
           "name": "vault",
@@ -506,7 +506,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "6JWjb73VpTRtq2Dq8iS5W3TbFJxjhgrJtdeyrcFtf9QB"
+          "address": "AWYhLHrQr1dwCBYL7UzevGRdnkTpvK2NwkQ9xghiYnRN"
         },
         {
           "name": "system_program",
