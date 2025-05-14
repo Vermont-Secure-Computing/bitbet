@@ -20,12 +20,10 @@ const CallHelloWorld = () => {
         network: "devnet" 
     } : null;
     
-    // Ensure a valid provider before creating a program instance
     const provider = walletAdapter ? new AnchorProvider(connection, walletAdapter, { preflightCommitment: "processed" }) : null;
     const program = provider ? new Program(idl, provider) : null;
 
     const callHelloWorld = async () => {
-        console.log("Public Key:", publicKey);
 
         if (!publicKey) {
             console.log("should display toast")
@@ -48,10 +46,7 @@ const CallHelloWorld = () => {
         try {
             setLoading(true);
             console.log("Wallet Public Key:", publicKey.toString());
-
-            // Ensure program is correctly initialized
             console.log("Program Methods:", Object.keys(program.methods));
-
             console.log("Calling helloWorld...");
 
             // Call the smart contract method correctly

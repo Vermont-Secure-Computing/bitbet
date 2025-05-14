@@ -1,3 +1,9 @@
+/**
+ * Utility function that determines the time remaining
+ * before an event betting is closed
+ * @param {*} closeTimestamp 
+ * @returns 
+ */
 export const getTimeRemaining = (closeTimestamp) => {
     const now = Math.floor(Date.now() / 1000);
     const timeLeft = closeTimestamp - now;

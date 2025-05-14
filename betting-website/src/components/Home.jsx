@@ -5,7 +5,6 @@ import { FaGithub } from 'react-icons/fa';
 
 import FetchQuestion from "./FetchQuestion";
 import CreateQuestion from "./CreateQuestion";
-import CallHelloWorld from "./CallHelloWorld";
 
 function Home() {
     const [activeTab, setActiveTab] = useState("fetch");
@@ -16,7 +15,7 @@ function Home() {
             
 
             {/* Main Content */}
-            <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 mt-6">
+            <div className="w-full flex justify-center px-0 sm:px-6 lg:px-8 mt-6">
                 <div className="w-full max-w-[1600px] bg-gray-800 rounded-lg shadow-md p-6">
 
                     {/* Tabs for Create & View Questions */}

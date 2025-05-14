@@ -1,15 +1,11 @@
-
+/**
+ * Utility function that determine the Event status
+ * based on the data being submitted
+ * @param {*} param0 
+ * @returns 
+ */
 export function getQuestionStatus({ closeDate, revealEndTime, finalized, truthNetworkWinner, winningPercentage, bettorData, bettingData }) {
     const now = Date.now() / 1000;
-
-    // console.log("closeDate: ", closeDate)
-    // console.log("revealEndTime: ", revealEndTime)
-    // console.log("finalized: ", finalized)
-    // console.log("truthNetworkWinner: ", truthNetworkWinner)
-    // console.log("winningPercentage: ", winningPercentage)
-    // console.log("bettorData.chosenOption: ", bettorData?.chosenOption)
-    // console.log("totalBetsOption1: ", parseFloat(bettingData?.totalBetsOption1))
-    // console.log("totalBetsOption2: ", parseFloat(bettingData?.totalBetsOption2))
   
     if (now < closeDate.getTime() / 1000) {
         return {

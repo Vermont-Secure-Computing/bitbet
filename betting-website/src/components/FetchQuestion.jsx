@@ -20,6 +20,8 @@ const FetchQuestion = () => {
     const [refreshingList, setRefreshingList] = useState(false);
     const [allQuestions, setAllQuestions] = useState([]);
     const [filter, setFilter] = useState("all");
+    const [sortType, setSortType] = useState("closing"); // default is by closing date
+
 
     const [currentQuestions, setCurrentQuestions] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
@@ -52,7 +54,7 @@ const FetchQuestion = () => {
         
         // Cleanup on unmount
         return () => clearInterval(intervalId); 
-    }, [connected, filter]);
+    }, [connected, filter, sortType]);
 
     const fetchAllQuestions = async () => {
         //console.log("Betting Program:", bettingProgram);
@@ -144,13 +146,21 @@ const FetchQuestion = () => {
 
             const openQuestions = filteredQuestions
                 .filter(q => q && q.betting.closeDate > now)
-                .sort((a, b) => a.betting.closeDate - b.betting.closeDate);
+                //.sort((a, b) => a.betting.closeDate - b.betting.closeDate);
             const closedQuestions = filteredQuestions
                 .filter(q => q && q.betting.closeDate <= now)
-                .sort((a, b) => b.betting.closeDate - a.betting.closeDate);
+                //.sort((a, b) => b.betting.closeDate - a.betting.closeDate);
 
-            const sortedQuestions = [...openQuestions, ...closedQuestions];
-            //console.log("sortedQuestions: ", sortedQuestions)
+            // Apply sorting here
+            const sortByClosingOpenEvent = (a, b) => a.betting.closeDate - b.betting.closeDate;
+            const sortByClosingClosedEvent = (a, b) => b.betting.closeDate - a.betting.closeDate;
+            const sortByBets = (a, b) => new BN(b.betting.totalPool).cmp(new BN(a.betting.totalPool));
+
+            const sortedOpen = [...openQuestions].sort(sortType === "bets" ? sortByBets : sortByClosingOpenEvent);
+            const sortedClosed = [...closedQuestions].sort(sortType === "bets" ? sortByBets : sortByClosingClosedEvent);
+
+            const sortedQuestions = [...sortedOpen, ...sortedClosed];
+            //const sortedQuestions = [...openQuestions, ...closedQuestions];
             setAllQuestions(sortedQuestions);
 
             
@@ -185,12 +195,34 @@ const FetchQuestion = () => {
         )
     }
 
+    const sortButtons = () => {
+        const baseClasses = "w-[120px] text-xs py-1.5 rounded !text-sm transition-colors";
+    
+        return (
+            <div className="flex gap-3 align-items justify-center sm:justify-start">
+                <span>Sort by: </span>
+                <button
+                    onClick={() => setSortType("closing")}
+                    className={`${baseClasses} ${sortType === "closing" ? "!bg-purple-600 text-white" : "!bg-gray-700 hover:!bg-gray-600 text-gray-300"}`}
+                >
+                    Closing Date
+                </button>
+                <button
+                    onClick={() => setSortType("bets")}
+                    className={`${baseClasses} ${sortType === "bets" ? "!bg-purple-600 text-white" : "!bg-gray-700 hover:!bg-gray-600 text-gray-300"}`}
+                >
+                    Highest Bets
+                </button>
+            </div>
+        );
+    };
+    
 
     const filterButtons = () => {
         const baseClasses = "w-[120px] text-xs py-1.5 rounded !text-sm transition-colors";
     
         return (
-            <div className="flex gap-3 my-4 justify-center sm:justify-start">
+            <div className="flex gap-3 justify-center sm:justify-start">
                 <button
                     onClick={() => setFilter("all")}
                     className={`${baseClasses} ${filter === "all" ? "!bg-blue-600 text-white" : "!bg-gray-700 hover:!bg-gray-600 text-gray-300"}`}
@@ -221,7 +253,10 @@ const FetchQuestion = () => {
             <h2 className="text-2xl font-bold text-gray-200">All Events</h2>
             <p className="text-sm text-gray-400">Note: All bets are resolved two (2) days after betting close date.</p>
 
-            {filterButtons()}
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
+                {filterButtons()}
+                {sortButtons()}
+            </div>
 
             {refreshingList && refreshingListLoader()}
 

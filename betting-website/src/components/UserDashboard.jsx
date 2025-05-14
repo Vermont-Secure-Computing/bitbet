@@ -76,7 +76,6 @@ const UserDashboard = () => {
                 },
             ]);
     
-            console.log("Bettor records for user:", allBettors);
             setUserBettorRecords(allBettors);
         } catch (err) {
             console.error("Failed to fetch bettor records:", err);
@@ -208,24 +207,6 @@ const UserDashboard = () => {
                 </div>
             </div>
 
-
-            {/* 
-                Not yet working
-                {userBettorRecords.map((record, index) => (
-                    <div key={index} className="p-4 border border-gray-700 rounded mb-3 bg-gray-800">
-                        <p><strong>Question PDA:</strong> {record.account.questionPda.toBase58()}</p>
-                        <p><strong>Bet result:</strong> {record.account.won ? "Won" : "Loss"}</p>
-                        {record.account.won && <p><strong>Claimed:</strong> {record.account.claimed ? "Yes" : "No"}</p>}
-
-                        <button
-                            className="!bg-red-600 text-white py-1 px-3 mt-2 rounded hover:!bg-red-700"
-                            onClick={() => deleteBettorRecord(record.publicKey, record.account.questionPda)}
-                        >
-                            Delete Bettor Record
-                        </button>
-                    </div>
-                ))} 
-             */}
         </div>
 
     )
