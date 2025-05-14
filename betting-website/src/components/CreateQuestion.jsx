@@ -37,10 +37,7 @@ const CreateQuestion = ({setActiveTab}) => {
     });
 
     useEffect(() => {
-        console.log("use effect connected: ", connected)
-        console.log("public key: ", publicKey)
         if (connected && publicKey) {
-            console.log("Wallet Connected:", publicKey.toString());
 
             const walletAdapter = publicKey && signTransaction ? { 
                 publicKey, 
@@ -48,18 +45,14 @@ const CreateQuestion = ({setActiveTab}) => {
                 signAllTransactions, 
                 network: "devnet" 
             } : null;
-            console.log("wallet adapter: ", walletAdapter)
             const provider = new AnchorProvider(connection, walletAdapter, { preflightCommitment: "processed" });
-            console.log("provider: ", provider)
 
             if (!truthNetworkIDL.accounts) {
                 console.error("Error: truthNetworkIDL is missing 'accounts' definition.");
                 return;
             }
 
-            console.log("setting betting program")
             setBettingProgram(new Program(bettingIDL, provider));
-            console.log("setting truth network program")
             setTruthNetworkProgram(new Program(truthNetworkIDL, provider));
 
             console.log("Betting & Truth Network Programs Initialized.");
@@ -98,7 +91,6 @@ const CreateQuestion = ({setActiveTab}) => {
         }
 
         console.log("Creating question...");
-        console.log("Public Key:", publicKey.toString());
 
         try {
             const [questionCounterPDA] = await PublicKey.findProgramAddress(
@@ -108,7 +100,6 @@ const CreateQuestion = ({setActiveTab}) => {
                 ],
                 TRUTH_NETWORK_PROGRAM_ID
             );
-            console.log("question counter pda: ", questionCounterPDA.toString())
             let questionCounterAccount = await truthNetworkProgram.account.questionCounter.fetch(questionCounterPDA).catch(() => null);
 
             if (!questionCounterAccount) {
@@ -128,7 +119,6 @@ const CreateQuestion = ({setActiveTab}) => {
             }
             
             const questionCount = questionCounterAccount.count;
-            console.log("question count: ", questionCount.count)
 
             const questionIdBuffer = new BN(questionCount).toArrayLike(Buffer, "le", 8);
             const [questionPDA] = PublicKey.findProgramAddressSync(
@@ -154,7 +144,6 @@ const CreateQuestion = ({setActiveTab}) => {
                 TRUTH_NETWORK_PROGRAM_ID
               );
             console.log("Truth network Vault PDA: ", truthVaultPDA)
-
             console.log("Calling truth network create question function")
 
             try {

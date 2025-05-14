@@ -68,7 +68,6 @@ const QuestionDetails = () => {
     }, [questionPda, bettingProgram, truthNetworkProgram]);
 
     const fetchQuestionDetails = async () => {
-        console.log("fetchQuestionDetails function ========>")
         const bettingQuestion = await bettingProgram.account.bettingQuestion.fetch(questionPda);
         const truthNetworkQuestion = await truthNetworkProgram.account.question.fetch(bettingQuestion.questionPda);
 
@@ -117,7 +116,6 @@ const QuestionDetails = () => {
             },
         });
     };
-    //console.log("questionData: ", questionData)
     
 
     const [bettingQuestionPDA, setBettingQuestionPDA] = useState(null);
@@ -159,11 +157,6 @@ const QuestionDetails = () => {
     useEffect(() => {
         console.log("Fetching event status")
         if (!questionData) return;
-        //if (!bettorData) return;
-
-        console.log("truthNetworkWinner: ", questionData.truth.winningOption)
-        console.log("winningPercentage: ", questionData.truth.winningPercent)
-        console.log("bettorData: ", bettorData)
 
         const getStatus = getQuestionStatus({
             closeDate: new Date(questionData.betting.closeDate * 1000),
@@ -175,7 +168,6 @@ const QuestionDetails = () => {
             bettingData: questionData.betting
         });
 
-        console.log("get status: ", getStatus)
         setStatus(getStatus);
     }, [bettorData, questionData])
 
@@ -210,25 +202,20 @@ const QuestionDetails = () => {
         );
     
         setBettingQuestion_PDA(pda);
-        console.log("Derived BettingQuestion PDA:", pda.toBase58());
     }, [questionData]);
 
     useEffect(() => {
         if (bettingQuestionPDA && publicKey && !bettorData) {
-            console.log("Fetching Bettor Data...");
             fetchBettorData();
         }
     }, [bettingQuestionPDA, publicKey]);
 
     const fetchBettorData = async () => {
-        console.log("Fetching Bettor Data");
-        //if (!publicKey) return;
         if (!publicKey || !bettingQuestion_PDA) {
             console.warn("Missing publicKey or bettingQuestion_PDA");
             return;
         }
     
-        
         try {
             const [bettorPda] = PublicKey.findProgramAddressSync(
                 [
@@ -238,8 +225,6 @@ const QuestionDetails = () => {
                 ],
                 BETTING_CONTRACT_PROGRAM_ID
             );
-    
-            console.log("Fetching Bettor PDA:", bettorPda.toBase58());
     
             // Check if the account exists first
             const bettorAccountInfo = await connection.getAccountInfo(bettorPda);
@@ -251,7 +236,6 @@ const QuestionDetails = () => {
     
             // If the account exists, fetch it
             const bettorAccount = await bettingProgram.account.bettorAccount.fetch(bettorPda);
-            console.log("Bettor Account:", bettorAccount);
             setBettorData(bettorAccount);
         } catch (error) {
             console.error("Error fetching bettor account:", error);
@@ -261,7 +245,6 @@ const QuestionDetails = () => {
 
 
     const fetchVaultBalance = async () => {
-        console.log("fetching vault balance")
         try {
             if (!questionData?.betting?.vault || !questionData?.truth?.vaultAddress) {
                 console.warn("Vault data is missing. Skipping balance fetch.");
@@ -319,8 +302,6 @@ const QuestionDetails = () => {
                 bettingProgram.programId
             );
 
-            console.log("Vault PDA: ", vaultPDA.toBase58());
-
             const [bettorPda] = PublicKey.findProgramAddressSync(
                 [
                     Buffer.from("bettor"),
@@ -329,7 +310,6 @@ const QuestionDetails = () => {
                 ],
                 BETTING_CONTRACT_PROGRAM_ID
             );
-            console.log("Derived Bettor PDA (Frontend):", bettorPda.toBase58());
 
             // Fetching Sysvar Rent account (Required for new accounts)
             const sysvarRent = web3.SYSVAR_RENT_PUBKEY;
@@ -356,7 +336,6 @@ const QuestionDetails = () => {
             await fetchBettorData(); 
             await fetchVaultBalance();
             toast.success("Bet placed successfully!", { transition: Bounce });
-            console.log("Transaction:", tx);
         } catch (error) {
             console.error("Error placing bet:", error);
             toast.error("Failed to place bet.", { transition: Bounce });
@@ -380,7 +359,6 @@ const QuestionDetails = () => {
                 })
                 .rpc();
 
-            console.log("Winner fetched & winners determined:", tx);
             toast.success("Winner fetched & winnings calculated!", { transition: Bounce });
 
             await fetchQuestionDetails();
@@ -400,7 +378,6 @@ const QuestionDetails = () => {
         setLoadingWinnings(true);
     
         try {
-            console.log("Claiming winnings...");
     
             const [bettorPda] = PublicKey.findProgramAddressSync(
                 [
@@ -410,8 +387,6 @@ const QuestionDetails = () => {
                 ],
                 BETTING_CONTRACT_PROGRAM_ID
             );
-    
-            console.log("Bettor PDA:", bettorPda.toBase58());
     
             const [vaultPDA] = PublicKey.findProgramAddressSync(
                 [
@@ -434,8 +409,6 @@ const QuestionDetails = () => {
                     systemProgram: web3.SystemProgram.programId,
                 })
                 .rpc();
-    
-            console.log("Claim Winnings Transaction:", tx);
             
 
             await bettingProgram.methods
@@ -546,7 +519,6 @@ const QuestionDetails = () => {
                 .rpc();
                 
                 setLoadingDeleting(false);
-            console.log("Bettor account deleted:", tx);
             toast.success("Bettor record deleted. Rent refunded!");
             
             // Fetch updated bettor data
@@ -615,20 +587,18 @@ const QuestionDetails = () => {
                 }
             }
             
-
-
-            console.log("truth network validation")
-            console.log("isFinalized: ", isFinalized)
-            console.log("vault lamports: ", vaultLamports - minRent < 1000)
-            console.log("minRent: ", minRent)
-            console.log("revealEnded: ", revealEnded)
-            console.log("truthVaultBalance: ", truthVaultBalance)
-            console.log("truthRentExemption: ", truthRentExemption)
-            console.log("vaultOnlyHasRent: ", vaultOnlyHasRent)
-            console.log("rentExpired: ", rentExpired)
-            console.log("asker: ", questionData.truth.asker)
-            console.log("truth creator: ", publicKey?.toBase58() === questionData.truth.asker)
-            console.log("other check: ", (questionData.truth.committedVoters === 0 || (questionData.truth.voterRecordsCount === 0 || questionData.truth.voterRecordsClosed === questionData.truth.voterRecordsCount) &&(questionData.truth.totalDistributed >= questionData.truth.snapshotReward || questionData.truth.originalReward === 0)))
+            // console.log("truth network validation")
+            // console.log("isFinalized: ", isFinalized)
+            // console.log("vault lamports: ", vaultLamports - minRent < 1000)
+            // console.log("minRent: ", minRent)
+            // console.log("revealEnded: ", revealEnded)
+            // console.log("truthVaultBalance: ", truthVaultBalance)
+            // console.log("truthRentExemption: ", truthRentExemption)
+            // console.log("vaultOnlyHasRent: ", vaultOnlyHasRent)
+            // console.log("rentExpired: ", rentExpired)
+            // console.log("asker: ", questionData.truth.asker)
+            // console.log("truth creator: ", publicKey?.toBase58() === questionData.truth.asker)
+            // console.log("other check: ", (questionData.truth.committedVoters === 0 || (questionData.truth.voterRecordsCount === 0 || questionData.truth.voterRecordsClosed === questionData.truth.voterRecordsCount) &&(questionData.truth.totalDistributed >= questionData.truth.snapshotReward || questionData.truth.originalReward === 0)))
 
 
             if (
@@ -684,7 +654,6 @@ const QuestionDetails = () => {
                 .rpc();
     
             toast.success("Event deleted successfully!");
-            console.log("TX:", tx);
             navigate("/"); 
         } catch (err) {
             console.error("Failed to delete event:", err);
@@ -751,11 +720,11 @@ const QuestionDetails = () => {
         )
     }
     
-    console.log("show delete event button: ", canDeleteEvent)
+    // console.log("show delete event button: ", canDeleteEvent)
 
-    console.log("is creator: ", publicKey?.toBase58() === questionData?.betting.creator)
-    console.log("is finalized: ", questionData?.truth.finalized)
-    console.log("creator commission claime: ", publicKey?.toBase58() !== questionData?.betting.creator)
+    // console.log("is creator: ", publicKey?.toBase58() === questionData?.betting.creator)
+    // console.log("is finalized: ", questionData?.truth.finalized)
+    // console.log("creator commission claime: ", publicKey?.toBase58() !== questionData?.betting.creator)
     
 
     // Compute odds for progress bar
