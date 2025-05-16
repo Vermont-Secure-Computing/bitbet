@@ -30,7 +30,7 @@ const UserDashboard = () => {
 
             const enriched = await Promise.all(
                 bettorAccounts.map(async (bet) => {
-                    console.log("bet: ", bet)
+                    //console.log("bet: ", bet)
                     const bettorData = bet.account;
                     const questionPDA = bettorData.questionPda;
 
@@ -65,6 +65,7 @@ const UserDashboard = () => {
 
     const fetchBettorRecords = async () => {
         if (!publicKey || !bettingProgram) return;
+        //console.log("fetching bettor records")
     
         try {
             const allBettors = await bettingProgram.account.bettorAccount.all([

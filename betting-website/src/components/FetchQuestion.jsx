@@ -42,7 +42,6 @@ const FetchQuestion = () => {
     const truthNetworkProgram = new Program(truthNetworkIDL, provider);
 
     useEffect(() => {
-        //if (!connected) return;
 
         // Initial fetch on load
         fetchAllQuestions();
@@ -71,7 +70,7 @@ const FetchQuestion = () => {
 
             // Fetch all betting questions
             const accounts = await bettingProgram.account.bettingQuestion.all();
-            //console.log("Fetched Betting Questions:", accounts);
+            console.log("Fetched Betting Questions:", accounts);
 
             if (!accounts.length) {
                 console.warn("No betting questions found!");
@@ -79,7 +78,7 @@ const FetchQuestion = () => {
                 return;
             }
 
-            // Fetch associated questions from the Truth Network
+            // parse / format betting question details
             const questionsWithDetails = await Promise.all(
                 accounts.map(async (bettingQuestion) => {
                     const totalPool = new BN(bettingQuestion.account.totalPool);
@@ -93,35 +92,22 @@ const FetchQuestion = () => {
                     const betCreator = bettingQuestion.account.creator.toString();
                     
                     try {
-                        const truthQuestion = await truthNetworkProgram.account.question.fetch(
-                            bettingQuestion.account.questionPda
-                        );
-
+                        
                         setRefreshingList(false)
                         return {
-                            betting: {
-                                ...bettingQuestion.account,
-                                id: bettingQuestion.account.id.toBase58(),
-                                questionPda: bettingQuestion.account.questionPda.toBase58(),
-                                totalPool: totalPool.toString(),
-                                totalBetsOption1: totalBetsOption1.toString(),
-                                totalBetsOption2: totalBetsOption2.toString(),
-                                option1Odds: option1Odds,
-                                option2Odds: option2Odds,
-                                totalHouseCommision: totalHouseCommission.toString(),
-                                totalCreatorCommission: totalCreatorCommission.toString(),
-                                vault: bettingQuestion.account.vault.toBase58(),
-                                closeDate: betClosing.toNumber(),
-                                creator: betCreator
-                            },
-                            truth: {
-                                ...truthQuestion,
-                                questionKey: truthQuestion.questionKey.toBase58(),
-                                vaultAddress: truthQuestion.vaultAddress.toBase58(),
-                                id: truthQuestion.id.toString(),
-                                revealEndTime: truthQuestion.revealEndTime.toNumber(),
-                                winningOption: truthQuestion.winningOption === 1 ? true : (truthQuestion.winningOption === 2 ? false : null)
-                            },
+                            ...bettingQuestion.account,
+                            id: bettingQuestion.account.id.toBase58(),
+                            questionPda: bettingQuestion.account.questionPda.toBase58(),
+                            totalPool: totalPool.toString(),
+                            totalBetsOption1: totalBetsOption1.toString(),
+                            totalBetsOption2: totalBetsOption2.toString(),
+                            option1Odds: option1Odds,
+                            option2Odds: option2Odds,
+                            totalHouseCommision: totalHouseCommission.toString(),
+                            totalCreatorCommission: totalCreatorCommission.toString(),
+                            vault: bettingQuestion.account.vault.toBase58(),
+                            closeDate: betClosing.toNumber(),
+                            creator: betCreator
                         };
 
                     } catch (error) {
@@ -139,28 +125,25 @@ const FetchQuestion = () => {
 
             const filteredQuestions = questionsWithDetails.filter((q) => {
                 if (!q) return false;
-                if (filter === "active") return q.betting.closeDate > now;
-                if (filter === "closed") return q.betting.closeDate <= now;
+                if (filter === "active") return q.closeDate > now;
+                if (filter === "closed") return q.closeDate <= now;
                 return true; // for "all"
             });
 
             const openQuestions = filteredQuestions
-                .filter(q => q && q.betting.closeDate > now)
-                //.sort((a, b) => a.betting.closeDate - b.betting.closeDate);
+                .filter(q => q && q.closeDate > now)
             const closedQuestions = filteredQuestions
-                .filter(q => q && q.betting.closeDate <= now)
-                //.sort((a, b) => b.betting.closeDate - a.betting.closeDate);
+                .filter(q => q && q.closeDate <= now)
 
             // Apply sorting here
-            const sortByClosingOpenEvent = (a, b) => a.betting.closeDate - b.betting.closeDate;
-            const sortByClosingClosedEvent = (a, b) => b.betting.closeDate - a.betting.closeDate;
-            const sortByBets = (a, b) => new BN(b.betting.totalPool).cmp(new BN(a.betting.totalPool));
+            const sortByClosingOpenEvent = (a, b) => a.closeDate - b.closeDate;
+            const sortByClosingClosedEvent = (a, b) => b.closeDate - a.closeDate;
+            const sortByBets = (a, b) => new BN(b.totalPool).cmp(new BN(a.totalPool));
 
             const sortedOpen = [...openQuestions].sort(sortType === "bets" ? sortByBets : sortByClosingOpenEvent);
             const sortedClosed = [...closedQuestions].sort(sortType === "bets" ? sortByBets : sortByClosingClosedEvent);
 
             const sortedQuestions = [...sortedOpen, ...sortedClosed];
-            //const sortedQuestions = [...openQuestions, ...closedQuestions];
             setAllQuestions(sortedQuestions);
 
             
@@ -264,11 +247,11 @@ const FetchQuestion = () => {
                 {currentQuestions && currentQuestions.map((q, index) => (
                     <div
                         key={index}
-                        onClick={() => navigate(`/question/${q.betting.id.toString()}`, { state: q })}
+                        onClick={() => navigate(`/question/${q.id.toString()}`, { state: q })}
                         className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer border border-gray-700 shadow-md transition-all"
                     >
                         <strong className="text-lg text-blue-400">
-                            {q.betting.title}
+                            {q.title}
                             {q.hasBet && (
                                 <span className="text-green-400 text-xs bg-green-900 px-2 py-1 ml-2 rounded-md">
                                     Bet Placed
@@ -276,17 +259,17 @@ const FetchQuestion = () => {
                             )}
                         </strong>
                         <p className="text-sm">
-                            <span className={q.betting.closeDate <= Math.floor(Date.now() / 1000)
+                            <span className={q.closeDate <= Math.floor(Date.now() / 1000)
                                 ? "text-red-500"
                                 : "text-green-500"}>
-                                {getTimeRemaining(q.betting.closeDate)}
+                                {getTimeRemaining(q.closeDate)}
                             </span>
                         </p>
                         <p className="text-gray-500 text-sm break-all">
-                            PDA: {q.betting.id.toString()}
+                            PDA: {q.id.toString()}
                         </p>
                         <p className="text-gray-500 text-sm">
-                            Total Bets: {(new BN(q.betting.totalPool) / 1_000_000_000).toString()} SOL
+                            Total Bets: {(new BN(q.totalPool) / 1_000_000_000).toString()} SOL
                         </p>
                     </div>
                 ))}

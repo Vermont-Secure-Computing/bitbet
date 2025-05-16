@@ -15,6 +15,7 @@ import truthNetworkIDL from "../idls/truth_network.json";
 import { getQuestionStatus } from "../utils/eventStatus";
 
 const connection = new web3.Connection("https://api.devnet.solana.com", "confirmed");
+
 const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
 
 const QuestionDetails = () => {
