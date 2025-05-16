@@ -21,7 +21,7 @@ use truth_network::accounts::Question;
 
 pub const HOUSE_WALLET: &str = "CQaZgx5jqQrz7c8shCG3vJLiiPGPrawSGhvkgXtGyxL";
 
-declare_id!("2UcxFiqH8yxSD17fFAtxC4nGeUxCDECSogLKVTkbowcF");
+declare_id!("BDvbvoCDzi4iDkorGa2HiKgiLGSjcwH6N9981o6Tv45N");
 
 // Used for adding on-chain event logs
 #[event]
