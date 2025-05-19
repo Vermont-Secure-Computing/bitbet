@@ -9,6 +9,7 @@ import Home from "./components/Home";
 import UserDashboard from "./components/UserDashboard";
 import Header from "./components/Header";
 import InstructionsPage from "./components/Instructions";
+import SecurityPolicy from "./components/SecurityPolicy";
 
 function App() {
 
@@ -27,6 +28,9 @@ function App() {
 
                 {/* Instructions */}
                 <Route path="/instructions" element={<InstructionsPage />} />
+
+                {/** Security Policy */}
+                <Route path="/security-policy" element={<SecurityPolicy />} />
             </Routes>
             {/* Toast Notification */}
             <ToastContainer />

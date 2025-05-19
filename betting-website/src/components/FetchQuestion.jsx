@@ -30,7 +30,8 @@ const FetchQuestion = () => {
     const totalPages = Math.ceil(allQuestions.length / questionsPerPage);
 
     // Setup Provider & Programs
-    const connection = new web3.Connection("https://api.devnet.solana.com", "confirmed");
+    const rpcUrl = localStorage.getItem("customRpcUrl") || "https://api.devnet.solana.com";
+    const connection = new web3.Connection(rpcUrl, "confirmed");
     
     // Dummy PublicKey for initialization
     const wallet = {
