@@ -23,6 +23,7 @@ const QuestionDetails = () => {
 
     const navigate = useNavigate();
 
+    const [fetchingQuestionDetails, setFetchingQuestionDetails] = useState(false);
     const { publicKey, connected, signTransaction, signAllTransactions } = useWallet();
     console.log("Wallet status:", publicKey?.toBase58(), connected);
 
@@ -64,12 +65,16 @@ const QuestionDetails = () => {
     const [questionData, setQuestionData] = useState(null);
 
     useEffect(() => {
-        if (questionPda) {
+        if (questionPda && !fetchingQuestionDetails) {
+            console.log("===== fetching question details ====")
             fetchQuestionDetails();
         }
     }, [questionPda, bettingProgram, truthNetworkProgram]);
 
     const fetchQuestionDetails = async () => {
+
+        setFetchingQuestionDetails(true);
+
         const bettingQuestion = await bettingProgram.account.bettingQuestion.fetch(questionPda);
         const truthNetworkQuestion = await truthNetworkProgram.account.question.fetch(bettingQuestion.questionPda);
 
@@ -117,6 +122,8 @@ const QuestionDetails = () => {
                 snapshotReward: truthNetworkQuestion.snapshotReward.toNumber(),
             },
         });
+
+        setFetchingQuestionDetails(false);
     };
     
 
