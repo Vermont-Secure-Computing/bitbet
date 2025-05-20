@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import { Link } from "react-router-dom";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -9,6 +10,36 @@ const Header = () => {
     const { publicKey } = useWallet();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showRpcModal, setShowRpcModal] = useState(false);
+    const [rpcUrl, setRpcUrl] = useState("");
+    const [rpcStatusText, setRpcStatusText] = useState("Checking...");
+    const [isOnline, setIsOnline] = useState(true);
+
+    useEffect(() => {
+        const stored = localStorage.getItem("customRpcUrl") || "https://api.devnet.solana.com";
+        setRpcUrl(stored);
+      
+        axios.post(stored, {
+            jsonrpc: "2.0",
+            id: 1,
+            method: "getVersion"
+        }, {
+            headers: { "Content-Type": "application/json" }
+        })
+            .then((res) => {
+                if (res.status === 200 && res.data.result) {
+                    setRpcStatusText("Online");
+                    setIsOnline(true);
+                } else {
+                    setRpcStatusText("Offline");
+                    setIsOnline(false);
+                }
+            })
+            .catch((error) => {
+                console.error("RPC health check failed:", error.message);
+                setRpcStatusText("Offline");
+                setIsOnline(false);
+            });
+    }, []);
 
     return (
         <>
@@ -27,18 +58,6 @@ const Header = () => {
                         <Link to="/" className="text-white text-sm hover:text-yellow-400 transition">
                             Home
                         </Link>
-                        <Link
-                            onClick={() => setShowRpcModal(true)}
-                            className="text-white text-sm hover:text-yellow-400 transition"
-                        >
-                            Change RPC
-                        </Link>
-                        <Link to="/instructions" className="text-white text-sm hover:text-yellow-400 transition">
-                            Instructions
-                        </Link>
-                        <Link to="/security-policy" className="text-white text-sm hover:text-yellow-400 transition">
-                            Security Policy
-                        </Link>
                         {publicKey && (
                             <Link
                                 to="/dashboard"
@@ -47,6 +66,28 @@ const Header = () => {
                                 My Bets
                             </Link>
                         )}
+                        <Link
+                            onClick={() => setShowRpcModal(true)}
+                            className="text-white text-sm hover:text-yellow-400 transition"
+                        >
+                            Change RPC
+
+                            <span
+                                className={`text-xs ml-2 px-2 py-1 rounded ${
+                                    isOnline ? "bg-green-600 text-white" : "bg-red-600 text-white"
+                                }`}
+                            >
+                                {rpcStatusText || "Checking..."}
+                            </span>
+                        </Link>
+                        
+                        <Link to="/instructions" className="text-white text-sm hover:text-yellow-400 transition">
+                            Instructions
+                        </Link>
+                        <Link to="/security-policy" className="text-white text-sm hover:text-yellow-400 transition">
+                            Security Policy
+                        </Link>
+                        
                         <WalletMultiButton />
                     </nav>
 
@@ -81,6 +122,13 @@ const Header = () => {
                         >
                             Change RPC
                         </Link>
+                        <div
+                            className={`text-xs mt-2 px-3 py-1 rounded inline-block ${
+                                isOnline ? "bg-green-600 text-white" : "bg-red-600 text-white"
+                            }`}
+                        >
+                            {rpcStatusText || "Checking..."}
+                        </div>
                         <Link 
                             to="/security-policy" 
                             className="block text-white text-sm hover:text-yellow-400 transition"
