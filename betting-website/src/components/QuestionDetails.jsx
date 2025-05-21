@@ -13,6 +13,7 @@ import bettingIDL from "../idls/betting.json";
 import truthNetworkIDL from "../idls/truth_network.json";
 
 import { getQuestionStatus } from "../utils/eventStatus";
+import { useCanDeleteEvent } from "../hooks/useCanDeleteEvent";
 
 const rpcUrl = localStorage.getItem("customRpcUrl") || "https://api.devnet.solana.com";
 const connection = new web3.Connection(rpcUrl, "confirmed");
@@ -541,6 +542,7 @@ const QuestionDetails = () => {
     };
 
 
+    //const canDeleteEvent = useCanDeleteEvent(questionData, publicKey, connection);
     useEffect(() => {
         const checkCanDelete = async () => {
             if (!questionData || !questionData.truth || !questionData.betting) return;
@@ -728,6 +730,9 @@ const QuestionDetails = () => {
         </div>
         )
     }
+
+    console.log("question data: ", questionData)
+    console.log("bettor data: ", bettorData)
     
     // console.log("show delete event button: ", canDeleteEvent)
 
