@@ -10,6 +10,7 @@ import UserDashboard from "./components/UserDashboard";
 import Header from "./components/Header";
 import InstructionsPage from "./components/Instructions";
 import SecurityPolicy from "./components/SecurityPolicy";
+import Footer from "./components/Footer";
 
 function App() {
 
@@ -34,6 +35,7 @@ function App() {
             </Routes>
             {/* Toast Notification */}
             <ToastContainer />
+            <Footer />
         </Router>
     );
 }

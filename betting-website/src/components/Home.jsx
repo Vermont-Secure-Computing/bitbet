@@ -53,7 +53,7 @@ function Home() {
                 </div>
             </div>
 
-            <div className="mt-8 flex justify-center items-center gap-2 text-sm text-gray-400">
+            {/* <div className="mt-8 flex justify-center items-center gap-2 text-sm text-gray-400">
                 <FaGithub className="text-xl" />
                 <a
                     href="https://github.com/Vermont-Secure-Computing/bitbet"
@@ -63,7 +63,7 @@ function Home() {
                 >
                     View SolBetX on GitHub
                 </a>
-            </div>
+            </div> */}
 
             
         </div>

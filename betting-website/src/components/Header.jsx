@@ -81,12 +81,14 @@ const Header = () => {
                             </span>
                         </Link>
                         
-                        <Link to="/instructions" className="text-white text-sm hover:text-yellow-400 transition">
-                            Instructions
-                        </Link>
-                        <Link to="/security-policy" className="text-white text-sm hover:text-yellow-400 transition">
-                            Security Policy
-                        </Link>
+                        <a
+                            href="https://solbetx.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-white text-sm hover:text-yellow-400 transition"
+                        >
+                            Open in Mainnet
+                        </a>
                         
                         <WalletMultiButton />
                     </nav>
@@ -110,12 +112,6 @@ const Header = () => {
                         >
                             Home
                         </Link>
-                        <Link 
-                            to="/instructions" 
-                            className="block text-white text-sm hover:text-yellow-400 transition"
-                        >
-                            Instructions
-                        </Link>
                         <Link
                             onClick={() => setShowRpcModal(true)}
                             className="block text-white text-sm hover:text-yellow-400 transition"
@@ -129,12 +125,14 @@ const Header = () => {
                         >
                             {rpcStatusText || "Checking..."}
                         </div>
-                        <Link 
-                            to="/security-policy" 
-                            className="block text-white text-sm hover:text-yellow-400 transition"
+                        <a
+                            href="https://solbetx.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-white text-sm hover:text-yellow-400 transition"
                         >
-                            Security Policy
-                        </Link>
+                            Open in Mainnet
+                        </a>
                         {publicKey && (
                             <Link
                                 to="/dashboard"
