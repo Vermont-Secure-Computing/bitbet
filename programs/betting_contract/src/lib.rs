@@ -21,7 +21,7 @@ use truth_network::accounts::Question;
 
 pub const HOUSE_WALLET: &str = "CQaZgx5jqQrz7c8shCG3vJLiiPGPrawSGhvkgXtGyxL";
 
-declare_id!("BDvbvoCDzi4iDkorGa2HiKgiLGSjcwH6N9981o6Tv45N");
+declare_id!("9XiAk8AJVCWkypFstaRERag2DeKgtSergJR4PqTYeV9C");
 
 // Used for adding on-chain event logs
 #[event]
@@ -1146,7 +1146,7 @@ security_txt! {
     // Optional Fields
     preferred_languages: "en",
     source_code: "https://github.com/Vermont-Secure-Computing/bitbet",
-    source_revision: "2UcxFiqH8yxSD17fFAtxC4nGeUxCDECSogLKVTkbowcF",
+    source_revision: "9XiAk8AJVCWkypFstaRERag2DeKgtSergJR4PqTYeV9C",
     source_release: "",
     encryption: "",
     auditors: "vtscc.org",

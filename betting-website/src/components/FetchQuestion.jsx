@@ -30,7 +30,7 @@ const FetchQuestion = () => {
     const totalPages = Math.ceil(allQuestions.length / questionsPerPage);
 
     // Setup Provider & Programs
-    const rpcUrl = localStorage.getItem("customRpcUrl") || "https://api.devnet.solana.com";
+    const rpcUrl = localStorage.getItem("customRpcUrl") || "https://solana-rpc.publicnode.com";
     const connection = new web3.Connection(rpcUrl, "confirmed");
     
     // Dummy PublicKey for initialization
@@ -234,7 +234,7 @@ const FetchQuestion = () => {
     return (
         <div className="w-full flex-1 mt-6 p-4 sm:p-6 lg:p-8 border border-gray-600 rounded-lg shadow-lg bg-gray-900 text-white">
 
-            <h2 className="text-2xl font-bold text-gray-200">All Events</h2>
+            <h2 className="text-2xl font-bold text-gray-200">Events</h2>
             <p className="text-sm text-gray-400">Note: All bets are resolved two (2) days after betting close date.</p>
 
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">

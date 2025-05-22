@@ -48,9 +48,10 @@ const Header = () => {
                     {/* Logo + Label */}
                     <div>
                         <Link to="/" className="text-2xl font-bold text-white hover:underline block">
-                            SolBetX - DevNet - v0.9
+                            SolBetX - MainNet - v0.9
                         </Link>
                         <p className="text-sm text-gray-300">Open Source No-Token Smart contract betting platform resolved by Truth.it network</p>
+                        
                     </div>
 
                     {/* Desktop Navigation */}
@@ -82,12 +83,12 @@ const Header = () => {
                         </Link>
                         
                         <a
-                            href="https://solbetx.com"
+                            href="https://devnet.solbetx.com"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-white text-sm hover:text-yellow-400 transition"
                         >
-                            Open in Mainnet
+                            Open in DevNet
                         </a>
                         
                         <WalletMultiButton />
@@ -126,12 +127,12 @@ const Header = () => {
                             {rpcStatusText || "Checking..."}
                         </div>
                         <a
-                            href="https://solbetx.com"
+                            href="https://devnet.solbetx.com"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-white text-sm hover:text-yellow-400 transition"
                         >
-                            Open in Mainnet
+                            Open in DevNet
                         </a>
                         {publicKey && (
                             <Link

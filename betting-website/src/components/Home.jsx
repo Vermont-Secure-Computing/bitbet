@@ -16,7 +16,18 @@ function Home() {
 
             {/* Main Content */}
             <div className="w-full flex justify-center px-0 sm:px-6 lg:px-8 mt-6">
+                
                 <div className="w-full max-w-[1600px] bg-gray-800 rounded-lg shadow-md p-6">
+                    <p className="text-sm text-gray-300 mb-4">
+                        Program Id: 
+                        <a 
+                            href="https://explorer.solana.com/address/9XiAk8AJVCWkypFstaRERag2DeKgtSergJR4PqTYeV9C"
+                            target="_blank"
+                            className="px-2"
+                        > 
+                            9XiAk8AJVCWkypFstaRERag2DeKgtSergJR4PqTYeV9C
+                        </a>
+                    </p>
 
                     {/* Tabs for Create & View Questions */}
                     <div className="bg-gray-800 rounded-t-xl shadow-sm">
@@ -53,19 +64,6 @@ function Home() {
                 </div>
             </div>
 
-            {/* <div className="mt-8 flex justify-center items-center gap-2 text-sm text-gray-400">
-                <FaGithub className="text-xl" />
-                <a
-                    href="https://github.com/Vermont-Secure-Computing/bitbet"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-400 hover:underline"
-                >
-                    View SolBetX on GitHub
-                </a>
-            </div> */}
-
-            
         </div>
     );
 }
