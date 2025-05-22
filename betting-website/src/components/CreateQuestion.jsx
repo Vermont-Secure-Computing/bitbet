@@ -133,10 +133,10 @@ const CreateQuestion = ({setActiveTab}) => {
             const bettingTimestamp = Math.floor(selectedTime.getTime() / 1000);
 
             // Calculate commit and reveal times
-            // const commitEndTimeTimestamp = new BN(bettingTimestamp + 24 * 60 * 60); // +one day after betting close date
-            // const revealEndTimeTimestamp = new BN(bettingTimestamp + 48 * 60 * 60); // +two days after betting close date
-            const commitEndTimeTimestamp = new BN(bettingTimestamp + 3 * 60); // +3 minutes for testing purposes
-            const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60); // +6 minutes for testing purposes
+            const commitEndTimeTimestamp = new BN(bettingTimestamp + 24 * 60 * 60); // +one day after betting close date
+            const revealEndTimeTimestamp = new BN(bettingTimestamp + 48 * 60 * 60); // +two days after betting close date
+            // const commitEndTimeTimestamp = new BN(bettingTimestamp + 3 * 60); // +3 minutes for testing purposes
+            // const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60); // +6 minutes for testing purposes
 
 
             const [truthVaultPDA] = await PublicKey.findProgramAddress(
