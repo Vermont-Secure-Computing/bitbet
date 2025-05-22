@@ -15,7 +15,7 @@ import truthNetworkIDL from "../idls/truth_network.json";
 import { getQuestionStatus } from "../utils/eventStatus";
 import { useCanDeleteEvent } from "../hooks/useCanDeleteEvent";
 
-const rpcUrl = localStorage.getItem("customRpcUrl") || "https://api.devnet.solana.com";
+const rpcUrl = localStorage.getItem("customRpcUrl") || "https://solana-rpc.publicnode.com";
 const connection = new web3.Connection(rpcUrl, "confirmed");
 
 const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
