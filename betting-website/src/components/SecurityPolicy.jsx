@@ -1,4 +1,5 @@
 import React from "react";
+import { FaCheckCircle } from "react-icons/fa";
 
 export default function SecurityPolicy() {
     return (
@@ -10,8 +11,21 @@ export default function SecurityPolicy() {
             </p>
 
             <h2 className="text-2xl font-semibold mt-8 mb-3">Smart Contract Overview</h2>
+            <span className="ml-2 inline-flex items-center text-green-400 text-sm font-medium">
+                <FaCheckCircle className="mr-1" />
+                Verified on Solana Explorer
+            </span>
             <ul className="list-disc pl-6 mb-4">
-                <li>Program ID: <code>BDvbvoCDzi4iDkorGa2HiKgiLGSjcwH6N9981o6Tv45N</code></li>
+                <li>Program ID: 
+                    <a 
+                        href="https://explorer.solana.com/address/9XiAk8AJVCWkypFstaRERag2DeKgtSergJR4PqTYeV9C"
+                        target="_blank"
+                        className="px-2 break-all text-blue-400 hover:underline"
+                    > 
+                        9XiAk8AJVCWkypFstaRERag2DeKgtSergJR4PqTYeV9C
+                    </a>
+                    
+                </li>
                 <li>Source: <a className="text-blue-600 hover:underline" href="https://github.com/Vermont-Secure-Computing/bitbet" target="_blank">GitHub Repo</a></li>
                 <li>Security metadata embedded using <code>solana-security-txt</code></li>
             </ul>
