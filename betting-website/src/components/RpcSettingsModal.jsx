@@ -101,7 +101,7 @@ const RpcSettingsModal = ({ isOpen, onClose }) => {
                     transition={{ duration: 0.2 }}
                     className="bg-white/80 backdrop-blur-lg text-black rounded-2xl shadow-2xl max-w-md w-full p-6"
                 >
-                    <h2 className="text-xl font-semibold mb-4">Set RPC Endpoint</h2>
+                    <h2 className="text-xl font-semibold mb-4">Set Solana RPC Endpoint</h2>
                     <input
                         type="text"
                         value={rpcUrl}

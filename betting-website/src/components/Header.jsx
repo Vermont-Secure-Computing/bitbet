@@ -1,46 +1,14 @@
-import { useState, useEffect } from "react";
-import axios from "axios";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { FaBars, FaTimes } from "react-icons/fa";
-import RpcSettingsModal from "./RpcSettingsModal";
+
 
 const Header = () => {
     const { publicKey } = useWallet();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [showRpcModal, setShowRpcModal] = useState(false);
-    const [rpcUrl, setRpcUrl] = useState("");
-    const [rpcStatusText, setRpcStatusText] = useState("Checking...");
-    const [isOnline, setIsOnline] = useState(true);
-
-    useEffect(() => {
-        const stored = localStorage.getItem("customRpcUrl") || "https://api.devnet.solana.com";
-        setRpcUrl(stored);
-      
-        axios.post(stored, {
-            jsonrpc: "2.0",
-            id: 1,
-            method: "getVersion"
-        }, {
-            headers: { "Content-Type": "application/json" }
-        })
-            .then((res) => {
-                if (res.status === 200 && res.data.result) {
-                    setRpcStatusText("Online");
-                    setIsOnline(true);
-                } else {
-                    setRpcStatusText("Offline");
-                    setIsOnline(false);
-                }
-            })
-            .catch((error) => {
-                console.error("RPC health check failed:", error.message);
-                setRpcStatusText("Offline");
-                setIsOnline(false);
-            });
-    }, []);
-
+    
     return (
         <>
             <header className="w-full bg-gray-800 py-4 shadow-lg relative">
@@ -67,19 +35,9 @@ const Header = () => {
                                 My Bets
                             </Link>
                         )}
-                        <Link
-                            onClick={() => setShowRpcModal(true)}
-                            className="text-white text-sm hover:text-yellow-400 transition"
-                        >
-                            Change RPC
-
-                            <span
-                                className={`text-xs ml-2 px-2 py-1 rounded ${
-                                    isOnline ? "bg-green-600 text-white" : "bg-red-600 text-white"
-                                }`}
-                            >
-                                {rpcStatusText || "Checking..."}
-                            </span>
+                        
+                        <Link to="/instructions" className="hover:underline text-gray-300">
+                            Instructions
                         </Link>
                         
                         <a
@@ -113,27 +71,19 @@ const Header = () => {
                         >
                             Home
                         </Link>
-                        <Link
-                            onClick={() => setShowRpcModal(true)}
-                            className="block text-white text-sm hover:text-yellow-400 transition"
-                        >
-                            Change RPC
+                        <Link to="/instructions" className="hover:underline text-gray-300">
+                            Instructions
                         </Link>
-                        <div
-                            className={`text-xs mt-2 px-3 py-1 rounded inline-block ${
-                                isOnline ? "bg-green-600 text-white" : "bg-red-600 text-white"
-                            }`}
-                        >
-                            {rpcStatusText || "Checking..."}
+                        <div>
+                            <a
+                                href="https://devnet.solbetx.com"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-white text-sm hover:text-yellow-400 transition"
+                            >
+                                Open in DevNet
+                            </a>
                         </div>
-                        <a
-                            href="https://devnet.solbetx.com"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-white text-sm hover:text-yellow-400 transition"
-                        >
-                            Open in DevNet
-                        </a>
                         {publicKey && (
                             <Link
                                 to="/dashboard"
@@ -149,7 +99,7 @@ const Header = () => {
                     </div>
                 )}
             </header>
-            <RpcSettingsModal isOpen={showRpcModal} onClose={() => setShowRpcModal(false)} />
+            
         </>
     );
 };
