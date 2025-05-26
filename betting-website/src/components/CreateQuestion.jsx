@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { PublicKey, Connection, clusterApiUrl } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import { AnchorProvider, Program, BN, web3 } from "@coral-xyz/anchor";
 import { toast } from "react-toastify";
 import { BsLock } from "react-icons/bs";
@@ -14,8 +14,6 @@ import ConfirmModal from "./ConfirmModal";
 const TRUTH_NETWORK_PROGRAM_ID = new PublicKey(import.meta.env.VITE_TRUTH_PROGRAM_ID);
 const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
 
-const connection = new web3.Connection(clusterApiUrl("mainnet-beta"), "confirmed");
-
 const CreateQuestion = ({setActiveTab}) => {
     const navigate = useNavigate();
     const { wallet, publicKey, signTransaction, signAllTransactions, connected } = useWallet(); 
@@ -25,6 +23,10 @@ const CreateQuestion = ({setActiveTab}) => {
     const [bettingProgram, setBettingProgram] = useState(null);
     const [truthNetworkProgram, setTruthNetworkProgram] = useState(null);
     const [showConfirm, setShowConfirm] = useState(false);
+
+    // Setup Provider & Programs
+    const rpcUrl = localStorage.getItem("customRpcUrl") || "https://solana-rpc.publicnode.com";
+    const connection = new web3.Connection(rpcUrl, "confirmed");
 
     const walletAdapter = {
         publicKey,
