@@ -766,9 +766,8 @@ const QuestionDetails = () => {
                 }
 
                 <h2 className="text-2xl font-bold text-gray-200">{questionData?.betting.title}</h2>
-                {publicKey?.toBase58() === questionData?.betting?.creator &&
-                    sharingComponent()
-                }
+                {sharingComponent()}
+                
 
 
                 <p className="text-gray-400 mt-2">
