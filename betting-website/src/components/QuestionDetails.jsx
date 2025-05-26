@@ -35,13 +35,13 @@ const QuestionDetails = () => {
                 publicKey,
                 signTransaction,
                 signAllTransactions,
-                network: "devnet",
+                network: "mainnet",
             }
             : {
                 dummyWallet,
                 signTransaction,
                 signAllTransactions,
-                network: "devnet",
+                network: "mainnet",
             };
     }, [publicKey, signTransaction, signAllTransactions]);
 
@@ -786,7 +786,7 @@ const QuestionDetails = () => {
 
                     return (
                         <a
-                            href={`https://explorer.solana.com/tx/${decodedTxId}?cluster=devnet`}
+                            href={`https://explorer.solana.com/tx/${decodedTxId}?cluster=mainnet`}
                             className="text-blue-400 underline text-xs mt-2"
                             target="_blank"
                             rel="noreferrer"

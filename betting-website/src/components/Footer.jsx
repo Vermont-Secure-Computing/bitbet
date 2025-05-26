@@ -12,7 +12,7 @@ const Footer = () => {
     const [isOnline, setIsOnline] = useState(true);
 
     useEffect(() => {
-        const stored = localStorage.getItem("customRpcUrl") || "https://api.devnet.solana.com";
+        const stored = localStorage.getItem("customRpcUrl") || "https://solana-rpc.publicnode.com";
         setRpcUrl(stored);
       
         axios.post(stored, {
