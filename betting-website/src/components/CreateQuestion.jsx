@@ -14,7 +14,7 @@ import ConfirmModal from "./ConfirmModal";
 const TRUTH_NETWORK_PROGRAM_ID = new PublicKey(import.meta.env.VITE_TRUTH_PROGRAM_ID);
 const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
 
-const connection = new web3.Connection(clusterApiUrl("devnet"), "confirmed");
+const connection = new web3.Connection(clusterApiUrl("mainnet-beta"), "confirmed");
 
 const CreateQuestion = ({setActiveTab}) => {
     const navigate = useNavigate();
@@ -43,7 +43,7 @@ const CreateQuestion = ({setActiveTab}) => {
                 publicKey, 
                 signTransaction, 
                 signAllTransactions, 
-                network: "devnet" 
+                network: "mainnet" 
             } : null;
             const provider = new AnchorProvider(connection, walletAdapter, { preflightCommitment: "processed" });
 
