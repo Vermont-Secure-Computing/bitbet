@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { FaBars, FaTimes } from "react-icons/fa";
+import constants from "../constants";
 
 
 const Header = () => {
@@ -16,7 +17,7 @@ const Header = () => {
                     {/* Logo + Label */}
                     <div>
                         <Link to="/" className="text-2xl font-bold text-white hover:underline block">
-                            SolBetX - MainNet - v0.9
+                            SolBetX - {constants.NETWORK_NAME} - v0.9
                         </Link>
                         <p className="text-sm text-gray-300">Open Source No-Token Smart contract betting platform resolved by Truth.it network</p>
                         
@@ -41,12 +42,12 @@ const Header = () => {
                         </Link>
                         
                         <a
-                            href="https://devnet.solbetx.com"
+                            href={constants.SWITCH_LINK_URL}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-white text-sm hover:text-yellow-400 transition"
                         >
-                            Open in DevNet
+                            {constants.SWITCH_LINK_LABEL}
                         </a>
                         
                         <WalletMultiButton />
@@ -76,12 +77,12 @@ const Header = () => {
                         </Link>
                         <div>
                             <a
-                                href="https://devnet.solbetx.com"
+                                href={constants.SWITCH_LINK_URL}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-white text-sm hover:text-yellow-400 transition"
                             >
-                                Open in DevNet
+                                {constants.SWITCH_LINK_LABEL}
                             </a>
                         </div>
                         {publicKey && (

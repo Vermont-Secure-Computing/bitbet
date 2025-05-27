@@ -1,6 +1,8 @@
 import { AnchorProvider, Program, setProvider } from "@coral-xyz/anchor";
 import { Connection, clusterApiUrl } from "@solana/web3.js";
-import truthIdl from "../idls/truth_network.json";
+
+import { getIdls } from "../idls";
+const { truthNetworkIDL } = await getIdls();
 
 const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
 
@@ -9,6 +11,6 @@ const provider = new AnchorProvider(connection, window.solana, {
 });
 setProvider(provider);
 
-const program = new Program(truthIdl, provider);
+const program = new Program(truthNetworkIDL, provider);
 
 export { connection, provider, program };

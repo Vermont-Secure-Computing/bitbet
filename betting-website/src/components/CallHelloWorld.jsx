@@ -4,7 +4,10 @@ import { Program, AnchorProvider, web3 } from "@coral-xyz/anchor";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { toast, ToastContainer, Bounce } from "react-toastify"; 
 import "react-toastify/dist/ReactToastify.css";
-import idl from "../idls/betting.json";
+import { getIdls } from "../idls";
+import constants from "../constants";
+
+const { bettingIDL } = await getIdls();
 
 const connection = new web3.Connection("https://api.devnet.solana.com", "confirmed");
 const PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
@@ -21,7 +24,7 @@ const CallHelloWorld = () => {
     } : null;
     
     const provider = walletAdapter ? new AnchorProvider(connection, walletAdapter, { preflightCommitment: "processed" }) : null;
-    const program = provider ? new Program(idl, provider) : null;
+    const program = provider ? new Program(bettingIDL, provider) : null;
 
     const callHelloWorld = async () => {
 

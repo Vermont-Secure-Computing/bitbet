@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-
-const DEFAULT_RPC = "https://solana-rpc.publicnode.com";
+import constants from "../constants";
+const DEFAULT_RPC = constants.DEFAULT_RPC_URL;
 
 const RpcSettingsModal = ({ isOpen, onClose }) => {
     const [rpcUrl, setRpcUrl] = useState(DEFAULT_RPC);
