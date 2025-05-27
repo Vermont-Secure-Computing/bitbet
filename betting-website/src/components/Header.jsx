@@ -3,12 +3,13 @@ import { Link } from "react-router-dom";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { FaBars, FaTimes } from "react-icons/fa";
-import constants from "../constants";
+import { getConstants } from "../constants";
 
 
 const Header = () => {
     const { publicKey } = useWallet();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const constants = getConstants();
     
     return (
         <>

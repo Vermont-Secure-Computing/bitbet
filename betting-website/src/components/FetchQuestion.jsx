@@ -3,20 +3,17 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { AnchorProvider, Program, web3, BN } from "@coral-xyz/anchor";
 import { useNavigate } from "react-router-dom";
-
-import { getIdls } from "../idls";
-const { bettingIDL, truthNetworkIDL } = await getIdls();
-
 import { getTimeRemaining } from "../utils/getRemainingTime";
 import { renderPagination } from "../utils/pagination";
-
-import constants from "../constants";
-
-const BETTING_CONTRACT_PROGRAM_ID = constants.BETTING_CONTRACT_PROGRAM_ID;
-const TRUTH_NETWORK_PROGRAM_ID = constants.TRUTH_NETWORK_PROGRAM_ID;
-
+import { getIdls } from "../idls";
+import { getConstants } from "../constants";
 
 const FetchQuestion = () => {
+    const constants = getConstants();
+    const BETTING_CONTRACT_PROGRAM_ID = constants.BETTING_CONTRACT_PROGRAM_ID;
+    const TRUTH_NETWORK_PROGRAM_ID = constants.TRUTH_NETWORK_PROGRAM_ID;
+
+    const { bettingIDL, truthNetworkIDL } = getIdls();
     const { publicKey, connected } = useWallet();
     const navigate = useNavigate();
     const [refreshingList, setRefreshingList] = useState(false);

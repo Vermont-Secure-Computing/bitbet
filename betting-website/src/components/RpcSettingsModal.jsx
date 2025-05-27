@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import constants from "../constants";
-const DEFAULT_RPC = constants.DEFAULT_RPC_URL;
+import { getConstants } from "../constants";
+
 
 const RpcSettingsModal = ({ isOpen, onClose }) => {
+    const constants = getConstants();
+    const DEFAULT_RPC = constants.DEFAULT_RPC_URL;
     const [rpcUrl, setRpcUrl] = useState(DEFAULT_RPC);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);

@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
-import { BETTING_CONTRACT_PROGRAM_ID, bettingProgram, connection } from "../utils/solana";
-import { program as truthProgram } from "../utils/truthProgram";
+import { Connection, clusterApiUrl } from "@solana/web3.js";
+import { AnchorProvider, Program, setProvider } from "@coral-xyz/anchor";
+import { getIdls } from "../idls";
+
 import { getQuestionStatus } from "../utils/eventStatus";
 
 const UserDashboard = () => {
@@ -11,10 +13,46 @@ const UserDashboard = () => {
     const [userBets, setUserBets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [userBettorRecords, setUserBettorRecords] = useState(null);
+    const [bettingProgram, setBettingProgram] = useState(null);
+    const [truthProgram, setTruthProgram] = useState(null);
+
+    // Initialize Truth and bitbet program on mount
+    useEffect(() => {
+        const setupPrograms = async () => {
+            try {
+                const { bettingIDL, truthNetworkIDL } = await getIdls();
+        
+                const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+        
+                const provider = new AnchorProvider(connection, window.solana, {
+                preflightCommitment: "confirmed",
+                });
+                setProvider(provider);
+        
+                const bettingProgram = new Program(bettingIDL, provider);
+                const truthProgram = new Program(truthNetworkIDL, provider);
+        
+                setBettingProgram(bettingProgram);
+                setTruthProgram(truthProgram);
+            } catch (err) {
+                console.error("Program initialization failed:", err);
+            }
+        };
+      
+        setupPrograms();
+    }, []);
+    
 
     useEffect(() => {
-        if (publicKey) fetchUserBets();
-    }, [publicKey]);
+        console.log("BETTING IDL being passed into Program:", bettingProgram);
+        console.log("truth:", truthProgram);
+        if (publicKey && bettingProgram && truthProgram) {
+            console.log("inside useEffect bettingProgram: ", bettingProgram)
+            console.log("inside useEffect truthProgram: ", truthProgram)
+            fetchUserBets();
+            fetchBettorRecords();
+        }
+      }, [publicKey, bettingProgram, truthProgram]);
 
     const fetchUserBets = async () => {
         setLoading(true);

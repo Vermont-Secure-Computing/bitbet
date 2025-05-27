@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { PublicKey } from "@solana/web3.js";
-//import { BETTING_CONTRACT_PROGRAM_ID } from "../constants";
-const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
+import { getConstants } from "../constants";
 
 export function useCanDeleteEvent(questionData, publicKey, connection) {
+
+    const constants = getConstants();
+    const BETTING_CONTRACT_PROGRAM_ID = constants.BETTING_CONTRACT_PROGRAM_ID;
     const [canDelete, setCanDelete] = useState(false);
 
     useEffect(() => {

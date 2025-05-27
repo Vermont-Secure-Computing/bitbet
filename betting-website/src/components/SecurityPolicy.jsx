@@ -1,8 +1,9 @@
 import React from "react";
 import { FaCheckCircle } from "react-icons/fa";
-import constants from "../constants";
+import { getConstants } from "../constants";
 
 export default function SecurityPolicy() {
+    const constants = getConstants();
     return (
         <section className="max-w-4xl mx-auto px-4 py-12 text-gray-100">
             <h1 className="text-3xl font-bold mb-6">Security Policy – SolBetX</h1>
