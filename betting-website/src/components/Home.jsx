@@ -6,6 +6,8 @@ import { FaGithub } from 'react-icons/fa';
 import FetchQuestion from "./FetchQuestion";
 import CreateQuestion from "./CreateQuestion";
 
+import constants from "../constants";
+
 function Home() {
     const [activeTab, setActiveTab] = useState("fetch");
     const navigate = useNavigate();
@@ -21,11 +23,11 @@ function Home() {
                     <p className="text-sm text-gray-300 mb-4">
                         Program Id: 
                         <a 
-                            href="https://explorer.solana.com/address/9XiAk8AJVCWkypFstaRERag2DeKgtSergJR4PqTYeV9C"
+                            href={`https://explorer.solana.com/address/${constants.BETTING_CONTRACT_PROGRAM_ID.toBase58()}`}
                             target="_blank"
                             className="px-2"
                         > 
-                            9XiAk8AJVCWkypFstaRERag2DeKgtSergJR4PqTYeV9C
+                            {constants.BETTING_CONTRACT_PROGRAM_ID.toBase58()}
                         </a>
                     </p>
 

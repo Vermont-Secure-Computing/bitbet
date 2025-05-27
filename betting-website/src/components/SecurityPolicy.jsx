@@ -1,5 +1,6 @@
 import React from "react";
 import { FaCheckCircle } from "react-icons/fa";
+import constants from "../constants";
 
 export default function SecurityPolicy() {
     return (
@@ -18,11 +19,11 @@ export default function SecurityPolicy() {
             <ul className="list-disc pl-6 mb-4">
                 <li>Program ID: 
                     <a 
-                        href="https://explorer.solana.com/address/9XiAk8AJVCWkypFstaRERag2DeKgtSergJR4PqTYeV9C"
+                        href={`https://explorer.solana.com/address/${constants.BETTING_CONTRACT_PROGRAM_ID.toBase58()}`}
                         target="_blank"
                         className="px-2 break-all text-blue-400 hover:underline"
                     > 
-                        9XiAk8AJVCWkypFstaRERag2DeKgtSergJR4PqTYeV9C
+                        {constants.BETTING_CONTRACT_PROGRAM_ID.toBase58()}
                     </a>
                     
                 </li>

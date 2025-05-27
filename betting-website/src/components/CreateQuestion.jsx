@@ -5,14 +5,14 @@ import { AnchorProvider, Program, BN, web3 } from "@coral-xyz/anchor";
 import { toast } from "react-toastify";
 import { BsLock } from "react-icons/bs";
 import { useNavigate } from "react-router-dom";
-import truthNetworkIDL from "../idls/truth_network.json";
-import bettingIDL from "../idls/betting.json";
-
-
 import ConfirmModal from "./ConfirmModal";
+import constants from "../constants";
+import { getIdls } from "../idls";
+const { bettingIDL, truthNetworkIDL } = await getIdls();
 
-const TRUTH_NETWORK_PROGRAM_ID = new PublicKey(import.meta.env.VITE_TRUTH_PROGRAM_ID);
-const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
+const BETTING_CONTRACT_PROGRAM_ID = constants.BETTING_CONTRACT_PROGRAM_ID;
+const TRUTH_NETWORK_PROGRAM_ID = constants.TRUTH_NETWORK_PROGRAM_ID;
+
 
 const CreateQuestion = ({setActiveTab}) => {
     const navigate = useNavigate();
@@ -25,7 +25,7 @@ const CreateQuestion = ({setActiveTab}) => {
     const [showConfirm, setShowConfirm] = useState(false);
 
     // Setup Provider & Programs
-    const rpcUrl = localStorage.getItem("customRpcUrl") || "https://solana-rpc.publicnode.com";
+    const rpcUrl = constants.DEFAULT_RPC_URL;
     const connection = new web3.Connection(rpcUrl, "confirmed");
 
     const walletAdapter = {
@@ -135,10 +135,10 @@ const CreateQuestion = ({setActiveTab}) => {
             const bettingTimestamp = Math.floor(selectedTime.getTime() / 1000);
 
             // Calculate commit and reveal times
-            const commitEndTimeTimestamp = new BN(bettingTimestamp + 24 * 60 * 60); // +one day after betting close date
-            const revealEndTimeTimestamp = new BN(bettingTimestamp + 48 * 60 * 60); // +two days after betting close date
-            // const commitEndTimeTimestamp = new BN(bettingTimestamp + 3 * 60); // +3 minutes for testing purposes
-            // const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60); // +6 minutes for testing purposes
+            // const commitEndTimeTimestamp = new BN(bettingTimestamp + 24 * 60 * 60); // +one day after betting close date
+            // const revealEndTimeTimestamp = new BN(bettingTimestamp + 48 * 60 * 60); // +two days after betting close date
+            const commitEndTimeTimestamp = new BN(bettingTimestamp + 3 * 60); // +3 minutes for testing purposes
+            const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60); // +6 minutes for testing purposes
 
 
             const [truthVaultPDA] = await PublicKey.findProgramAddress(

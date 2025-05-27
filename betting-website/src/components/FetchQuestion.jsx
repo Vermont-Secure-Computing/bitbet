@@ -4,14 +4,16 @@ import { PublicKey } from "@solana/web3.js";
 import { AnchorProvider, Program, web3, BN } from "@coral-xyz/anchor";
 import { useNavigate } from "react-router-dom";
 
-import bettingIDL from "../idls/betting.json";
-import truthNetworkIDL from "../idls/truth_network.json";
+import { getIdls } from "../idls";
+const { bettingIDL, truthNetworkIDL } = await getIdls();
 
 import { getTimeRemaining } from "../utils/getRemainingTime";
 import { renderPagination } from "../utils/pagination";
 
-const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
-const TRUTH_NETWORK_PROGRAM_ID = new PublicKey(import.meta.env.VITE_TRUTH_PROGRAM_ID);
+import constants from "../constants";
+
+const BETTING_CONTRACT_PROGRAM_ID = constants.BETTING_CONTRACT_PROGRAM_ID;
+const TRUTH_NETWORK_PROGRAM_ID = constants.TRUTH_NETWORK_PROGRAM_ID;
 
 
 const FetchQuestion = () => {
@@ -30,7 +32,7 @@ const FetchQuestion = () => {
     const totalPages = Math.ceil(allQuestions.length / questionsPerPage);
 
     // Setup Provider & Programs
-    const rpcUrl = localStorage.getItem("customRpcUrl") || "https://solana-rpc.publicnode.com";
+    const rpcUrl = constants.DEFAULT_RPC_URL;
     const connection = new web3.Connection(rpcUrl, "confirmed");
     
     // Dummy PublicKey for initialization

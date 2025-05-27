@@ -8,17 +8,17 @@ import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { FaRegCopy, FaTwitter, FaFacebookF, FaTelegramPlane } from "react-icons/fa";
 import { FiLogIn } from "react-icons/fi";
-
-import bettingIDL from "../idls/betting.json";
-import truthNetworkIDL from "../idls/truth_network.json";
+import constants from "../constants";
+import { getIdls } from "../idls";
+const { bettingIDL, truthNetworkIDL } = await getIdls();
 
 import { getQuestionStatus } from "../utils/eventStatus";
 import { useCanDeleteEvent } from "../hooks/useCanDeleteEvent";
 
-const rpcUrl = localStorage.getItem("customRpcUrl") || "https://solana-rpc.publicnode.com";
+const rpcUrl = constants.DEFAULT_RPC_URL;
 const connection = new web3.Connection(rpcUrl, "confirmed");
 
-const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
+const BETTING_CONTRACT_PROGRAM_ID = constants.BETTING_CONTRACT_PROGRAM_ID;
 
 const QuestionDetails = () => {
 
@@ -35,13 +35,13 @@ const QuestionDetails = () => {
                 publicKey,
                 signTransaction,
                 signAllTransactions,
-                network: "mainnet",
+                network: import.meta.env.VITE_NETWORK,
             }
             : {
                 dummyWallet,
                 signTransaction,
                 signAllTransactions,
-                network: "mainnet",
+                network: import.meta.env.VITE_NETWORK,
             };
     }, [publicKey, signTransaction, signAllTransactions]);
 

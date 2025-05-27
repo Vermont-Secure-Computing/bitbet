@@ -1,9 +1,12 @@
 import { Connection, clusterApiUrl } from "@solana/web3.js";
 import { AnchorProvider, Program, setProvider } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
-import idl from "../idls/betting.json";
+import { getIdls } from "../idls";
+import constants from "../constants";
 
-const BETTING_CONTRACT_PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
+const { bettingIDL } = await getIdls();
+
+const BETTING_CONTRACT_PROGRAM_ID = constants.BETTING_CONTRACT_PROGRAM_ID;
 
 const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
 
@@ -13,6 +16,6 @@ const provider = new AnchorProvider(connection, window.solana, {
 
 setProvider(provider);
 
-const bettingProgram = new Program(idl, provider);
+const bettingProgram = new Program(bettingIDL, provider);
 
 export { connection, provider, bettingProgram, BETTING_CONTRACT_PROGRAM_ID};

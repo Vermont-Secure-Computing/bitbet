@@ -3,6 +3,7 @@ import axios from "axios";
 import { Link } from "react-router-dom";
 import { FaGithub } from "react-icons/fa";
 import RpcSettingsModal from "./RpcSettingsModal";
+import constants from "../constants";
 
 const Footer = () => {
 
@@ -12,7 +13,7 @@ const Footer = () => {
     const [isOnline, setIsOnline] = useState(true);
 
     useEffect(() => {
-        const stored = localStorage.getItem("customRpcUrl") || "https://solana-rpc.publicnode.com";
+        const stored = constants.DEFAULT_RPC_URL;
         setRpcUrl(stored);
       
         axios.post(stored, {
