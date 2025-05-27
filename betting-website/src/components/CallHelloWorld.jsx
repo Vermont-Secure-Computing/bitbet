@@ -5,14 +5,12 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { toast, ToastContainer, Bounce } from "react-toastify"; 
 import "react-toastify/dist/ReactToastify.css";
 import { getIdls } from "../idls";
-import constants from "../constants";
-
-const { bettingIDL } = await getIdls();
 
 const connection = new web3.Connection("https://api.devnet.solana.com", "confirmed");
 const PROGRAM_ID = new PublicKey(import.meta.env.VITE_BETTING_PROGRAM_ID);
 
 const CallHelloWorld = () => {
+    const { bettingIDL } = getIdls();
     const { publicKey, signTransaction, signAllTransactions } = useWallet();
     const [loading, setLoading] = useState(false);
 

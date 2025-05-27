@@ -6,12 +6,12 @@ import { FaGithub } from 'react-icons/fa';
 import FetchQuestion from "./FetchQuestion";
 import CreateQuestion from "./CreateQuestion";
 
-import constants from "../constants";
+import { getConstants } from "../constants";
 
 function Home() {
     const [activeTab, setActiveTab] = useState("fetch");
     const navigate = useNavigate();
-
+    const constants = getConstants();
     return (
         <div className="w-full min-h-screen bg-gray-900 text-white flex flex-col">
             

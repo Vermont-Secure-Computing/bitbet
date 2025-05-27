@@ -3,10 +3,10 @@ import axios from "axios";
 import { Link } from "react-router-dom";
 import { FaGithub } from "react-icons/fa";
 import RpcSettingsModal from "./RpcSettingsModal";
-import constants from "../constants";
+import { getConstants } from "../constants";
 
 const Footer = () => {
-
+    const constants = getConstants();
     const [showRpcModal, setShowRpcModal] = useState(false);
     const [rpcUrl, setRpcUrl] = useState("");
     const [rpcStatusText, setRpcStatusText] = useState("Checking...");

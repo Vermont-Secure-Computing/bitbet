@@ -6,15 +6,15 @@ import { toast } from "react-toastify";
 import { BsLock } from "react-icons/bs";
 import { useNavigate } from "react-router-dom";
 import ConfirmModal from "./ConfirmModal";
-import constants from "../constants";
+import { getConstants } from "../constants";
 import { getIdls } from "../idls";
-const { bettingIDL, truthNetworkIDL } = await getIdls();
-
-const BETTING_CONTRACT_PROGRAM_ID = constants.BETTING_CONTRACT_PROGRAM_ID;
-const TRUTH_NETWORK_PROGRAM_ID = constants.TRUTH_NETWORK_PROGRAM_ID;
-
 
 const CreateQuestion = ({setActiveTab}) => {
+    const constants = getConstants();
+    const BETTING_CONTRACT_PROGRAM_ID = constants.BETTING_CONTRACT_PROGRAM_ID;
+    const TRUTH_NETWORK_PROGRAM_ID = constants.TRUTH_NETWORK_PROGRAM_ID;
+
+    const { bettingIDL, truthNetworkIDL } = getIdls();
     const navigate = useNavigate();
     const { wallet, publicKey, signTransaction, signAllTransactions, connected } = useWallet(); 
     const [questionText, setQuestionText] = useState("");

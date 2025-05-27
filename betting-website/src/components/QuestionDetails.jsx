@@ -8,22 +8,24 @@ import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { FaRegCopy, FaTwitter, FaFacebookF, FaTelegramPlane } from "react-icons/fa";
 import { FiLogIn } from "react-icons/fi";
-import constants from "../constants";
+import { getConstants } from "../constants";
 import { getIdls } from "../idls";
-const { bettingIDL, truthNetworkIDL } = await getIdls();
+
 
 import { getQuestionStatus } from "../utils/eventStatus";
 import { useCanDeleteEvent } from "../hooks/useCanDeleteEvent";
 
-const rpcUrl = constants.DEFAULT_RPC_URL;
-const connection = new web3.Connection(rpcUrl, "confirmed");
 
-const BETTING_CONTRACT_PROGRAM_ID = constants.BETTING_CONTRACT_PROGRAM_ID;
 
 const QuestionDetails = () => {
+    const constants = getConstants();
+
+    const rpcUrl = constants.DEFAULT_RPC_URL;
+    const connection = new web3.Connection(rpcUrl, "confirmed");
+    const BETTING_CONTRACT_PROGRAM_ID = constants.BETTING_CONTRACT_PROGRAM_ID;
 
     const navigate = useNavigate();
-
+    const { bettingIDL, truthNetworkIDL } = getIdls();
     const [fetchingQuestionDetails, setFetchingQuestionDetails] = useState(false);
     const { publicKey, connected, signTransaction, signAllTransactions } = useWallet();
     console.log("Wallet status:", publicKey?.toBase58(), connected);
