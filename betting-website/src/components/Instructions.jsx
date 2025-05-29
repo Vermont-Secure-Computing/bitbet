@@ -16,16 +16,18 @@ export default function InstructionsPage() {
         <li className="text-justify">
           <strong> Rewards : </strong>
           1% of all the coin wagered on a given event are rewarded to the address which initiated the betting event.  A further 1% of the coin goes to the SolbetX development fund address.  Another 1% goes to the Truth.It network for providing the result of the event,  thus determining the winners of the bet.  The remaining 97% of all bets are distributed among the betters on the favorable side of the event (the winners) according to their share as determined by the amount of their bet.
-
+        </li>
+        <li className="text-justify">
           <strong> Odds: </strong>
           The odds of a given bet are determined automatically through the reward mechanism, and are not fixed until the betting time period is over.  If you have a bet on the winning side, you have some fraction F of the winning bets.  Your reward is that fracion F multiplied by the total amount in the bet on both sides.
 
           For example consider an event "The Celtics are the 2025 NBA Champions" which has 30 solana on the "false" side and 10 solana on the "true" side.  This is a total of 40 solana on the table with 25% of the total bet on "false".  Suppose that one of these solana is your bet on "true", that the Celtice will win.  If the bet resolves to "true", your reward is 10 percent (your share of the total "true" bets) times forty ("total on all bets"), and you receive 4 solana reward, making this scenario 4 to 1 odds.
 
-
+        </li>
+        <li className="text-justify">
           <strong> Creating an Event: </strong>
 
-          To create an event for betting requires two transactions on Solana.  Use the "create event" button to create an event by entering an event statement in the text box and selecting the event resolution date and time.  When you click "create" the transactions will be initiaed to add your event to the smart contract and your solana wallet should pop up for approval.  The first is a deposit of 0.1 solana which all goes to the Truth.It network which will resolve the bet.  The second is a solana "rent fee" required to store the data of the event.  This fee will be refunded with any rewards when the event is complete.  1% of all bets placed on your event will be available to you when the event is complete.  Rewards must be claimed by using the "claim rewards" button upon event finalization.  Please be careful to state your event result as a statement which is either "true" or "false" for proper resolution!  Remember to claim your rewards!
+          To create an event for betting requires two transactions on Solana.  Use the "create event" button to create an event by entering an event statement in the text box and selecting the event resolution date and time.  When you click "create" the transactions will be initiated to add your event to the smart contract and your solana wallet should pop up for approval.  The first is a deposit of 0.1 solana which all goes to the Truth.It network which will resolve the bet.  The second is a solana "rent fee" required to store the data of the event.  This fee will be refunded with any rewards when the event is complete.  1% of all bets placed on your event will be available to you when the event is complete.  Rewards must be claimed by using the "claim rewards" button upon event finalization.  Please be careful to state your event result as a statement which is either "true" or "false" for proper resolution!  Remember to claim your rewards!
 
         </li>
       </ul>

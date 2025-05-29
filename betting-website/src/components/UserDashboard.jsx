@@ -3,13 +3,15 @@ import { Link } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { Connection, clusterApiUrl } from "@solana/web3.js";
-import { AnchorProvider, Program, setProvider } from "@coral-xyz/anchor";
+import { AnchorProvider, Program, setProvider, web3 } from "@coral-xyz/anchor";
 import { getIdls } from "../idls";
+import { getConstants } from "../constants";
 
 import { getQuestionStatus } from "../utils/eventStatus";
 
 const UserDashboard = () => {
-    const { publicKey } = useWallet();
+    const constants = getConstants();
+    const { wallet, publicKey, signTransaction, signAllTransactions, connected } = useWallet(); 
     const [userBets, setUserBets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [userBettorRecords, setUserBettorRecords] = useState(null);
@@ -18,14 +20,22 @@ const UserDashboard = () => {
 
     // Initialize Truth and bitbet program on mount
     useEffect(() => {
-        const setupPrograms = async () => {
+        const setupPrograms = () => {
+            console.log("===== setting up betting and truth programs ======")
             try {
-                const { bettingIDL, truthNetworkIDL } = await getIdls();
+                const { bettingIDL, truthNetworkIDL } = getIdls();
         
-                const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
-        
-                const provider = new AnchorProvider(connection, window.solana, {
-                preflightCommitment: "confirmed",
+                // Setup Provider & Programs
+                const rpcUrl = constants.DEFAULT_RPC_URL;
+                const connection = new web3.Connection(rpcUrl, "confirmed");
+                const walletAdapter = publicKey && signTransaction ? { 
+                    publicKey, 
+                    signTransaction, 
+                    signAllTransactions, 
+                    network: "mainnet" 
+                } : null;
+                const provider = new AnchorProvider(connection, walletAdapter, {
+                    preflightCommitment: "confirmed",
                 });
                 setProvider(provider);
         
@@ -34,21 +44,21 @@ const UserDashboard = () => {
         
                 setBettingProgram(bettingProgram);
                 setTruthProgram(truthProgram);
+
+                console.log("Program initialization success")
             } catch (err) {
                 console.error("Program initialization failed:", err);
             }
         };
-      
-        setupPrograms();
-    }, []);
+        
+        if (connected && publicKey) {
+            setupPrograms();
+        }
+    }, [connected, publicKey]);
     
 
     useEffect(() => {
-        console.log("BETTING IDL being passed into Program:", bettingProgram);
-        console.log("truth:", truthProgram);
         if (publicKey && bettingProgram && truthProgram) {
-            console.log("inside useEffect bettingProgram: ", bettingProgram)
-            console.log("inside useEffect truthProgram: ", truthProgram)
             fetchUserBets();
             fetchBettorRecords();
         }
@@ -59,16 +69,15 @@ const UserDashboard = () => {
         try {
             const bettorAccounts = await bettingProgram.account.bettorAccount.all([
                 {
-                memcmp: {
-                    offset: 8,
-                    bytes: publicKey.toBase58(),
-                },
+                    memcmp: {
+                        offset: 8,
+                        bytes: publicKey.toBase58(),
+                    },
                 },
             ]);
-
             const enriched = await Promise.all(
                 bettorAccounts.map(async (bet) => {
-                    //console.log("bet: ", bet)
+                    console.log("bet: ", bet)
                     const bettorData = bet.account;
                     const questionPDA = bettorData.questionPda;
 
