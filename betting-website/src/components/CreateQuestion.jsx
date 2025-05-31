@@ -5,6 +5,8 @@ import { AnchorProvider, Program, BN, web3 } from "@coral-xyz/anchor";
 import { toast } from "react-toastify";
 import { BsLock } from "react-icons/bs";
 import { useNavigate } from "react-router-dom";
+import { FiInfo } from "react-icons/fi";
+import InfoWithTooltip from "./InfoWithTooltip";
 import ConfirmModal from "./ConfirmModal";
 import { getConstants } from "../constants";
 import { getIdls } from "../idls";
@@ -23,6 +25,10 @@ const CreateQuestion = ({setActiveTab}) => {
     const [bettingProgram, setBettingProgram] = useState(null);
     const [truthNetworkProgram, setTruthNetworkProgram] = useState(null);
     const [showConfirm, setShowConfirm] = useState(false);
+
+    const [commitEndTime, setCommitEndTime] = useState("");
+    const [revealEndTime, setRevealEndTime] = useState("");
+    const [showCommitInput, setShowCommitInput] = useState(false);
 
     // Setup Provider & Programs
     const rpcUrl = constants.DEFAULT_RPC_URL;
@@ -62,6 +68,20 @@ const CreateQuestion = ({setActiveTab}) => {
     }, [connected, publicKey]);
 
 
+    const getMinDateTime = () => {
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, "0");
+      
+        const year = now.getFullYear();
+        const month = pad(now.getMonth() + 1);
+        const day = pad(now.getDate());
+        const hours = pad(now.getHours());
+        const minutes = pad(now.getMinutes());
+      
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+
     const handleCreateClick = () => {
         if (questionText.length < 10) 
             return toast.error("Event must be at least 10 characters.");
@@ -71,6 +91,10 @@ const CreateQuestion = ({setActiveTab}) => {
 
         if (!bettingEndTime || new Date(bettingEndTime) <= new Date()) 
             return toast.error("Close date must be in the future.");
+
+        if (new Date(commitEndTime) <= new Date(bettingEndTime)) {
+            return toast.error("Commit End Time must be after Betting Close Date.");
+        }
 
         setShowConfirm(true);
     };
@@ -82,6 +106,7 @@ const CreateQuestion = ({setActiveTab}) => {
 
         if (!publicKey) return alert("Please connect your wallet");
         if (!questionText || !bettingEndTime ) return alert("All fields are required");
+        
         if (!connected) {
             console.error("Wallet is not connected.");
             return alert("Please connect your wallet first.");
@@ -131,14 +156,17 @@ const CreateQuestion = ({setActiveTab}) => {
             const bettingEndTimeTimestamp = new BN(Math.floor(new Date(bettingEndTime).getTime() / 1000));
 
             const rewardLamports = new BN(100_000_000); // For now, rewards defaults to 0.1 sol
-            const selectedTime = new Date(bettingEndTime);
-            const bettingTimestamp = Math.floor(selectedTime.getTime() / 1000);
+            //const selectedTime = new Date(bettingEndTime);
+            //const bettingTimestamp = Math.floor(selectedTime.getTime() / 1000);
 
             // Calculate commit and reveal times
-            const commitEndTimeTimestamp = new BN(bettingTimestamp + 24 * 60 * 60); // +one day after betting close date
-            const revealEndTimeTimestamp = new BN(bettingTimestamp + 48 * 60 * 60); // +two days after betting close date
+            // const commitEndTimeTimestamp = new BN(bettingTimestamp + 24 * 60 * 60); // +one day after betting close date
+            // const revealEndTimeTimestamp = new BN(bettingTimestamp + 48 * 60 * 60); // +two days after betting close date
             // const commitEndTimeTimestamp = new BN(bettingTimestamp + 3 * 60); // +3 minutes for testing purposes
             // const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60); // +6 minutes for testing purposes
+
+            const commitEndTimeTimestamp = new BN(Math.floor(new Date(commitEndTime).getTime() / 1000));
+            const revealEndTimeTimestamp = new BN(Math.floor(new Date(revealEndTime).getTime() / 1000));
 
 
             const [truthVaultPDA] = await PublicKey.findProgramAddress(
@@ -224,34 +252,136 @@ const CreateQuestion = ({setActiveTab}) => {
                         placeholder="Enter event..."
                         value={questionText}
                         onChange={(e) => setQuestionText(e.target.value)}
-                        className="w-full p-2 border border-1 border-color-gray-400 text-gray-600 rounded-md mb-3"
+                        className="w-full p-2 border border-gray-400 text-gray-600 rounded-md mb-3"
                     />
-                    <label>Betting Close Date</label>
-                    <input 
-                        type="datetime-local" 
-                        value={bettingEndTime} 
-                        onChange={(e) => setBettingEndTime(e.target.value)} 
-                        placeholder="Betting End Time" 
-                        className="w-full p-2 border border-1 border-color-gray-400 text-gray-600  rounded-md mb-3"
-                    />
+                
+                    <InfoWithTooltip
+                        label="Betting Close Date"
+                        tooltip="The final time users can place a bet."
+                    >
+                        <input
+                            type="datetime-local"
+                            value={bettingEndTime}
+                            min={getMinDateTime()}
+                            onChange={(e) => {
+                                const selected = e.target.value;
+                                setBettingEndTime(selected);
+
+                                if (selected) {
+                                    const closeDate = new Date(selected);
+                                    // const commitDate = new Date(closeDate.getTime() + 24 * 60 * 60 * 1000);
+                                    // const revealDate = new Date(closeDate.getTime() + 48 * 60 * 60 * 1000);
+                                    const commitDate = new Date(closeDate.getTime() + 2 * 60 * 1000);
+                                    const revealDate = new Date(closeDate.getTime() + 3 * 60 * 1000);
+
+                                  
+                                    // Convert to local datetime format
+                                    const format = (d) => d.toLocaleString("sv-SE").replace(" ", "T").slice(0, 16);
+                                  
+                                    setCommitEndTime(format(commitDate));
+                                    setRevealEndTime(format(revealDate));
+                                  }
+
+                            }}
+                            className="w-full p-2 border border-gray-300 rounded-md mt-1"
+                        />
+                    </InfoWithTooltip>
+
+                    {/* <InfoWithTooltip
+                        label="Commit End Time"
+                        tooltip="Used by the Truth Network. This is the deadline for voters to commit their votes. It is auto-set to 1 day after the betting close date, but you can adjust it as long as it is later than the betting close date. The reveal phase will begin immediately after and end 1 day later."
+                    >
+                        <input
+                            type="datetime-local"
+                            value={commitEndTime}
+                            min={bettingEndTime || ""}
+                            onChange={(e) => {
+                                const selected = e.target.value;
+                                setCommitEndTime(selected);
+
+                                if (selected) {
+                                    const commitDate = new Date(selected);
+                                    const revealDate = new Date(commitDate.getTime() + 24 * 60 * 60 * 1000);
+                                  
+                                    // Convert to local datetime format
+                                    const format = (d) => d.toLocaleString("sv-SE").replace(" ", "T").slice(0, 16);
+                                    setRevealEndTime(format(revealDate));
+                                  }
+
+                            }}
+                            className="w-full p-2 border border-gray-300 rounded-md mt-1"
+                        />
+                    </InfoWithTooltip> */}
+                    {/* Toggle Commit Time Visibility */}
+                    {!showCommitInput ? (
+                        <span
+                            onClick={() => setShowCommitInput(true)}
+                            className="text-blue-600 text-sm underline cursor-pointer mb-2 inline-block"
+                        >
+                            Enter custom resolution date
+                        </span>
+                    ) : (
+                        <>
+                            <InfoWithTooltip
+                                label="Commit End Time"
+                                tooltip="Used by the Truth Network. This is the deadline for voters to commit their votes. It is auto-set to 1 day after the betting close date, but you can adjust it as long as it is later than the betting close date. The reveal phase will begin immediately after and end 1 day later."
+                            >
+                                <input
+                                    type="datetime-local"
+                                    value={commitEndTime}
+                                    min={bettingEndTime || ""}
+                                    onChange={(e) => {
+                                        const selected = e.target.value;
+                                        setCommitEndTime(selected);
+
+                                        if (selected) {
+                                            const commitDate = new Date(selected);
+                                            const revealDate = new Date(commitDate.getTime() + 24 * 60 * 60 * 1000);
+                                        
+                                            const format = (d) => d.toLocaleString("sv-SE").replace(" ", "T").slice(0, 16);
+                                            setRevealEndTime(format(revealDate));
+                                        }
+                                    }}
+                                    className="w-full p-2 border border-gray-300 rounded-md mt-1"
+                                />
+                            </InfoWithTooltip>
+                            <span
+                                onClick={() => setShowCommitInput(false)}
+                                className="text-blue-600 text-sm underline cursor-pointer mb-2 inline-block"
+                            >
+                                Hide Commit End Time
+                            </span>
+                        </>
+                    )}
+                
+                    {/* Preview Summary Box */}
+                    {/* <div className="bg-white border border-blue-400 rounded-lg p-4 text-sm text-gray-800 mb-4 shadow-sm">
+                        <p className="font-semibold text-blue-600 mb-2">Preview Summary</p>
+                        <div className="space-y-1 pl-2">
+                            <p><span className="font-medium">Event:</span> {questionText || "-"}</p>
+                            <p><span className="font-medium">Betting Closes:</span> {bettingEndTime || "-"}</p>
+                            <p><span className="font-medium">Commit Ends:</span> {commitEndTime || "-"}</p>
+                            <p><span className="font-medium">Reveal Ends:</span> {revealEndTime || "-"}</p>
+                        </div>
+                    </div> */}
+                
                     <button
                         onClick={handleCreateClick}
                         className="w-full !bg-blue-600 text-white py-2 rounded-md"
                         disabled={loading}
                     >
-                        {loading ? 
-                            (
-                                <span className="flex items-center justify-center">
-                                    Submitting <span className="dot-animate">.</span>
-                                    <span className="dot-animate dot2">.</span>
-                                    <span className="dot-animate dot3">.</span>
-                                </span>
-                            ) 
-                            :
-                            "Create Event"
-                        }
+                    {loading ? (
+                        <span className="flex items-center justify-center">
+                        Submitting <span className="dot-animate">.</span>
+                        <span className="dot-animate dot2">.</span>
+                        <span className="dot-animate dot3">.</span>
+                        </span>
+                    ) : (
+                        "Create Event"
+                    )}
                     </button>
                 </>
+              
                 :
                 <div className="mt-6 p-4 border-l-4 border-blue-500 text-blue-600 rounded-md flex items-start gap-3">
                     <BsLock className="text-2xl mt-0.5" />
