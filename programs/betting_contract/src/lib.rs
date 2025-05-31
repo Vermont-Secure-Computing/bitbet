@@ -148,9 +148,9 @@ pub mod betting_contract {
         let current_time = Clock::get()?.unix_timestamp;
         require!(current_time < betting_question.close_date, BettingError::BettingClosed);
 
-        // Ensure bet amount is at least 0.1 SOL (minimum bet)
+        // Ensure bet amount is at least 0.01 SOL (minimum bet)
         require!(
-            amount >= 100_000_000, // 0.1 SOL in lamports
+            amount >= 10_000_000,// 0.01 SOL in lamports
             BettingError::MinimumBetNotMet
         );
 

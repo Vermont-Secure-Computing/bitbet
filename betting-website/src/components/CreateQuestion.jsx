@@ -271,8 +271,8 @@ const CreateQuestion = ({setActiveTab}) => {
                                     const closeDate = new Date(selected);
                                     // const commitDate = new Date(closeDate.getTime() + 24 * 60 * 60 * 1000);
                                     // const revealDate = new Date(closeDate.getTime() + 48 * 60 * 60 * 1000);
-                                    const commitDate = new Date(closeDate.getTime() + 2 * 60 * 1000);
-                                    const revealDate = new Date(closeDate.getTime() + 3 * 60 * 1000);
+                                    const commitDate = new Date(closeDate.getTime() + 3 * 60 * 1000);
+                                    const revealDate = new Date(closeDate.getTime() + 6 * 60 * 1000);
 
                                   
                                     // Convert to local datetime format
@@ -287,32 +287,7 @@ const CreateQuestion = ({setActiveTab}) => {
                         />
                     </InfoWithTooltip>
 
-                    {/* <InfoWithTooltip
-                        label="Commit End Time"
-                        tooltip="Used by the Truth Network. This is the deadline for voters to commit their votes. It is auto-set to 1 day after the betting close date, but you can adjust it as long as it is later than the betting close date. The reveal phase will begin immediately after and end 1 day later."
-                    >
-                        <input
-                            type="datetime-local"
-                            value={commitEndTime}
-                            min={bettingEndTime || ""}
-                            onChange={(e) => {
-                                const selected = e.target.value;
-                                setCommitEndTime(selected);
-
-                                if (selected) {
-                                    const commitDate = new Date(selected);
-                                    const revealDate = new Date(commitDate.getTime() + 24 * 60 * 60 * 1000);
-                                  
-                                    // Convert to local datetime format
-                                    const format = (d) => d.toLocaleString("sv-SE").replace(" ", "T").slice(0, 16);
-                                    setRevealEndTime(format(revealDate));
-                                  }
-
-                            }}
-                            className="w-full p-2 border border-gray-300 rounded-md mt-1"
-                        />
-                    </InfoWithTooltip> */}
-                    {/* Toggle Commit Time Visibility */}
+                    
                     {!showCommitInput ? (
                         <span
                             onClick={() => setShowCommitInput(true)}
