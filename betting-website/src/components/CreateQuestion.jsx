@@ -81,21 +81,32 @@ const CreateQuestion = ({setActiveTab}) => {
         return `${year}-${month}-${day}T${hours}:${minutes}`;
     };
 
-
     const handleCreateClick = () => {
+        const now = new Date();
+        const close = new Date(bettingEndTime);
+        const commit = new Date(commitEndTime);
+        const reveal = new Date(revealEndTime);
+    
+        // Basic validations
         if (questionText.length < 10) 
             return toast.error("Event must be at least 10 characters.");
-
+    
         if (questionText.length > 150) 
             return toast.error("Event must be at max 150 characters.");
-
-        if (!bettingEndTime || new Date(bettingEndTime) <= new Date()) 
+    
+        if (!bettingEndTime || close <= now) 
             return toast.error("Close date must be in the future.");
-
-        if (new Date(commitEndTime) <= new Date(bettingEndTime)) {
-            return toast.error("Commit End Time must be after Betting Close Date.");
+    
+        // Commit must be at least 1 hour after betting close
+        if (commit.getTime() - close.getTime() < 60 * 60 * 1000) {
+            return toast.error("Commit End Time must be at least 1 hour after Betting Close Date.");
         }
-
+    
+        // Reveal must be at least 1 hour after commit end
+        if (reveal.getTime() - commit.getTime() < 60 * 60 * 1000) {
+            return toast.error("Reveal End Time must be at least 1 hour after Commit End Time.");
+        }
+    
         setShowConfirm(true);
     };
 
@@ -269,10 +280,8 @@ const CreateQuestion = ({setActiveTab}) => {
 
                                 if (selected) {
                                     const closeDate = new Date(selected);
-                                    // const commitDate = new Date(closeDate.getTime() + 24 * 60 * 60 * 1000);
-                                    // const revealDate = new Date(closeDate.getTime() + 48 * 60 * 60 * 1000);
-                                    const commitDate = new Date(closeDate.getTime() + 3 * 60 * 1000);
-                                    const revealDate = new Date(closeDate.getTime() + 6 * 60 * 1000);
+                                    const commitDate = new Date(closeDate.getTime() + 24 * 60 * 60 * 1000);
+                                    const revealDate = new Date(closeDate.getTime() + 48 * 60 * 60 * 1000);
 
                                   
                                     // Convert to local datetime format
@@ -299,23 +308,53 @@ const CreateQuestion = ({setActiveTab}) => {
                         <>
                             <InfoWithTooltip
                                 label="Commit End Time"
-                                tooltip="Used by the Truth Network. This is the deadline for voters to commit their votes. It is auto-set to 1 day after the betting close date, but you can adjust it as long as it is later than the betting close date. The reveal phase will begin immediately after and end 1 day later."
+                                tooltip="Used by the Truth Network. This is the deadline for voters to commit their votes. It must be at least 1 hour after the betting close date. The reveal phase will begin immediately after and end based on the Reveal End Time."
                             >
                                 <input
                                     type="datetime-local"
                                     value={commitEndTime}
-                                    min={bettingEndTime || ""}
+                                    min={
+                                        bettingEndTime
+                                            ? new Date(new Date(bettingEndTime).getTime() + 60 * 60 * 1000)
+                                                  .toLocaleString("sv-SE")
+                                                  .replace(" ", "T")
+                                                  .slice(0, 16)
+                                            : ""
+                                    }
                                     onChange={(e) => {
                                         const selected = e.target.value;
                                         setCommitEndTime(selected);
 
                                         if (selected) {
                                             const commitDate = new Date(selected);
-                                            const revealDate = new Date(commitDate.getTime() + 24 * 60 * 60 * 1000);
+                                            const revealDate = new Date(commitDate.getTime() + 2 * 60 * 60 * 1000); // testing
                                         
                                             const format = (d) => d.toLocaleString("sv-SE").replace(" ", "T").slice(0, 16);
                                             setRevealEndTime(format(revealDate));
                                         }
+                                    }}
+                                    className="w-full p-2 border border-gray-300 rounded-md mt-1"
+                                />
+                            </InfoWithTooltip>
+
+                            <InfoWithTooltip
+                                label="Reveal End Time"
+                                tooltip="Used by the Truth Network. This is the deadline for voters to reveal their committed votes. It must be at least 1 hour after the commit end time."
+                            >
+                                <input
+                                    type="datetime-local"
+                                    value={revealEndTime}
+                                    min={
+                                        commitEndTime
+                                            ? new Date(new Date(commitEndTime).getTime() + 60 * 60 * 1000)
+                                                .toLocaleString("sv-SE")
+                                                .replace(" ", "T")
+                                                .slice(0, 16)
+                                            : ""
+                                    }
+                                    onChange={(e) => {
+                                        const selected = e.target.value;
+                                        setRevealEndTime(selected);
                                     }}
                                     className="w-full p-2 border border-gray-300 rounded-md mt-1"
                                 />
