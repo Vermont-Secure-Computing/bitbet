@@ -285,8 +285,8 @@ const QuestionDetails = () => {
             return toast.error("Enter a valid bet amount.", { transition: Bounce });
         }
 
-        if (parsedBet < 0.1) {
-            return toast.error("Minimum bet is 0.1 SOL.", { transition: Bounce });
+        if (parsedBet < 0.01) {
+            return toast.error("Minimum bet is 0.01 SOL.", { transition: Bounce });
         }
 
 
