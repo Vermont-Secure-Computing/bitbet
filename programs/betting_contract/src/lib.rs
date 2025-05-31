@@ -21,7 +21,7 @@ use truth_network::accounts::Question;
 
 pub const HOUSE_WALLET: &str = "CQaZgx5jqQrz7c8shCG3vJLiiPGPrawSGhvkgXtGyxL";
 
-declare_id!("9XiAk8AJVCWkypFstaRERag2DeKgtSergJR4PqTYeV9C");
+declare_id!("98ftixwWWStM2KE7dNHHr5ABPPckVkrCELqCjA2sJbJE");
 
 // Used for adding on-chain event logs
 #[event]
@@ -420,9 +420,9 @@ pub mod betting_contract {
         if winning_percentage >= 75.0 {
 
             // Check if only one side bet exists
-            let one_side_only = (winning_option == 1 && betting_question.total_bets_option2 == 0)
-            || (winning_option == 2 && betting_question.total_bets_option1 == 0);
-
+            let one_side_only = betting_question.total_bets_option1 == 0 
+                 || betting_question.total_bets_option2 == 0;
+            
             if one_side_only {
                 // Treat as unresolved → refund 97%
                 let refund_amount = (bettor_account.bet_amount as f64 * 0.97) as u64;
@@ -435,72 +435,72 @@ pub mod betting_contract {
                 user.add_lamports(refund_amount)?;
 
                 bettor_account.winnings = refund_amount;
-                bettor_account.claimed = true;
-
+                
                 msg!(
                     "One-sided bet detected. Refunded {} lamports to user {}.",
                     refund_amount,
                     user.key()
                 );
+                
 
-                return Ok(());
-            }
-
-            // Check if the user placed a bet on the winning option
-            let user_bet_won = (winning_option == 1 && bettor_account.chosen_option)
-                || (winning_option == 2 && !bettor_account.chosen_option);
-        
-            require!(user_bet_won, BettingError::UserDidNotWin);
-    
-            // Compute winnings
-            let winning_odds = if winning_option == 1 {
-                betting_question.option1_odds
             } else {
-                betting_question.option2_odds
-            };
-    
-            let user_winnings = (bettor_account.bet_amount as f64 * winning_odds) as u64;
-            require!(user_winnings > 0, BettingError::NoWinningsAvailable);
-    
-            // Check if vault has enough balance
-            let vault_balance = vault.get_lamports();
-            require!(vault_balance >= user_winnings, BettingError::InsufficientVaultBalance);
-    
-            msg!(
-                "User won {} lamports. Transferring from vault {}...",
-                user_winnings,
-                vault.key()
-            );
-    
-            // Transfer winnings from Vault to User
-            {
-                let vault_balance_before = vault.get_lamports();
-                let user_balance_before = user.get_lamports();
+
+                // Check if the user placed a bet on the winning option
+                let user_bet_won = (winning_option == 1 && bettor_account.chosen_option)
+                    || (winning_option == 2 && !bettor_account.chosen_option);
+            
+                require!(user_bet_won, BettingError::UserDidNotWin);
         
-                // Deduct from vault
-                vault.sub_lamports(user_winnings)?;
+                // Compute winnings
+                let winning_odds = if winning_option == 1 {
+                    betting_question.option1_odds
+                } else {
+                    betting_question.option2_odds
+                };
         
-                // Add to user
-                user.add_lamports(user_winnings)?;
+                let user_winnings = (bettor_account.bet_amount as f64 * winning_odds) as u64;
+                require!(user_winnings > 0, BettingError::NoWinningsAvailable);
         
-                let vault_balance_after = vault.get_lamports();
-                let user_balance_after = user.get_lamports();
+                // Check if vault has enough balance
+                let vault_balance = vault.get_lamports();
+                require!(vault_balance >= user_winnings, BettingError::InsufficientVaultBalance);
         
-                require_eq!(vault_balance_after, vault_balance_before - user_winnings);
-                require_eq!(user_balance_after, user_balance_before + user_winnings);
+                msg!(
+                    "User won {} lamports. Transferring from vault {}...",
+                    user_winnings,
+                    vault.key()
+                );
         
-                msg!("Successfully transferred {} lamports to user {}!", user_winnings, user.key());
+                // Transfer winnings from Vault to User
+                {
+                    let vault_balance_before = vault.get_lamports();
+                    let user_balance_before = user.get_lamports();
+            
+                    // Deduct from vault
+                    vault.sub_lamports(user_winnings)?;
+            
+                    // Add to user
+                    user.add_lamports(user_winnings)?;
+            
+                    let vault_balance_after = vault.get_lamports();
+                    let user_balance_after = user.get_lamports();
+            
+                    require_eq!(vault_balance_after, vault_balance_before - user_winnings);
+                    require_eq!(user_balance_after, user_balance_before + user_winnings);
+            
+                    msg!("Successfully transferred {} lamports to user {}!", user_winnings, user.key());
+                }
+
+                bettor_account.winnings = user_winnings;
+                msg!("Claim successful! User {} received {} SOL", user.key(), user_winnings);
+
+                emit!(WinningsClaimed {
+                    bettor: *ctx.accounts.user.key,
+                    question: betting_question.key(),
+                    amount: user_winnings,
+                    won: true,
+                });
             }
-
-            bettor_account.winnings = user_winnings;
-            msg!("Claim successful! User {} received {} SOL", user.key(), user_winnings);
-
-            emit!(WinningsClaimed {
-                bettor: *ctx.accounts.user.key,
-                question: betting_question.key(),
-                amount: user_winnings,
-                won: true,
-            });
             
         } else {
             // Case 2: If winning percentage is below 75% -> Refund 97% of bet amount to all bettors
@@ -531,15 +531,11 @@ pub mod betting_contract {
                 amount: refund_amount,
                 won: false,
             });
-
         }
 
-        // Mark bettor winnings as claimed
         bettor_account.claimed = true;
-
         betting_question.action_in_progress = false;
-
-        Ok(())
+        return Ok(());
     }
 
 
