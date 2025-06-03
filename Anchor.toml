@@ -4,15 +4,15 @@
 resolution = true
 skip-lint = false
 
-[programs.devnet]
-betting_contract = "98ftixwWWStM2KE7dNHHr5ABPPckVkrCELqCjA2sJbJE"
+[programs.mainnet]
+betting_contract = "Dm3SXYSbQJJjiFR346vLh41wdPnXSJcq4pMsheuWnfU4"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "https://api.devnet.solana.com"
-wallet = "/home/jong/.config/solana/bitbet-keypair.json"
+cluster = "https://api.mainnet-beta.solana.com"
+wallet = "~/.config/solana/bitbet-keypair.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
