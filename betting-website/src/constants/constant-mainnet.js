@@ -1,7 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 
 // Program IDs
-export const BETTING_CONTRACT_PROGRAM_ID = new PublicKey("9XiAk8AJVCWkypFstaRERag2DeKgtSergJR4PqTYeV9C");
+export const BETTING_CONTRACT_PROGRAM_ID = new PublicKey("Dm3SXYSbQJJjiFR346vLh41wdPnXSJcq4pMsheuWnfU4");
 export const TRUTH_NETWORK_PROGRAM_ID = new PublicKey("4sC1fceX7osnaP8JkY4AfgK5tSFSfS44rXMhX361WEPF");
 
 // Default RPC url

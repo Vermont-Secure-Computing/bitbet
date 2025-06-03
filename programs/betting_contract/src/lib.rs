@@ -21,7 +21,7 @@ use truth_network::accounts::Question;
 
 pub const HOUSE_WALLET: &str = "CQaZgx5jqQrz7c8shCG3vJLiiPGPrawSGhvkgXtGyxL";
 
-declare_id!("98ftixwWWStM2KE7dNHHr5ABPPckVkrCELqCjA2sJbJE");
+declare_id!("Dm3SXYSbQJJjiFR346vLh41wdPnXSJcq4pMsheuWnfU4");
 
 // Used for adding on-chain event logs
 #[event]
@@ -144,116 +144,121 @@ pub mod betting_contract {
         require!(!betting_question.action_in_progress, BettingError::ActionInProgress);
         betting_question.action_in_progress = true;
 
-        // Ensure betting is still open
-        let current_time = Clock::get()?.unix_timestamp;
-        require!(current_time < betting_question.close_date, BettingError::BettingClosed);
+        let result = (|| {
 
-        // Ensure bet amount is at least 0.01 SOL (minimum bet)
-        require!(
-            amount >= 10_000_000,// 0.01 SOL in lamports
-            BettingError::MinimumBetNotMet
-        );
+            // Ensure betting is still open
+            let current_time = Clock::get()?.unix_timestamp;
+            require!(current_time < betting_question.close_date, BettingError::BettingClosed);
 
-        let bump = ctx.bumps.bettor_account;
+            // Ensure bet amount is at least 0.01 SOL (minimum bet)
+            require!(
+                amount >= 10_000_000,// 0.01 SOL in lamports
+                BettingError::MinimumBetNotMet
+            );
 
-        msg!("Bettor PDA: {}", ctx.accounts.bettor_account.key());
-        msg!("Bettor Exists?: {}", ctx.accounts.bettor_account.bettor_address != Pubkey::default());
+            let bump = ctx.bumps.bettor_account;
 
-        if ctx.accounts.bettor_account.bettor_address == Pubkey::default() {
-            msg!("Initializing new Bettor Account...");
-            ctx.accounts.bettor_account.bettor_address = *user.key;
-            ctx.accounts.bettor_account.question_pda = betting_question.key();
-            ctx.accounts.bettor_account.chosen_option = is_option_1;
-            ctx.accounts.bettor_account.bet_amount = 0;
-            ctx.accounts.bettor_account.won = false;
-            ctx.accounts.bettor_account.winnings = 0;
-            ctx.accounts.bettor_account.claimed = false;
-        }
+            msg!("Bettor PDA: {}", ctx.accounts.bettor_account.key());
+            msg!("Bettor Exists?: {}", ctx.accounts.bettor_account.bettor_address != Pubkey::default());
 
-        // Update bet amount
-        ctx.accounts.bettor_account.bet_amount += amount;
+            if ctx.accounts.bettor_account.bettor_address == Pubkey::default() {
+                msg!("Initializing new Bettor Account...");
+                ctx.accounts.bettor_account.bettor_address = *user.key;
+                ctx.accounts.bettor_account.question_pda = betting_question.key();
+                ctx.accounts.bettor_account.chosen_option = is_option_1;
+                ctx.accounts.bettor_account.bet_amount = 0;
+                ctx.accounts.bettor_account.won = false;
+                ctx.accounts.bettor_account.winnings = 0;
+                ctx.accounts.bettor_account.claimed = false;
+            }
 
-        msg!("Bettor {} placed a bet of {} on option {}", user.key(), amount, is_option_1);
+            // Update bet amount
+            ctx.accounts.bettor_account.bet_amount += amount;
 
-    
-        // Deduct commissions
-        let truth_network_commission = amount / 100;
-        let house_commission = amount / 100;
-        let creator_commission = amount / 100;
-        let bet_after_commissions = amount - (truth_network_commission + house_commission + creator_commission);
-    
-        // Track total amount bet before deductions
-        betting_question.total_bets_before_commission += amount;
-    
-        // Update total bets
-        if is_option_1 {
-            betting_question.total_bets_option1 += amount;
-        } else {
-            betting_question.total_bets_option2 += amount;
-        }
-        betting_question.total_pool += bet_after_commissions;
-    
-    
-        // Transfer the user's bet to the vault using System Program
-        {
-            let transfer_instruction = anchor_lang::system_program::transfer(
-                CpiContext::new(
-                    system_program.to_account_info(),
-                    anchor_lang::system_program::Transfer {
-                        from: user.to_account_info(),
-                        to: vault.to_account_info(),
-                    },
-                ),
+            msg!("Bettor {} placed a bet of {} on option {}", user.key(), amount, is_option_1);
+
+        
+            // Deduct commissions
+            let truth_network_commission = amount / 100;
+            let house_commission = amount / 100;
+            let creator_commission = amount / 100;
+            let bet_after_commissions = amount - (truth_network_commission + house_commission + creator_commission);
+        
+            // Track total amount bet before deductions
+            betting_question.total_bets_before_commission += amount;
+        
+            // Update total bets
+            if is_option_1 {
+                betting_question.total_bets_option1 += amount;
+            } else {
+                betting_question.total_bets_option2 += amount;
+            }
+            betting_question.total_pool += bet_after_commissions;
+        
+        
+            // Transfer the user's bet to the vault using System Program
+            {
+                let transfer_instruction = anchor_lang::system_program::transfer(
+                    CpiContext::new(
+                        system_program.to_account_info(),
+                        anchor_lang::system_program::Transfer {
+                            from: user.to_account_info(),
+                            to: vault.to_account_info(),
+                        },
+                    ),
+                    amount,
+                )?;
+                msg!("User bet is transferred to the vault, amount: {}", amount);
+            }
+        
+            // Transfer commission from Betting Vault to Truth-Network Vault
+            {
+                let vault_balance_before = vault.get_lamports();
+                let truth_balance_before = truth_vault.get_lamports();
+        
+                // Subtract from betting vault
+                vault.sub_lamports(truth_network_commission)?;
+        
+                // Add to truth network vault
+                truth_vault.add_lamports(truth_network_commission)?;
+        
+                let vault_balance_after = vault.get_lamports();
+                let truth_balance_after = truth_vault.get_lamports();
+        
+                require_eq!(vault_balance_after, vault_balance_before - truth_network_commission);
+                require_eq!(truth_balance_after, truth_balance_before + truth_network_commission);
+        
+                msg!("Successfully transferred {} lamports to Truth-Network vault!", truth_network_commission);
+            }
+        
+            // Compute odds
+            if betting_question.total_bets_option1 > 0 && betting_question.total_bets_option2 > 0 {
+                betting_question.option1_odds = betting_question.total_pool as f64 / betting_question.total_bets_option1 as f64;
+                betting_question.option2_odds = betting_question.total_pool as f64 / betting_question.total_bets_option2 as f64;
+            } else {
+                betting_question.option1_odds = 0.0;
+                betting_question.option2_odds = 0.0;
+            }
+        
+            // Update total commission fields
+            betting_question.total_creator_commission += creator_commission;
+            betting_question.total_house_commision += house_commission;
+        
+            msg!("Truth network question rewards updated with {}", truth_network_commission);
+
+            emit!(BetPlaced {
+                bettor: *ctx.accounts.user.key,
+                question: betting_question.key(),
                 amount,
-            )?;
-            msg!("User bet is transferred to the vault, amount: {}", amount);
-        }
-    
-        // Transfer commission from Betting Vault to Truth-Network Vault
-        {
-            let vault_balance_before = vault.get_lamports();
-            let truth_balance_before = truth_vault.get_lamports();
-    
-            // Subtract from betting vault
-            vault.sub_lamports(truth_network_commission)?;
-    
-            // Add to truth network vault
-            truth_vault.add_lamports(truth_network_commission)?;
-    
-            let vault_balance_after = vault.get_lamports();
-            let truth_balance_after = truth_vault.get_lamports();
-    
-            require_eq!(vault_balance_after, vault_balance_before - truth_network_commission);
-            require_eq!(truth_balance_after, truth_balance_before + truth_network_commission);
-    
-            msg!("Successfully transferred {} lamports to Truth-Network vault!", truth_network_commission);
-        }
-    
-        // Compute odds
-        if betting_question.total_bets_option1 > 0 && betting_question.total_bets_option2 > 0 {
-            betting_question.option1_odds = betting_question.total_pool as f64 / betting_question.total_bets_option1 as f64;
-            betting_question.option2_odds = betting_question.total_pool as f64 / betting_question.total_bets_option2 as f64;
-        } else {
-            betting_question.option1_odds = 0.0;
-            betting_question.option2_odds = 0.0;
-        }
-    
-        // Update total commission fields
-        betting_question.total_creator_commission += creator_commission;
-        betting_question.total_house_commision += house_commission;
-    
-        msg!("Truth network question rewards updated with {}", truth_network_commission);
+                option: is_option_1,
+            });
 
-        emit!(BetPlaced {
-            bettor: *ctx.accounts.user.key,
-            question: betting_question.key(),
-            amount,
-            option: is_option_1,
-        });
+            Ok(())
+        })();
 
         betting_question.action_in_progress = false;
     
-        Ok(())
+        result
     }
     
     
@@ -376,166 +381,178 @@ pub mod betting_contract {
         require!(!betting_question.action_in_progress, BettingError::ActionInProgress);
         betting_question.action_in_progress = true;
 
-        // Ensure the bettor is the caller
-        require!(
-            bettor_account.bettor_address == *user.key,
-            BettingError::UnauthorizedBettor
-        );
+        let result = (|| {
 
-        // Ensure the bet belongs to the correct question
-        require!(
-            bettor_account.question_pda == betting_question.key(),
-            BettingError::InvalidBettingQuestion
-        );
-    
-        // Check if the user has already claimed winnings
-        require!(!bettor_account.claimed, BettingError::AlreadyClaimed);
-    
-        // Check if betting has ended
-        require!(
-            Clock::get()?.unix_timestamp >= betting_question.close_date,
-            BettingError::BettingActive
-        );
-    
-        // Ensure Truth-Network question is finalized
-        require!(
-            truth_network_question.finalized,
-            BettingError::WinnerNotFinalized
-        );
-    
-        // Get the winning option from Truth-Network question
-        let winning_option = truth_network_question.winning_option;
-        let winning_percentage = truth_network_question.winning_percent;
+            // Ensure the bettor is the caller
+            require!(
+                bettor_account.bettor_address == *user.key,
+                BettingError::UnauthorizedBettor
+            );
 
-        require!(winning_option == 1 || winning_option == 2, BettingError::InvalidWinner);
+            // Ensure the bet belongs to the correct question
+            require!(
+                bettor_account.question_pda == betting_question.key(),
+                BettingError::InvalidBettingQuestion
+            );
         
-        msg!(
-            "Winning option: {}, Winning percentage: {}%",
-            winning_option,
-            winning_percentage
-        );
+            // Check if the user has already claimed winnings
+            require!(!bettor_account.claimed, BettingError::AlreadyClaimed);
         
+            // Check if betting has ended
+            require!(
+                Clock::get()?.unix_timestamp >= betting_question.close_date,
+                BettingError::BettingActive
+            );
+        
+            // Ensure Truth-Network question is finalized
+            require!(
+                truth_network_question.finalized,
+                BettingError::WinnerNotFinalized
+            );
+        
+            // Get the winning option from Truth-Network question
+            let winning_option = truth_network_question.winning_option;
+            let winning_percentage = truth_network_question.winning_percent;
 
-        // Case 1: If winning percentage is 75% or higher -> Only winners get winnings
-        if winning_percentage >= 75.0 {
-
-            // Check if only one side bet exists
-            let one_side_only = betting_question.total_bets_option1 == 0 
-                 || betting_question.total_bets_option2 == 0;
+            require!(winning_option == 1 || winning_option == 2, BettingError::InvalidWinner);
             
-            if one_side_only {
-                // Treat as unresolved → refund 97%
+            msg!(
+                "Winning option: {}, Winning percentage: {}%",
+                winning_option,
+                winning_percentage
+            );
+            
+
+            // Case 1: If winning percentage is 75% or higher -> Only winners get winnings
+            if winning_percentage >= 75.0 {
+
+                // Check if only one side bet exists
+                let one_side_only = betting_question.total_bets_option1 == 0 
+                    || betting_question.total_bets_option2 == 0;
+                
+                if one_side_only {
+                    // Treat as unresolved → refund 97%
+                    let refund_amount = (bettor_account.bet_amount as f64 * 0.97) as u64;
+                    require!(refund_amount > 0, BettingError::NoWinningsAvailable);
+
+                    let vault_balance = vault.get_lamports();
+                    require!(vault_balance >= refund_amount, BettingError::InsufficientVaultBalance);
+
+                    vault.sub_lamports(refund_amount)?;
+                    user.add_lamports(refund_amount)?;
+
+                    bettor_account.winnings = refund_amount;
+                    bettor_account.claimed = true;
+                    
+                    msg!(
+                        "One-sided bet detected. Refunded {} lamports to user {}.",
+                        refund_amount,
+                        user.key()
+                    );
+
+                    Ok(())
+                    
+
+                } else {
+
+                    // Check if the user placed a bet on the winning option
+                    let user_bet_won = (winning_option == 1 && bettor_account.chosen_option)
+                        || (winning_option == 2 && !bettor_account.chosen_option);
+                
+                    require!(user_bet_won, BettingError::UserDidNotWin);
+            
+                    // Compute winnings
+                    let winning_odds = if winning_option == 1 {
+                        betting_question.option1_odds
+                    } else {
+                        betting_question.option2_odds
+                    };
+            
+                    let user_winnings = (bettor_account.bet_amount as f64 * winning_odds) as u64;
+                    require!(user_winnings > 0, BettingError::NoWinningsAvailable);
+            
+                    // Check if vault has enough balance
+                    let vault_balance = vault.get_lamports();
+                    require!(vault_balance >= user_winnings, BettingError::InsufficientVaultBalance);
+            
+                    msg!(
+                        "User won {} lamports. Transferring from vault {}...",
+                        user_winnings,
+                        vault.key()
+                    );
+            
+                    // Transfer winnings from Vault to User
+                    {
+                        let vault_balance_before = vault.get_lamports();
+                        let user_balance_before = user.get_lamports();
+                
+                        // Deduct from vault
+                        vault.sub_lamports(user_winnings)?;
+                
+                        // Add to user
+                        user.add_lamports(user_winnings)?;
+                
+                        let vault_balance_after = vault.get_lamports();
+                        let user_balance_after = user.get_lamports();
+                
+                        require_eq!(vault_balance_after, vault_balance_before - user_winnings);
+                        require_eq!(user_balance_after, user_balance_before + user_winnings);
+                
+                        msg!("Successfully transferred {} lamports to user {}!", user_winnings, user.key());
+                    }
+
+                    bettor_account.winnings = user_winnings;
+                    bettor_account.claimed = true;
+                    msg!("Claim successful! User {} received {} SOL", user.key(), user_winnings);
+
+                    emit!(WinningsClaimed {
+                        bettor: *ctx.accounts.user.key,
+                        question: betting_question.key(),
+                        amount: user_winnings,
+                        won: true,
+                    });
+
+                    Ok(())
+                }
+                
+            } else {
+                // Case 2: If winning percentage is below 75% -> Refund 97% of bet amount to all bettors
                 let refund_amount = (bettor_account.bet_amount as f64 * 0.97) as u64;
+
                 require!(refund_amount > 0, BettingError::NoWinningsAvailable);
 
+                // Check if vault has enough balance
                 let vault_balance = vault.get_lamports();
                 require!(vault_balance >= refund_amount, BettingError::InsufficientVaultBalance);
 
+                msg!(
+                    "Refunding {} lamports to user {}...",
+                    refund_amount,
+                    user.key()
+                );
+
+                // Transfer refund
                 vault.sub_lamports(refund_amount)?;
                 user.add_lamports(refund_amount)?;
 
                 bettor_account.winnings = refund_amount;
-                
-                msg!(
-                    "One-sided bet detected. Refunded {} lamports to user {}.",
-                    refund_amount,
-                    user.key()
-                );
-                
-
-            } else {
-
-                // Check if the user placed a bet on the winning option
-                let user_bet_won = (winning_option == 1 && bettor_account.chosen_option)
-                    || (winning_option == 2 && !bettor_account.chosen_option);
-            
-                require!(user_bet_won, BettingError::UserDidNotWin);
-        
-                // Compute winnings
-                let winning_odds = if winning_option == 1 {
-                    betting_question.option1_odds
-                } else {
-                    betting_question.option2_odds
-                };
-        
-                let user_winnings = (bettor_account.bet_amount as f64 * winning_odds) as u64;
-                require!(user_winnings > 0, BettingError::NoWinningsAvailable);
-        
-                // Check if vault has enough balance
-                let vault_balance = vault.get_lamports();
-                require!(vault_balance >= user_winnings, BettingError::InsufficientVaultBalance);
-        
-                msg!(
-                    "User won {} lamports. Transferring from vault {}...",
-                    user_winnings,
-                    vault.key()
-                );
-        
-                // Transfer winnings from Vault to User
-                {
-                    let vault_balance_before = vault.get_lamports();
-                    let user_balance_before = user.get_lamports();
-            
-                    // Deduct from vault
-                    vault.sub_lamports(user_winnings)?;
-            
-                    // Add to user
-                    user.add_lamports(user_winnings)?;
-            
-                    let vault_balance_after = vault.get_lamports();
-                    let user_balance_after = user.get_lamports();
-            
-                    require_eq!(vault_balance_after, vault_balance_before - user_winnings);
-                    require_eq!(user_balance_after, user_balance_before + user_winnings);
-            
-                    msg!("Successfully transferred {} lamports to user {}!", user_winnings, user.key());
-                }
-
-                bettor_account.winnings = user_winnings;
-                msg!("Claim successful! User {} received {} SOL", user.key(), user_winnings);
+                bettor_account.claimed = true;
+                msg!("Refund successful! User {} received {} SOL", user.key(), refund_amount);
 
                 emit!(WinningsClaimed {
                     bettor: *ctx.accounts.user.key,
                     question: betting_question.key(),
-                    amount: user_winnings,
-                    won: true,
+                    amount: refund_amount,
+                    won: false,
                 });
+
+                Ok(())
             }
-            
-        } else {
-            // Case 2: If winning percentage is below 75% -> Refund 97% of bet amount to all bettors
-            let refund_amount = (bettor_account.bet_amount as f64 * 0.97) as u64;
+        })();
 
-            require!(refund_amount > 0, BettingError::NoWinningsAvailable);
-
-            // Check if vault has enough balance
-            let vault_balance = vault.get_lamports();
-            require!(vault_balance >= refund_amount, BettingError::InsufficientVaultBalance);
-
-            msg!(
-                "Refunding {} lamports to user {}...",
-                refund_amount,
-                user.key()
-            );
-
-            // Transfer refund
-            vault.sub_lamports(refund_amount)?;
-            user.add_lamports(refund_amount)?;
-
-            bettor_account.winnings = refund_amount;
-            msg!("Refund successful! User {} received {} SOL", user.key(), refund_amount);
-
-            emit!(WinningsClaimed {
-                bettor: *ctx.accounts.user.key,
-                question: betting_question.key(),
-                amount: refund_amount,
-                won: false,
-            });
-        }
-
-        bettor_account.claimed = true;
+        // Ensure reentrancy flag is always reset
         betting_question.action_in_progress = false;
-        return Ok(());
+        result
     }
 
 
@@ -563,48 +580,52 @@ pub mod betting_contract {
         // Reentrancy guard check
         require!(!betting_question.action_in_progress, BettingError::ActionInProgress);
         betting_question.action_in_progress = true;
-    
-        require!(
-            betting_question.creator == *creator.key,
-            BettingError::UnauthorizedCreator
-        );
-    
-        require!(
-            Clock::get()?.unix_timestamp >= betting_question.close_date,
-            BettingError::BettingActive
-        );
-    
-        require!(!betting_question.creator_commission_claimed, BettingError::CommissionAlreadyClaimed);
-        
-        let commission_amount = betting_question.total_creator_commission;
-        require!(commission_amount > 0, BettingError::NoCommissionAvailable);
-    
-        let vault_balance = vault.get_lamports();
-        require!(vault_balance >= commission_amount, BettingError::InsufficientVaultBalance);
-    
-        msg!(
-            "Transferring {} lamports to creator {}...",
-            commission_amount,
-            creator.key()
-        );
-    
-        vault.sub_lamports(commission_amount)?;
-        creator.add_lamports(commission_amount)?;
-    
-        // Mark as claimed
-        betting_question.creator_commission_claimed = true;
-    
-        msg!("Creator commission of {} lamports claimed by {}", commission_amount, creator.key());
 
-        emit!(CreatorCommissionClaimed {
-            creator: creator.key(),
-            betting_question: betting_question.key(),
-            amount: commission_amount,
-        });
+        let result = (|| {
+    
+            require!(
+                betting_question.creator == *creator.key,
+                BettingError::UnauthorizedCreator
+            );
+        
+            require!(
+                Clock::get()?.unix_timestamp >= betting_question.close_date,
+                BettingError::BettingActive
+            );
+        
+            require!(!betting_question.creator_commission_claimed, BettingError::CommissionAlreadyClaimed);
+            
+            let commission_amount = betting_question.total_creator_commission;
+            require!(commission_amount > 0, BettingError::NoCommissionAvailable);
+        
+            let vault_balance = vault.get_lamports();
+            require!(vault_balance >= commission_amount, BettingError::InsufficientVaultBalance);
+        
+            msg!(
+                "Transferring {} lamports to creator {}...",
+                commission_amount,
+                creator.key()
+            );
+        
+            vault.sub_lamports(commission_amount)?;
+            creator.add_lamports(commission_amount)?;
+        
+            // Mark as claimed
+            betting_question.creator_commission_claimed = true;
+        
+            msg!("Creator commission of {} lamports claimed by {}", commission_amount, creator.key());
+
+            emit!(CreatorCommissionClaimed {
+                creator: creator.key(),
+                betting_question: betting_question.key(),
+                amount: commission_amount,
+            });
+
+            Ok(())
+        })();
 
         betting_question.action_in_progress = false;
-    
-        Ok(())
+        result
     }
 
 
@@ -671,73 +692,79 @@ pub mod betting_contract {
         // Reentrancy guard check
         require!(!betting_question.action_in_progress, BettingError::ActionInProgress);
         betting_question.action_in_progress = true;
+
+        let result = (|| {
     
-        // Event must not be active
-        require!(betting_question.status == "close", BettingError::BettingActive);
+            // Event must not be active
+            require!(betting_question.status == "close", BettingError::BettingActive);
 
-        // Must be event creator
-        require!(betting_question.creator == creator.key(), BettingError::UnauthorizedCreator);
+            // Must be event creator
+            require!(betting_question.creator == creator.key(), BettingError::UnauthorizedCreator);
 
-        // Check truth network asker field
-        require!(truth_question.asker == creator.key(), BettingError::UnauthorizedCreator);
+            // Check truth network asker field
+            require!(truth_question.asker == creator.key(), BettingError::UnauthorizedCreator);
 
-        // Check truth network finalized
-        require!(truth_question.finalized, BettingError::WinnerNotFinalized);
+            // Check truth network finalized
+            require!(truth_question.finalized, BettingError::WinnerNotFinalized);
 
-        // Reveal phase should have ended
-        require!(now >= truth_question.reveal_end_time, BettingError::RevealNotEnded);
+            // Reveal phase should have ended
+            require!(now >= truth_question.reveal_end_time, BettingError::RevealNotEnded);
 
 
-        // Rent must have expired on Truth Network
-        require!(now >= truth_question.rent_expiration, BettingError::TruthRentNotExpired);
+            // Rent must have expired on Truth Network
+            require!(now >= truth_question.rent_expiration, BettingError::TruthRentNotExpired);
 
-        // Truth vault must only have rent remaining
-        // allow a buffer of 1000 lamports to ensure lamports rounding
-        let rent = Rent::get()?;
-        let truth_min_balance = rent.minimum_balance(truth_vault_info.data_len());
-        let truth_vault_balance = **truth_vault_info.lamports.borrow();
-        require!(truth_vault_balance <= truth_min_balance + 1000, BettingError::RemainingRewardExists);
+            // Truth vault must only have rent remaining
+            // allow a buffer of 1000 lamports to ensure lamports rounding
+            let rent = Rent::get()?;
+            let truth_min_balance = rent.minimum_balance(truth_vault_info.data_len());
+            let truth_vault_balance = **truth_vault_info.lamports.borrow();
+            require!(truth_vault_balance <= truth_min_balance + 1000, BettingError::RemainingRewardExists);
 
-        // Betting vault must only have rent remaining
-        // allow a buffer of 1000 lamports to ensure lamports rounding
-        let betting_min_balance = rent.minimum_balance(betting_vault.data_len());
-        let betting_vault_balance = **betting_vault.lamports.borrow();
-        require!(betting_vault_balance <= betting_min_balance + 1000, BettingError::RemainingBettingBalance);
+            // Betting vault must only have rent remaining
+            // allow a buffer of 1000 lamports to ensure lamports rounding
+            let betting_min_balance = rent.minimum_balance(betting_vault.data_len());
+            let betting_vault_balance = **betting_vault.lamports.borrow();
+            require!(betting_vault_balance <= betting_min_balance + 1000, BettingError::RemainingBettingBalance);
 
-        // CPI: call Truth-Network to drain & delete vault
-        msg!("Calling truth-network delete question");
-        let cpi_ctx = CpiContext::new(
-            ctx.accounts.truth_network_program.to_account_info(),
-            DeleteExpiredQuestion {
-                question: ctx.accounts.truth_question.to_account_info(),
-                vault: ctx.accounts.truth_vault.to_account_info(),
-                asker: ctx.accounts.creator.to_account_info(),
-                system_program: ctx.accounts.system_program.to_account_info(),
-            },
-        );
-        delete_expired_question(cpi_ctx)?;
+            // CPI: call Truth-Network to drain & delete vault
+            msg!("Calling truth-network delete question");
+            let cpi_ctx = CpiContext::new(
+                ctx.accounts.truth_network_program.to_account_info(),
+                DeleteExpiredQuestion {
+                    question: ctx.accounts.truth_question.to_account_info(),
+                    vault: ctx.accounts.truth_vault.to_account_info(),
+                    asker: ctx.accounts.creator.to_account_info(),
+                    system_program: ctx.accounts.system_program.to_account_info(),
+                },
+            );
+            delete_expired_question(cpi_ctx)?;
 
-        // Drain betting vault → creator
-        let vault_lamports = **betting_vault.lamports.borrow();
-        require!(vault_lamports > 0, BettingError::VaultEmptyAlready);
-    
-        **creator.lamports.borrow_mut() += vault_lamports;
-        **betting_vault.lamports.borrow_mut() = 0;
-    
-        msg!("Drained betting vault: {} lamports sent to creator {}", vault_lamports, creator.key());
-    
-        // Betting Question will be closed automatically
-        msg!("BettingQuestion deleted. Rents refunded to {}", creator.key());
+            // Drain betting vault → creator
+            let vault_lamports = **betting_vault.lamports.borrow();
+            require!(vault_lamports > 0, BettingError::VaultEmptyAlready);
+        
+            **creator.lamports.borrow_mut() += vault_lamports;
+            **betting_vault.lamports.borrow_mut() = 0;
+        
+            msg!("Drained betting vault: {} lamports sent to creator {}", vault_lamports, creator.key());
+        
+            // Betting Question will be closed automatically
+            msg!("BettingQuestion deleted. Rents refunded to {}", creator.key());
 
-        emit!(EventDeleted {
-            creator: creator.key(),
-            betting_question: betting_question.key(),
-            refund_amount: vault_lamports,
-        });
+            emit!(EventDeleted {
+                creator: creator.key(),
+                betting_question: betting_question.key(),
+                refund_amount: vault_lamports,
+            });
+
+            Ok(())
+
+        })();
 
         betting_question.action_in_progress = false;
-    
-        Ok(())
+        result
+        
     }    
 
 }
@@ -1142,7 +1169,7 @@ security_txt! {
     // Optional Fields
     preferred_languages: "en",
     source_code: "https://github.com/Vermont-Secure-Computing/bitbet",
-    source_revision: "9XiAk8AJVCWkypFstaRERag2DeKgtSergJR4PqTYeV9C",
+    source_revision: "Dm3SXYSbQJJjiFR346vLh41wdPnXSJcq4pMsheuWnfU4",
     source_release: "",
     encryption: "",
     auditors: "vtscc.org",

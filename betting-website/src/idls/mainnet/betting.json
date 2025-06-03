@@ -1,5 +1,5 @@
 {
-  "address": "9XiAk8AJVCWkypFstaRERag2DeKgtSergJR4PqTYeV9C",
+  "address": "Dm3SXYSbQJJjiFR346vLh41wdPnXSJcq4pMsheuWnfU4",
   "metadata": {
     "name": "betting_contract",
     "version": "0.1.0",
@@ -209,7 +209,7 @@
         },
         {
           "name": "betting_contract",
-          "address": "9XiAk8AJVCWkypFstaRERag2DeKgtSergJR4PqTYeV9C"
+          "address": "Dm3SXYSbQJJjiFR346vLh41wdPnXSJcq4pMsheuWnfU4"
         },
         {
           "name": "vault",
