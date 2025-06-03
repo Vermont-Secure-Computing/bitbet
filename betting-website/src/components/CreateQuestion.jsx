@@ -97,7 +97,7 @@ const CreateQuestion = ({setActiveTab}) => {
         if (!bettingEndTime || close <= now) 
             return toast.error("Close date must be in the future.");
     
-        Commit must be at least 1 hour after betting close
+        //Commit must be at least 1 hour after betting close
         if (commit.getTime() - close.getTime() < 60 * 60 * 1000) {
             return toast.error("Commit End Time must be at least 1 hour after Betting Close Date.");
         }
