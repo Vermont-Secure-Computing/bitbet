@@ -3,6 +3,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { AnchorProvider, Program, web3, BN } from "@coral-xyz/anchor";
 import { useNavigate } from "react-router-dom";
+import { FaCheckCircle } from "react-icons/fa";
 import { getTimeRemaining } from "../utils/getRemainingTime";
 import { renderPagination } from "../utils/pagination";
 import { getIdls } from "../idls";
@@ -41,19 +42,34 @@ const FetchQuestion = () => {
     const bettingProgram = new Program(bettingIDL, provider);
     const truthNetworkProgram = new Program(truthNetworkIDL, provider);
 
+    const getData = () => {
+        if (connected && publicKey) {
+            fetchAllQuestionsWithUserInfo();
+        } else {
+            fetchAllQuestions();
+        }
+    };
+
     useEffect(() => {
 
         // Initial fetch on load
-        fetchAllQuestions();
+        getData();
     
         // Refresh events list after 5 minutes
         const intervalId = setInterval(() => {
-            fetchAllQuestions();
+            getData();
         }, 1 * 60 * 1000);
         
         // Cleanup on unmount
         return () => clearInterval(intervalId); 
-    }, [connected, filter, sortType]);
+    }, [connected, publicKey, filter, sortType]);
+
+    const getBettorAccountPDA = async (userPubkey, questionId) => {
+        return await PublicKey.findProgramAddress(
+            [Buffer.from("bettor"), new PublicKey(userPubkey).toBuffer(), new PublicKey(questionId).toBuffer()],
+            BETTING_CONTRACT_PROGRAM_ID
+        );
+    };
 
     const fetchAllQuestions = async () => {
         //console.log("Betting Program:", bettingProgram);
@@ -70,7 +86,7 @@ const FetchQuestion = () => {
 
             // Fetch all betting questions
             const accounts = await bettingProgram.account.bettingQuestion.all();
-            console.log("Fetched Betting Questions:", accounts);
+            //console.log("Fetched Betting Questions:", accounts);
 
             if (!accounts.length) {
                 console.warn("No betting questions found!");
@@ -155,6 +171,79 @@ const FetchQuestion = () => {
         }
     };
 
+
+    const fetchAllQuestionsWithUserInfo = async () => {
+        try {
+            setRefreshingList(true);
+    
+            const accounts = await bettingProgram.account.bettingQuestion.all();
+            const now = Math.floor(Date.now() / 1000);
+    
+            const questionsWithDetails = await Promise.all(
+                accounts.map(async (bettingQuestion) => {
+                    const base = bettingQuestion.account;
+                    const id = base.id.toBase58();
+    
+                    let hasBet = false;
+                    let won = false;
+                    let claimed = false;
+    
+                    try {
+                        const [bettorPda] = await getBettorAccountPDA(publicKey.toBase58(), id);
+                        const bettorAccount = await bettingProgram.account.bettorAccount.fetch(bettorPda);
+                        hasBet = true;
+                        won = bettorAccount.won;
+                        claimed = bettorAccount.claimed;
+                    } catch (e) {
+                        // no bet or PDA not found
+                        console.log("no bet of PDA not found")
+                    }
+    
+                    return {
+                        ...base,
+                        id,
+                        questionPda: base.questionPda.toBase58(),
+                        totalPool: new BN(base.totalPool).toString(),
+                        totalBetsOption1: new BN(base.totalBetsOption1).toString(),
+                        totalBetsOption2: new BN(base.totalBetsOption2).toString(),
+                        totalHouseCommision: new BN(base.totalHouseCommision).toString(),
+                        totalCreatorCommission: new BN(base.totalCreatorCommission).toString(),
+                        vault: base.vault.toBase58(),
+                        closeDate: new BN(base.closeDate).toNumber(),
+                        creator: base.creator.toString(),
+                        hasBet,
+                        won,
+                        claimed,
+                    };
+                })
+            );
+    
+            const filteredQuestions = questionsWithDetails.filter((q) => {
+                if (!q) return false;
+                if (filter === "active") return q.closeDate > now;
+                if (filter === "closed") return q.closeDate <= now;
+                return true;
+            });
+    
+            // sorting logic...
+            const open = filteredQuestions.filter(q => q.closeDate > now);
+            const closed = filteredQuestions.filter(q => q.closeDate <= now);
+    
+            const sortFn = sortType === "bets"
+                ? (a, b) => new BN(b.totalPool).cmp(new BN(a.totalPool))
+                : (a, b) => a.closeDate - b.closeDate;
+    
+            const sortedQuestions = [...open.sort(sortFn), ...closed.sort(sortFn)];
+    
+            setAllQuestions(sortedQuestions);
+        } catch (err) {
+            console.error("Error fetching with user info:", err);
+            alert("Error loading questions.");
+        } finally {
+            setRefreshingList(false);
+        }
+    };
+
     useEffect(() => {
         const startIndex = (currentPage - 1) * questionsPerPage;
         const pageSlice = allQuestions.slice(startIndex, startIndex + questionsPerPage);
@@ -234,7 +323,10 @@ const FetchQuestion = () => {
         <div className="w-full flex-1 mt-6 p-4 sm:p-6 lg:p-8 border border-gray-600 rounded-lg shadow-lg bg-gray-900 text-white">
 
             <h2 className="text-2xl font-bold text-gray-200">Events</h2>
-            <p className="text-sm text-gray-400">Note: All bets are resolved two (2) days after betting close date.</p>
+            <p className="text-sm text-gray-400 mb-2">
+                Note: Bets are resolved after community voting ends on the Truth.it Network (Commit + Reveal phases). 
+                Each event's timeline is defined by its creator.
+            </p>
 
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
                 {filterButtons()}
@@ -244,36 +336,78 @@ const FetchQuestion = () => {
             {refreshingList && refreshingListLoader()}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                {currentQuestions && currentQuestions.map((q, index) => (
-                    <div
-                        key={index}
-                        onClick={() => navigate(`/question/${q.id.toString()}`, { state: q })}
-                        className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer border border-gray-700 shadow-md transition-all"
-                    >
-                        <strong className="text-lg text-blue-400">
-                            {q.title}
+                {currentQuestions && currentQuestions.map((q, index) => {
+                    const option1Bets = new BN(q.totalBetsOption1).toNumber();
+                    const option2Bets = new BN(q.totalBetsOption2).toNumber();
+                    const total = option1Bets + option2Bets;
+
+                    const option1Pct = total > 0 ? (option1Bets / total) * 100 : 0;
+                    const option2Pct = total > 0 ? (option2Bets / total) * 100 : 0;
+                    
+                    return (
+                        <div
+                            key={index}
+                            onClick={() => navigate(`/question/${q.id.toString()}`, { state: q })}
+                            className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer border border-gray-700 shadow-md transition-all"
+                        >
+                            <div className="flex items-center justify-between mb-1">
+                                <strong className="text-lg text-blue-400">
+                                    {q.title}
+                                </strong>
+                            </div>
+
                             {q.hasBet && (
-                                <span className="text-green-400 text-xs bg-green-900 px-2 py-1 ml-2 rounded-md">
+                                <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md mb-2 bg-green-900 text-green-400 whitespace-nowrap">
+                                    <FaCheckCircle className="text-green-400 text-sm" />
                                     Bet Placed
+                                    {q.claimed && (
+                                        <span className={`ml-1 ${q.won ? 'text-yellow-300' : 'text-red-400'}`}>
+                                            ({q.won ? 'Won' : 'Lost'})
+                                        </span>
+                                    )}
                                 </span>
                             )}
-                        </strong>
-                        <p className="text-sm">
-                            <span className={q.closeDate <= Math.floor(Date.now() / 1000)
-                                ? "text-red-500"
-                                : "text-green-500"}>
-                                {getTimeRemaining(q.closeDate)}
-                            </span>
-                        </p>
-                        <p className="text-gray-500 text-sm break-all">
-                            PDA: {q.id.toString()}
-                        </p>
-                        <p className="text-gray-500 text-sm">
-                            Total Bets: {(new BN(q.totalPool) / 1_000_000_000).toString()} SOL
-                        </p>
-                    </div>
-                ))}
+
+                            {/* Horizontal Bet Breakdown */}
+                            <div className="mt-2 text-xs text-gray-300">
+                                <div className="flex justify-between mb-1">
+                                    <span>{q.option1} ({(option1Pct).toFixed(1)}%)</span>
+                                    <span>{q.option2} ({(option2Pct).toFixed(1)}%)</span>
+                                </div>
+                                <div className="w-full h-3 bg-gray-700 rounded overflow-hidden">
+                                    <div
+                                        className="h-3 bg-green-500"
+                                        style={{ width: `${option1Pct}%` }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Time Remaining */}
+                            <p className="text-sm mt-3">
+                                <span
+                                    className={
+                                    q.closeDate <= Math.floor(Date.now() / 1000)
+                                        ? "text-red-500"
+                                        : "text-green-500"
+                                    }
+                                    title={new Date(Number(q.closeDate) * 1000).toLocaleString()}
+                                >
+                                    {getTimeRemaining(q.closeDate, Number(q.winner), Number(q.winningPercentage))}
+                                </span>
+                            </p>
+
+                            {/* PDA and Total Pool */}
+                            <p className="text-gray-500 text-sm break-all mt-1">
+                                PDA: {q.id.toString()}
+                            </p>
+                            <p className="text-gray-500 text-sm">
+                                Total Bets: {(new BN(q.totalPool) / 1_000_000_000).toFixed(2)} SOL
+                            </p>
+                        </div>
+                    );
+                })}
             </div>
+
 
             {totalPages > 1 && renderPagination( currentPage, totalPages, setCurrentPage )}
 
