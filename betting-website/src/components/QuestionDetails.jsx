@@ -11,7 +11,6 @@ import { FiLogIn } from "react-icons/fi";
 import { getConstants } from "../constants";
 import { getIdls } from "../idls";
 
-
 import { getQuestionStatus } from "../utils/eventStatus";
 import { useCanDeleteEvent } from "../hooks/useCanDeleteEvent";
 
@@ -822,6 +821,9 @@ const QuestionDetails = () => {
                 */}
                 {closeDate && Date.now() / 1000 < closeDate.getTime() / 1000 && (
                     <div className="mt-4">
+                        <p className="text-sm text-gray-500 mt-2 italic">
+                            Minimum bet amount is <strong>0.01 SOL</strong>. Your funds stay in smart contracts until resolved.
+                        </p>
                         <input
                             type="number"
                             placeholder="Enter bet amount"
@@ -880,6 +882,10 @@ const QuestionDetails = () => {
                 {/* Betting Pool & Commissions */}
                 <div className="mt-6 bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-md">
                     <h3 className="text-lg font-semibold text-gray-300">Betting Pool</h3>
+                    <p className="text-sm text-gray-500 mb-2 italic">
+                        Betting pool distribution: 1% to event creator, 1% to SolbetX dev fund, 1% to Truth.It for resolution, and 97% shared among winning bettors.
+                    </p>
+
                     <p className="text-gray-400">
                         Total Pool: 
                         <span 
@@ -916,6 +922,9 @@ const QuestionDetails = () => {
 
                 <div className="mt-6 bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-md">
                     <h3 className="text-lg font-semibold text-gray-300">Vault Balances</h3>
+                    <p className="text-sm text-gray-400 italic mb-2">
+                        Vaults are smart contract accounts holding all SOL (bets and rewards) related to this event.
+                    </p>
                     <p className="text-gray-400">Betting Vault Balance: <span className="text-green-400">{vaultBalance.toFixed(10)} SOL</span></p>
                     <p className="text-gray-400">Truth-Network Vault Balance: <span className="text-blue-400">{truthVaultBalance.toFixed(10)} SOL</span></p>
                 </div>
