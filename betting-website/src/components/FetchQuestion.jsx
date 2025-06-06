@@ -392,7 +392,7 @@ const FetchQuestion = () => {
                                     }
                                     title={new Date(Number(q.closeDate) * 1000).toLocaleString()}
                                 >
-                                    {getTimeRemaining(q.closeDate, Number(q.winner), Number(q.winningPercentage))}
+                                    {getTimeRemaining(q.closeDate, Number(q.winner), Number(q.winningPercentage), q.houseCommissionClaimed)}
                                 </span>
                             </p>
 

@@ -7,33 +7,34 @@
 
 import { FaCheckCircle, FaHourglassHalf, FaTimesCircle } from 'react-icons/fa';
 
-export const getTimeRemaining = (closeTimestamp, winner = 0, winningPercentage = 0) => {
+export const getTimeRemaining = (closeTimestamp, winner = 0, winningPercentage = 0, houseCommissionClaimed) => {
     const now = Math.floor(Date.now() / 1000);
     const timeLeft = closeTimestamp - now;
 
     if (timeLeft <= 0) {
-        if (winner == 1 && winningPercentage == 0) {
+        if (!houseCommissionClaimed) {
+            // Betting ended, but truth network has not finalized yet
             return (
-                <span className="flex items-center gap-1 text-red-400">
-                    <FaTimesCircle /> No votes were cast. No winner declared.
+                <span className="flex items-center gap-1 text-blue-300">
+                    <FaHourglassHalf /> Waiting for Truth.it resolution
                 </span>
             );
-        } else if (winningPercentage >= 75) {
+        } else if (houseCommissionClaimed && winningPercentage >= 75) {
             return (
                 <span className="flex items-center gap-1 text-green-400">
                     <FaCheckCircle /> Winner: {winner === 1 ? 'True' : 'False'}
                 </span>
             );
-        } else if (winningPercentage < 75) {
+        } else if (houseCommissionClaimed && winningPercentage > 0 && winningPercentage < 75) {
             return (
                 <span className="flex items-center gap-1 text-yellow-300">
-                    <FaTimesCircle /> Winning percentage less than 75 %. No winner declared
+                    <FaTimesCircle /> Winning percentage less than 75%. No winner declared
                 </span>
             );
         } else {
             return (
-                <span className="flex items-center gap-1 text-blue-300">
-                    <FaHourglassHalf /> Waiting for Truth.it resolution
+                <span className="flex items-center gap-1 text-red-400">
+                    <FaTimesCircle /> No votes were cast. No winner declared.
                 </span>
             );
         }
