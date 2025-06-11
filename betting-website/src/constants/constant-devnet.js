@@ -4,8 +4,19 @@ import { PublicKey } from "@solana/web3.js";
 export const BETTING_CONTRACT_PROGRAM_ID = new PublicKey("98ftixwWWStM2KE7dNHHr5ABPPckVkrCELqCjA2sJbJE");
 export const TRUTH_NETWORK_PROGRAM_ID = new PublicKey("C26LU8DVw2c51gNWFLye1oAwH3hiRPGcGCA2crnER3mR");
 
-// Default RPC url
-export const DEFAULT_RPC_URL = localStorage.getItem("customRpcUrl") || "https://api.devnet.solana.com"
+export const FALLBACK_RPC_URLS = [
+    localStorage.getItem("customRpcUrl") || null,
+    "https://api.devnet.solana.com",
+    "https://solana-testnet.drpc.org/"
+];
+
+export const DEFAULT_RPC_URL = FALLBACK_RPC_URLS[0];
+
+export const RPC_HELP_LINKS = [
+    "https://www.helius.xyz/",
+    "https://triton.one/",
+    "https://quicknode.com/",
+];
 
 // Header title
 export const NETWORK_NAME = "DevNet"

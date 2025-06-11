@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { FaRegCopy, FaTwitter, FaFacebookF, FaTelegramPlane } from "react-icons/fa";
 import { FiLogIn } from "react-icons/fi";
+import BetChart from "./BetChart";
 import { getConstants } from "../constants";
 import { getIdls } from "../idls";
 
@@ -27,7 +28,7 @@ const QuestionDetails = () => {
     const { bettingIDL, truthNetworkIDL } = getIdls();
     const [fetchingQuestionDetails, setFetchingQuestionDetails] = useState(false);
     const { publicKey, connected, signTransaction, signAllTransactions } = useWallet();
-    console.log("Wallet status:", publicKey?.toBase58(), connected);
+    //console.log("Wallet status:", publicKey?.toBase58(), connected);
 
     const dummyWallet = new PublicKey("11111111111111111111111111111111")
     const walletAdapter = useMemo(() => {
@@ -68,64 +69,98 @@ const QuestionDetails = () => {
 
     useEffect(() => {
         if (questionPda && !fetchingQuestionDetails) {
-            console.log("===== fetching question details ====")
+            //console.log("===== fetching question details ====")
             fetchQuestionDetails();
         }
     }, [questionPda, bettingProgram, truthNetworkProgram]);
 
     const fetchQuestionDetails = async () => {
-
+        const { RPC_HELP_LINKS } = constants;
         setFetchingQuestionDetails(true);
 
-        const bettingQuestion = await bettingProgram.account.bettingQuestion.fetch(questionPda);
-        const truthNetworkQuestion = await truthNetworkProgram.account.question.fetch(bettingQuestion.questionPda);
+        const allRpcUrls = [
+            ...(localStorage.getItem("customRpcUrl") ? [localStorage.getItem("customRpcUrl")] : []),
+            ...constants.FALLBACK_RPC_URLS
+        ];
 
-        const totalPool = new BN(bettingQuestion.totalPool);
-        const totalBetsOption1 = new BN(bettingQuestion.totalBetsOption1);
-        const totalBetsOption2 = new BN(bettingQuestion.totalBetsOption2);
-        const option1Odds = bettingQuestion.option1Odds
-        const option2Odds = bettingQuestion.option2Odds
-        const totalHouseCommission = new BN(bettingQuestion.totalHouseCommision);
-        const totalCreatorCommission = new BN(bettingQuestion.totalCreatorCommission);
-        const betClosing = new BN(bettingQuestion.closeDate);
-        const betCreator = bettingQuestion.creator.toString();
-        const truthAsker = truthNetworkQuestion.asker.toString();
+        let success = false;
 
-        setQuestionData({
-            betting: {
-                ...bettingQuestion,
-                id: bettingQuestion.id.toBase58(),
-                questionPda: bettingQuestion.questionPda.toBase58(),
-                totalPool: totalPool.toString(),
-                totalBetsOption1: totalBetsOption1.toString(),
-                totalBetsOption2: totalBetsOption2.toString(),
-                option1Odds: option1Odds,
-                option2Odds: option2Odds,
-                totalHouseCommision: totalHouseCommission.toString(),
-                totalCreatorCommission: totalCreatorCommission.toString(),
-                vault: bettingQuestion.vault.toBase58(),
-                closeDate: betClosing.toNumber(),
-                creator: betCreator
-            },
-            truth: {
-                ...truthNetworkQuestion,
-                asker: truthAsker,
-                questionKey: truthNetworkQuestion.questionKey.toBase58(),
-                vaultAddress: truthNetworkQuestion.vaultAddress.toBase58(),
-                id: truthNetworkQuestion.id.toString(),
-                revealEndTime: truthNetworkQuestion.revealEndTime.toNumber(),
-                winningOption: truthNetworkQuestion.winningOption === 1 ? true : (truthNetworkQuestion.winningOption === 2 ? false : null),
-                winningPercent: truthNetworkQuestion.winningPercent,
-                committedVoters: truthNetworkQuestion.committedVoters.toNumber(),
-                voterRecordsCount: truthNetworkQuestion.voterRecordsCount.toNumber(),
-                voterRecordsClosed: truthNetworkQuestion.voterRecordsClosed.toNumber(),
-                totalDistributed: truthNetworkQuestion.totalDistributed.toNumber(),
-                originalReward: truthNetworkQuestion.originalReward.toNumber(),
-                snapshotReward: truthNetworkQuestion.snapshotReward.toNumber(),
-            },
-        });
+        for (const rpcUrl of allRpcUrls) {
+            if (rpcUrl == null) continue;
+            console.log("============ trying rpc: ", rpcUrl)
 
-        setFetchingQuestionDetails(false);
+            try {
+
+                const bettingQuestion = await bettingProgram.account.bettingQuestion.fetch(questionPda);
+                const truthNetworkQuestion = await truthNetworkProgram.account.question.fetch(bettingQuestion.questionPda);
+
+                const totalPool = new BN(bettingQuestion.totalPool);
+                const totalBetsOption1 = new BN(bettingQuestion.totalBetsOption1);
+                const totalBetsOption2 = new BN(bettingQuestion.totalBetsOption2);
+                const option1Odds = bettingQuestion.option1Odds
+                const option2Odds = bettingQuestion.option2Odds
+                const totalHouseCommission = new BN(bettingQuestion.totalHouseCommision);
+                const totalCreatorCommission = new BN(bettingQuestion.totalCreatorCommission);
+                const betClosing = new BN(bettingQuestion.closeDate);
+                const betCreator = bettingQuestion.creator.toString();
+                const truthAsker = truthNetworkQuestion.asker.toString();
+
+                // Save working RPC
+                localStorage.setItem("lastWorkingRpc", rpcUrl); 
+
+                setQuestionData({
+                    betting: {
+                        ...bettingQuestion,
+                        id: bettingQuestion.id.toBase58(),
+                        questionPda: bettingQuestion.questionPda.toBase58(),
+                        totalPool: totalPool.toString(),
+                        totalBetsOption1: totalBetsOption1.toString(),
+                        totalBetsOption2: totalBetsOption2.toString(),
+                        option1Odds: option1Odds,
+                        option2Odds: option2Odds,
+                        totalHouseCommision: totalHouseCommission.toString(),
+                        totalCreatorCommission: totalCreatorCommission.toString(),
+                        vault: bettingQuestion.vault.toBase58(),
+                        closeDate: betClosing.toNumber(),
+                        creator: betCreator
+                    },
+                    truth: {
+                        ...truthNetworkQuestion,
+                        asker: truthAsker,
+                        questionKey: truthNetworkQuestion.questionKey.toBase58(),
+                        vaultAddress: truthNetworkQuestion.vaultAddress.toBase58(),
+                        id: truthNetworkQuestion.id.toString(),
+                        revealEndTime: truthNetworkQuestion.revealEndTime.toNumber(),
+                        winningOption: truthNetworkQuestion.winningOption === 1 ? true : (truthNetworkQuestion.winningOption === 2 ? false : null),
+                        winningPercent: truthNetworkQuestion.winningPercent,
+                        committedVoters: truthNetworkQuestion.committedVoters.toNumber(),
+                        voterRecordsCount: truthNetworkQuestion.voterRecordsCount.toNumber(),
+                        voterRecordsClosed: truthNetworkQuestion.voterRecordsClosed.toNumber(),
+                        totalDistributed: truthNetworkQuestion.totalDistributed.toNumber(),
+                        originalReward: truthNetworkQuestion.originalReward.toNumber(),
+                        snapshotReward: truthNetworkQuestion.snapshotReward.toNumber(),
+                    },
+                });
+                success = true; 
+                break;
+
+            } catch (error) {
+                console.warn(`Error using RPC ${rpcUrl}:`, error.message);
+                continue; // try next RPC
+            } finally {
+                setFetchingQuestionDetails(false);
+            }
+        }
+
+        // All RPCs failed
+        const network = constants.NETWORK_NAME;
+        const linksList = RPC_HELP_LINKS.map(link => ` ${link}`).join("\n");
+
+        if (!success) {
+            alert(
+                `Failed to fetch events on ${network}.\n\nAll available RPCs failed.\n\nYou can set a custom RPC URL in "Network Settings".\nFree RPC providers:\n${linksList}`
+            );
+        }
     };
     
 
@@ -166,7 +201,7 @@ const QuestionDetails = () => {
     }, [questionData]);
 
     useEffect(() => {
-        console.log("Fetching event status")
+        //console.log("Fetching event status")
         if (!questionData) return;
 
         const getStatus = getQuestionStatus({
@@ -304,7 +339,7 @@ const QuestionDetails = () => {
                 console.error("Truth network Program is NOT initialized!");
                 return alert("Truth network program is not ready. Try reloading the page.");
             }
-            console.log("bettingQuestion_pda: ", bettingQuestion_PDA.toString())
+            //console.log("bettingQuestion_pda: ", bettingQuestion_PDA.toString())
             const [vaultPDA] = PublicKey.findProgramAddressSync(
                 [
                     Buffer.from("bet_vault"),
@@ -407,7 +442,7 @@ const QuestionDetails = () => {
                 bettingProgram.programId
             );
     
-            console.log("Vault PDA:", vaultPDA.toBase58());
+            //console.log("Vault PDA:", vaultPDA.toBase58());
     
             const tx = await bettingProgram.methods
                 .claimWinnings()
@@ -732,8 +767,8 @@ const QuestionDetails = () => {
         )
     }
 
-    console.log("question data: ", questionData)
-    console.log("bettor data: ", bettorData)
+    // console.log("question data: ", questionData)
+    // console.log("bettor data: ", bettorData)
     
     // console.log("show delete event button: ", canDeleteEvent)
 
@@ -814,6 +849,8 @@ const QuestionDetails = () => {
                     </div>
                 )}
 
+                <p className="mt-4">{option1Percentage.toFixed(2)}%</p>
+                {questionPda && <BetChart questionPda={questionPda} />}
 
                 {/* 
                     Betting Form 
