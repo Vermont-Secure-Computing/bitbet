@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { Helmet } from "react-helmet";
 import { useParams } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
@@ -767,7 +768,7 @@ const QuestionDetails = () => {
         )
     }
 
-    // console.log("question data: ", questionData)
+    console.log("question data: ", questionData)
     // console.log("bettor data: ", bettorData)
     
     // console.log("show delete event button: ", canDeleteEvent)
@@ -787,7 +788,22 @@ const QuestionDetails = () => {
         <div className="flex flex-col min-h-screen justify-center items-center bg-gray-900 text-white">  
             <Link to="/">Back to List</Link>
 
-            
+            {questionData && (
+                <Helmet>
+                    <title>{questionData.betting?.title || "SolBetX Event"}</title>
+
+                    {/* Open Graph (OG) tags */}
+                    <meta property="og:title" content={questionData.betting?.title || "SolBetX Event"} />
+                    <meta property="og:description" content="SolBetX - Open Source No-Token Smart contract betting platform resolved by Truth.it network" />
+                    <meta property="og:type" content="website" />
+                    <meta property="og:url" content={window.location.href} />
+
+                    {/* Twitter Card */}
+                    <meta name="twitter:card" content="summary_large_image" />
+                    <meta name="twitter:title" content={questionData.betting?.title || "SolBetX Event"} />
+                    <meta name="twitter:description" content="SolBetX - Open Source No-Token Smart contract betting platform resolved by Truth.it network" />
+                </Helmet>
+            )}  
 
             <div className="w-full max-w-2xl mx-auto p-6 border border-gray-600 rounded-lg shadow-lg bg-gray-800">
                 
