@@ -5,7 +5,7 @@ export const BETTING_CONTRACT_PROGRAM_ID = new PublicKey("Dm3SXYSbQJJjiFR346vLh4
 export const TRUTH_NETWORK_PROGRAM_ID = new PublicKey("4sC1fceX7osnaP8JkY4AfgK5tSFSfS44rXMhX361WEPF");
 
 export const FALLBACK_RPC_URLS = [
-    localStorage.getItem("customRpcUrl") || null,
+    localStorage.getItem("customRpcUrl") || "https://solana-rpc.publicnode.com",
     "https://solana-rpc.publicnode.com",
     "https://go.getblock.io/4136d34f90a6488b84214ae26f0ed5f4",
     "https://api.mainnet-beta.solana.com"
