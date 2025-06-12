@@ -8,6 +8,7 @@ import { getTimeRemaining } from "../utils/getRemainingTime";
 import { renderPagination } from "../utils/pagination";
 import { getIdls } from "../idls";
 import { getConstants } from "../constants";
+import { Helmet } from "react-helmet";
 
 const FetchQuestion = () => {
     const constants = getConstants();
@@ -384,6 +385,19 @@ const FetchQuestion = () => {
 
     return (
         <div className="w-full flex-1 mt-6 p-4 sm:p-6 lg:p-8 border border-gray-600 rounded-lg shadow-lg bg-gray-900 text-white">
+
+            <Helmet>
+                <meta property="og:title" content="SolBetX" />
+                <meta property="og:description" content="Open Source No-Token Smart contract betting platform resolved by Truth.it network" />
+                <meta property="og:image" content="https://solbetx.com/solbetx-preview.png" />
+                <meta property="og:url" content="https://solbetx.com/" />
+                <meta property="og:type" content="website" />
+
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content="SolBetX" />
+                <meta name="twitter:description" content="Open Source No-Token Smart contract betting platform resolved by Truth.it network" />
+                <meta name="twitter:image" content="https://solbetx.com/solbetx-preview.png" /> 
+            </Helmet>
 
             <h2 className="text-2xl font-bold text-gray-200">Events</h2>
             <p className="text-sm text-gray-400 mb-2">
