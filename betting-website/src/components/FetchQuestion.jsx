@@ -163,12 +163,16 @@ const FetchQuestion = () => {
                  */
                 const now = Math.floor(Date.now() / 1000);
 
+                console.log("Question IDs:", questionsWithDetails.map((q) => q.id));
+
                 const filteredQuestions = questionsWithDetails.filter((q) => {
                     if (!q) return false;
+                    if (q.id === "Cx7izX3LXxJCGYAfsNEYwj6h5uFGvcFnT6cu1X579apa") return false;
                     if (filter === "active") return q.closeDate > now;
                     if (filter === "closed") return q.closeDate <= now;
                     return true; // for "all"
                 });
+
 
                 const openQuestions = filteredQuestions
                     .filter(q => q && q.closeDate > now)
@@ -269,10 +273,12 @@ const FetchQuestion = () => {
         
                 const filteredQuestions = questionsWithDetails.filter((q) => {
                     if (!q) return false;
+                    if (q.id === "Cx7izX3LXxJCGYAfsNEYwj6h5uFGvcFnT6cu1X579apa") return false;
                     if (filter === "active") return q.closeDate > now;
                     if (filter === "closed") return q.closeDate <= now;
                     return true;
                 });
+                
         
                 // sorting logic...
                 const open = filteredQuestions.filter(q => q.closeDate > now);
