@@ -98,17 +98,37 @@ export const useBetChartData = (questionPda, refreshKey, viewMode = 'hourly') =>
                     resultMap[key][option] += amountSol;
                 });
 
-                // Convert to percentage for "true" bets
-                const sorted = Object.entries(resultMap)
-                    .map(([date, values]) => {
-                        const trueAmt = values.true || 0;
-                        const falseAmt = values.false || 0;
-                        const total = trueAmt + falseAmt;
-                        const truePercent = total > 0 ? (trueAmt / total) * 100 : 0;
 
-                        return { date, true: truePercent };
-                    })
-                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+                // Sort by date first
+                const parseDateKey = (key) => {
+                    // For hourly: e.g. "2025-06-06T07"
+                    if (key.includes('T') && key.length === 13) {
+                      return new Date(`${key}:00:00`);
+                    }
+                    // For daily: e.g. "2025-06-06"
+                    return new Date(`${key}T00:00:00`);
+                };
+                  
+                const sortedEntries = Object.entries(resultMap).sort(([dateA], [dateB]) => {
+                    return parseDateKey(dateA).getTime() - parseDateKey(dateB).getTime();
+                });
+
+                let runningTrue = 0;
+                let runningFalse = 0;
+
+                const sorted = sortedEntries.map(([date, values]) => {
+                    runningTrue += values.true || 0;
+                    runningFalse += values.false || 0;
+
+                    const total = runningTrue + runningFalse;
+                    const truePercent = total > 0 ? (runningTrue / total) * 100 : 0;
+
+                    return {
+                        date,
+                        true: truePercent
+                    };
+                });
+                  
 
                 setChartData(sorted);
             } catch (err) {

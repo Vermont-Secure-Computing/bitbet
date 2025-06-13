@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Helmet } from "react-helmet";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { Program, AnchorProvider, web3, BN } from "@coral-xyz/anchor";
@@ -20,6 +20,9 @@ import { useCanDeleteEvent } from "../hooks/useCanDeleteEvent";
 
 const QuestionDetails = () => {
     const constants = getConstants();
+    const location = useLocation();
+    const passedQuestionData = location.state;
+    console.log("passedQuestionData: ", passedQuestionData)
 
     const rpcUrl = constants.DEFAULT_RPC_URL;
     const connection = new web3.Connection(rpcUrl, "confirmed");
@@ -788,20 +791,20 @@ const QuestionDetails = () => {
         <div className="flex flex-col min-h-screen justify-center items-center bg-gray-900 text-white">  
             <Link to="/">Back to List</Link>
 
-            {questionData && (
+            {passedQuestionData && (
                 <Helmet>
-                    <title>{questionData.betting?.title || "SolBetX Event"}</title>
+                    <title>{passedQuestionData.title || "SolBetX Event"}</title>
 
                     {/* Open Graph (OG) tags */}
-                    <meta property="og:title" content={questionData.betting?.title || "SolBetX Event"} />
-                    <meta property="og:description" content="SolBetX - Open Source No-Token Smart contract betting platform resolved by Truth.it network" />
+                    <meta property="og:title" content={passedQuestionData.title || "SolBetX Event"} />
+                    <meta property="og:description" content="SolBetX - Open Source No-Token Smart contract prediction platform resolved by Truth.it network" />
                     <meta property="og:type" content="website" />
                     <meta property="og:url" content={window.location.href} />
 
                     {/* Twitter Card */}
                     <meta name="twitter:card" content="summary_large_image" />
-                    <meta name="twitter:title" content={questionData.betting?.title || "SolBetX Event"} />
-                    <meta name="twitter:description" content="SolBetX - Open Source No-Token Smart contract betting platform resolved by Truth.it network" />
+                    <meta name="twitter:title" content={passedQuestionData.title || "SolBetX Event"} />
+                    <meta name="twitter:description" content="SolBetX - Open Source No-Token Smart contract prediction platform resolved by Truth.it network" />
                 </Helmet>
             )}  
 
