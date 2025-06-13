@@ -14,7 +14,7 @@ export const DEFAULT_RPC_URL = FALLBACK_RPC_URLS[0];
 
 export const RPC_HELP_LINKS = [
     "https://www.helius.xyz/",
-    "https://triton.one/",
+    "https://alchemy.com",
     "https://quicknode.com/",
 ];
 

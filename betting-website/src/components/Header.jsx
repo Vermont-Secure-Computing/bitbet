@@ -20,7 +20,7 @@ const Header = () => {
                         <Link to="/" className="text-2xl font-bold text-white hover:underline block">
                             SolBetX - {constants.NETWORK_NAME} - v0.9
                         </Link>
-                        <p className="text-sm text-gray-300">Open Source No-Token Smart contract betting platform resolved by Truth.it network</p>
+                        <p className="text-sm text-gray-300">Open Source No-Token Smart contract prediction platform resolved by Truth.it network</p>
                         
                     </div>
 
