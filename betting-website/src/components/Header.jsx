@@ -13,11 +13,11 @@ const Header = () => {
     
     return (
         <>
-            <header className="w-full bg-gray-800 py-4 shadow-lg relative">
-                <div className="container mx-auto flex justify-between items-center px-4 sm:px-6">
+            <header className="w-full bg-gray-800 py-4 shadow-lg">
+                <div className="max-w-7xl mx-auto flex flex-wrap md:flex-nowrap items-center justify-between px-4 gap-4">
                     {/* Logo + Label */}
-                    <div>
-                        <Link to="/" className="text-2xl font-bold text-white hover:underline block">
+                    <div className="flex-1 min-w-[220px]">
+                        <Link to="/" className="text-xl md:text-2xl font-bold text-white hover:underline block">
                             SolBetX - {constants.NETWORK_NAME} - v0.9
                         </Link>
                         <p className="text-sm text-gray-300">Open Source No-Token Smart contract prediction platform resolved by Truth.it network</p>
@@ -25,7 +25,7 @@ const Header = () => {
                     </div>
 
                     {/* Desktop Navigation */}
-                    <nav className="hidden sm:flex items-center gap-6">
+                    <nav className="hidden md:flex items-center gap-4 xl:gap-6 flex-wrap">
                         <Link to="/" className="text-white text-sm hover:text-yellow-400 transition">
                             Home
                         </Link>
@@ -51,21 +51,23 @@ const Header = () => {
                             {constants.SWITCH_LINK_LABEL}
                         </a>
                         
-                        <WalletMultiButton />
+                        <div className="max-w-[140px] sm:max-w-[180px]">
+                            <WalletMultiButton className="truncate w-full !text-sm !px-2" />
+                        </div>
+
                     </nav>
 
                     {/* Mobile Hamburger */}
-                    <button
-                        className="sm:hidden !bg-blue-400 text-white"
-                        onClick={() => setIsMenuOpen((prev) => !prev)}
-                    >
-                        {isMenuOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
-                    </button>
+                    <div className="md:hidden">
+                        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="!bg-blue-400 text-white">
+                            {isMenuOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
+                        </button>
+                    </div>
                 </div>
 
                 {/* Mobile Menu */}
                 {isMenuOpen && (
-                    <div className="sm:hidden bg-gray-700 border-t border-gray-600 mt-2 px-4 py-3 space-y-3 text-center z-10">
+                    <div className="md:hidden bg-gray-700 border-t border-gray-600 mt-2 px-4 py-3 space-y-3 text-center z-10">
                         <Link
                             to="/"
                             className="block text-white text-sm hover:text-yellow-400"

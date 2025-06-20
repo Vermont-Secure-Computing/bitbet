@@ -3,7 +3,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { AnchorProvider, Program, web3, BN } from "@coral-xyz/anchor";
 import { useNavigate } from "react-router-dom";
-import { FaCheckCircle } from "react-icons/fa";
+import { FaCheckCircle, FaCalendarAlt, FaDollarSign } from "react-icons/fa";
 import { getTimeRemaining } from "../utils/getRemainingTime";
 import { renderPagination } from "../utils/pagination";
 import { getIdls } from "../idls";
@@ -338,22 +338,30 @@ const FetchQuestion = () => {
     }
 
     const sortButtons = () => {
-        const baseClasses = "w-[120px] text-xs py-1.5 rounded !text-sm transition-colors";
     
         return (
-            <div className="flex gap-3 align-items justify-center sm:justify-start">
-                <span>Sort by: </span>
+            <div className="flex gap-2 sm:gap-3">
                 <button
                     onClick={() => setSortType("closing")}
-                    className={`${baseClasses} ${sortType === "closing" ? "!bg-purple-600 text-white" : "!bg-gray-700 hover:!bg-gray-600 text-gray-300"}`}
+                    className={`px-2 sm:px-3 py-1 rounded transition-colors flex items-center gap-1 ${
+                        sortType === "closing"
+                        ? "!bg-purple-600 text-white"
+                        : "!bg-gray-700 hover:!bg-gray-600 text-gray-300"
+                    }`}
                 >
-                    Closing Date
+                    <FaCalendarAlt />
+                    <span className="hidden sm:inline">Closing</span>
                 </button>
                 <button
                     onClick={() => setSortType("bets")}
-                    className={`${baseClasses} ${sortType === "bets" ? "!bg-purple-600 text-white" : "!bg-gray-700 hover:!bg-gray-600 text-gray-300"}`}
+                    className={`px-2 sm:px-3 py-1 rounded transition-colors flex items-center gap-1 ${
+                        sortType === "bets"
+                        ? "!bg-purple-600 text-white"
+                        : "!bg-gray-700 hover:!bg-gray-600 text-gray-300"
+                    }`}
                 >
-                    Highest Bets
+                    <FaDollarSign />
+                    <span className="hidden sm:inline">Highest</span>
                 </button>
             </div>
         );
@@ -361,28 +369,26 @@ const FetchQuestion = () => {
     
 
     const filterButtons = () => {
-        const baseClasses = "w-[120px] text-xs py-1.5 rounded !text-sm transition-colors";
     
         return (
-            <div className="flex gap-3 justify-center sm:justify-start">
-                <button
-                    onClick={() => setFilter("all")}
-                    className={`${baseClasses} ${filter === "all" ? "!bg-blue-600 text-white" : "!bg-gray-700 hover:!bg-gray-600 text-gray-300"}`}
-                >
-                    All
-                </button>
-                <button
-                    onClick={() => setFilter("active")}
-                    className={`${baseClasses} ${filter === "active" ? "!bg-green-600 text-white" : "!bg-gray-700 hover:!bg-gray-600 text-gray-300"}`}
-                >
-                    Active
-                </button>
-                <button
-                    onClick={() => setFilter("closed")}
-                    className={`${baseClasses} ${filter === "closed" ? "!bg-red-600 text-white" : "!bg-gray-700 hover:!bg-gray-600 text-gray-300"}`}
-                >
-                    Closed
-                </button>
+            <div className="flex flex-wrap gap-1 sm:gap-3">
+                {["all", "active", "closed"].map((type) => (
+                    <button
+                        key={type}
+                        onClick={() => setFilter(type)}
+                        className={`px-2 sm:px-3 py-1 rounded transition-colors ${
+                        filter === type
+                            ? type === "all"
+                            ? "!bg-blue-600 text-white"
+                            : type === "active"
+                            ? "!bg-green-600 text-white"
+                            : "!bg-red-600 text-white"
+                            : "!bg-gray-700 hover:!bg-gray-600 text-gray-300"
+                        }`}
+                    >
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                    </button>
+                ))}
             </div>
         );
     };
@@ -411,8 +417,11 @@ const FetchQuestion = () => {
                 Each event's timeline is defined by its creator.
             </p>
 
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
+            <div className="flex flex-wrap items-center justify-center sm:justify-between gap-y-2 gap-x-1 sm:gap-x-4 mb-4 text-sm">
+                {/* Filter Buttons */}
                 {filterButtons()}
+
+                {/* Sort Buttons */}
                 {sortButtons()}
             </div>
 
