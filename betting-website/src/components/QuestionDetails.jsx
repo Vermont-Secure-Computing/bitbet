@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Helmet } from "react-helmet";
 import { useParams, useLocation } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
@@ -705,6 +704,9 @@ const QuestionDetails = () => {
                 .rpc();
     
             toast.success("Event deleted successfully!");
+            await fetch(`https://solbetx.com/api/event/${questionData.betting.id.toString()}`, {
+                method: "DELETE"
+            });
             navigate("/"); 
         } catch (err) {
             console.error("Failed to delete event:", err);
@@ -736,7 +738,7 @@ const QuestionDetails = () => {
             <div className="flex items-center gap-3 mt-1">
                 {/* Twitter */}
                 <a
-                    href={`https://twitter.com/intent/tweet?text=Check out this event!&url=${encodeURIComponent(`${window.location.origin}/question/${questionData?.betting.id}`)}`}
+                    href={`https://twitter.com/intent/tweet?text=Check out this event!&url=${encodeURIComponent(`${window.location.origin}/share/${questionData?.betting.id}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-500 hover:text-blue-600"
@@ -747,7 +749,7 @@ const QuestionDetails = () => {
 
                 {/* Facebook */}
                 <a
-                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${window.location.origin}/question/${questionData?.betting.id}`)}`}
+                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${window.location.origin}/share/${questionData?.betting.id}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-700 hover:text-blue-800"
@@ -758,7 +760,7 @@ const QuestionDetails = () => {
 
                 {/* Telegram */}
                 <a
-                    href={`https://t.me/share/url?url=${encodeURIComponent(`${window.location.origin}/question/${questionData?.betting.id}`)}&text=Bitbet - Check out this event!`}
+                    href={`https://t.me/share/url?url=${encodeURIComponent(`${window.location.origin}/share/${questionData?.betting.id}`)}&text=Bitbet - Check out this event!`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sky-500 hover:text-sky-600"
@@ -789,24 +791,7 @@ const QuestionDetails = () => {
 
     return (
         <div className="flex flex-col min-h-screen justify-center items-center bg-gray-900 text-white">  
-            <Link to="/">Back to List</Link>
-
-            {passedQuestionData && (
-                <Helmet>
-                    <title>{passedQuestionData.title || "SolBetX Event"}</title>
-
-                    {/* Open Graph (OG) tags */}
-                    <meta property="og:title" content={passedQuestionData.title || "SolBetX Event"} />
-                    <meta property="og:description" content="SolBetX - Open Source No-Token Smart contract prediction platform resolved by Truth.it network" />
-                    <meta property="og:type" content="website" />
-                    <meta property="og:url" content={window.location.href} />
-
-                    {/* Twitter Card */}
-                    <meta name="twitter:card" content="summary_large_image" />
-                    <meta name="twitter:title" content={passedQuestionData.title || "SolBetX Event"} />
-                    <meta name="twitter:description" content="SolBetX - Open Source No-Token Smart contract prediction platform resolved by Truth.it network" />
-                </Helmet>
-            )}  
+            <Link to="/">Back to List</Link>      
 
             <div className="w-full max-w-2xl mx-auto p-6 border border-gray-600 rounded-lg shadow-lg bg-gray-800">
                 

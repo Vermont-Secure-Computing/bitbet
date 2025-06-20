@@ -243,7 +243,18 @@ const CreateQuestion = ({setActiveTab}) => {
             console.log("Successfully created event in Betting Contract:", bettingQuestionPDA.toString());
             setLoading(false)
             toast.success("Event successfully created!");
-
+            // Add event to OG metadata backend
+            await fetch("http://localhost:5001/api/event", {
+                method: "POST",
+                headers: {
+                "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    id: bettingQuestionPDA.toString(),
+                    title: questionText,
+                    image: "https://solbetx.com/og/solbetx-preview.png"
+                })
+            });
             setActiveTab("fetch")
         } catch (error) {
             setLoading(false)
