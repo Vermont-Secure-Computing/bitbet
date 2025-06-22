@@ -244,7 +244,7 @@ const CreateQuestion = ({setActiveTab}) => {
             setLoading(false)
             toast.success("Event successfully created!");
             // Add event to OG metadata backend
-            await fetch("http://localhost:5001/api/event", {
+            await fetch("https://solbetx.com/api/event", {
                 method: "POST",
                 headers: {
                 "Content-Type": "application/json",

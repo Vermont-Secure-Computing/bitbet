@@ -7,13 +7,13 @@ import { toast, Bounce } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { FaRegCopy, FaTwitter, FaFacebookF, FaTelegramPlane } from "react-icons/fa";
+import { FaSpinner, FaCheckCircle, FaTimesCircle, FaClock, FaExternalLinkAlt } from "react-icons/fa";
 import { FiLogIn } from "react-icons/fi";
 import BetChart from "./BetChart";
 import { getConstants } from "../constants";
 import { getIdls } from "../idls";
 
 import { getQuestionStatus } from "../utils/eventStatus";
-import { useCanDeleteEvent } from "../hooks/useCanDeleteEvent";
 
 
 
@@ -32,6 +32,9 @@ const QuestionDetails = () => {
     const [fetchingQuestionDetails, setFetchingQuestionDetails] = useState(false);
     const { publicKey, connected, signTransaction, signAllTransactions } = useWallet();
     //console.log("Wallet status:", publicKey?.toBase58(), connected);
+
+    const [txSig, setTxSig] = useState(null);
+    const [txStatus, setTxStatus] = useState(null);
 
     const dummyWallet = new PublicKey("11111111111111111111111111111111")
     const walletAdapter = useMemo(() => {
@@ -378,6 +381,16 @@ const QuestionDetails = () => {
                     rent: sysvarRent,
                 })
                 .rpc();
+
+            setTxSig(tx);
+            setTxStatus("pending");
+        
+            const { value } = await connection.confirmTransaction(tx, "confirmed");
+            if (value.err) {
+                setTxStatus("failed");
+            } else {
+                setTxStatus("confirmed");
+            }
 
             setBetAmount("");
             
@@ -916,6 +929,52 @@ const QuestionDetails = () => {
                                 </button>
                             )}
                         </div>
+
+                        {txStatus && txSig && (
+                            <div className="mt-3 text-sm text-center flex items-center justify-center gap-2">
+                                {txStatus === "pending" && (
+                                    <span className="flex items-center gap-2 text-yellow-400 animate-pulse">
+                                        <FaSpinner className="animate-spin" />
+                                        Waiting for confirmation...
+                                    </span>
+                                )}
+                                {txStatus === "confirmed" && (
+                                    <span className="flex items-center gap-2 text-green-400">
+                                        <FaCheckCircle />
+                                        Bet confirmed!
+                                        <a
+                                        href={`https://solscan.io/tx/${txSig}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="underline text-blue-400 inline-flex items-center gap-1"
+                                        >
+                                        View <FaExternalLinkAlt className="inline-block" size={12} />
+                                        </a>
+                                    </span>
+                                )}
+                                {txStatus === "failed" && (
+                                    <span className="flex items-center gap-2 text-red-400">
+                                        <FaTimesCircle />
+                                        Transaction failed.
+                                    </span>
+                                )}
+                                {txStatus === "timeout" && (
+                                    <span className="flex items-center gap-2 text-orange-400">
+                                        <FaClock />
+                                        Confirmation delayed.
+                                        <a
+                                            href={`https://solscan.io/tx/${txSig}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="underline text-blue-400 inline-flex items-center gap-1"
+                                        >
+                                            Check <FaExternalLinkAlt className="inline-block" size={12} />
+                                        </a>
+                                    </span>
+                                )}
+                            </div>
+                        )}
+
                     </div>
                 )}
 
@@ -1166,7 +1225,6 @@ const QuestionDetails = () => {
                         </button>
                     </div>
                 )}
-
                 
             </div>
         </div>
