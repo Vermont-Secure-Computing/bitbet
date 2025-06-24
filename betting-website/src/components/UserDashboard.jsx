@@ -91,7 +91,6 @@ const UserDashboard = () => {
                     } catch (err) {
                         console.warn("Truth question not found or failed to load.");
                     }
-
                     return {
                         bettorPDA: bet.publicKey,
                         bettorData,
@@ -162,7 +161,6 @@ const UserDashboard = () => {
         }
     };
 
-
     return (
         <div className="w-full min-h-screen bg-gray-900 text-white"> 
             <h2 className="text-3xl font-bold text-center text-white mb-8">My Bets</h2>
@@ -208,10 +206,10 @@ const UserDashboard = () => {
 
                         const status = getQuestionStatus({
                             closeDate: new Date(bettingQuestion.closeDate * 1000),
-                            revealEndTime: truthNetworkQuestion.revealEndTime,
-                            finalized: truthNetworkQuestion.finalized,
-                            truthNetworkWinner: truthNetworkQuestion.winningOption,
-                            winningPercentage: truthNetworkQuestion.winningPercent,
+                            revealEndTime: truthNetworkQuestion?.revealEndTime,
+                            finalized: truthNetworkQuestion?.finalized,
+                            truthNetworkWinner: truthNetworkQuestion?.winningOption,
+                            winningPercentage: truthNetworkQuestion?.winningPercent,
                             bettorData,
                             bettingQuestion
                         })

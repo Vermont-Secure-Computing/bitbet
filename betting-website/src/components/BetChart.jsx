@@ -109,6 +109,8 @@ const BetChart = (questionPda) => {
     };
 
     // Chance = total_bet_true / (total_bet_true+total_bet_false) 
+
+    console.log("chart data: ", data)
     
     return (
         <div className="space-y-4">

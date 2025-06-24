@@ -31,7 +31,7 @@ export const useBetChartData = (questionPda, refreshKey, viewMode = 'hourly') =>
     useEffect(() => {
         if (!questionPda || !isValidPublicKey(questionPda)) return;
 
-        //console.log("Fetching chart data ============>", refreshKey, viewMode);
+        console.log("Fetching chart data ============>", refreshKey, viewMode);
 
         const txFetchKey = `${questionPda}_tx`;
         const QUESTION_PDA = new PublicKey(questionPda);
