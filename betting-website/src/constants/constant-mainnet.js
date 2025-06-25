@@ -8,7 +8,7 @@ export const FALLBACK_RPC_URLS = [
     localStorage.getItem("customRpcUrl") || "https://solana-rpc.publicnode.com",
     "https://solana-rpc.publicnode.com",
     "https://go.getblock.io/4136d34f90a6488b84214ae26f0ed5f4",
-    "https://api.mainnet-beta.solana.com"
+    "https://api.mainnet-beta.solana.com",
 ];
 
 export const DEFAULT_RPC_URL = FALLBACK_RPC_URLS[0];

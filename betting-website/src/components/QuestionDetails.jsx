@@ -21,7 +21,7 @@ const QuestionDetails = () => {
     const constants = getConstants();
     const location = useLocation();
     const passedQuestionData = location.state;
-    console.log("passedQuestionData: ", passedQuestionData)
+    //console.log("passedQuestionData: ", passedQuestionData)
 
     const rpcUrl = constants.DEFAULT_RPC_URL;
     const connection = new web3.Connection(rpcUrl, "confirmed");
@@ -786,7 +786,7 @@ const QuestionDetails = () => {
         )
     }
 
-    console.log("question data: ", questionData)
+    //console.log("question data: ", questionData)
     // console.log("bettor data: ", bettorData)
     
     // console.log("show delete event button: ", canDeleteEvent)
