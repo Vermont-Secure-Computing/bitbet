@@ -84,6 +84,44 @@ export default function InstructionsPage() {
           <strong>Technical : </strong> This webpage front end you are now viewing can be run locally from your own machine by following the instructions at the github repository.  It is recommended to run it locally for optimal response and security.  All information is stored on the solana blockchain; there is no physical server associated with data on the solbetx smart contract apart from the servers running solana nodes.  The smart contract is not editable, upgradeable, or reversible.  Please use responsibly.
 
         </li>
+
+        <li className="text-justify">
+          <strong>RPC Performance Tip: </strong>
+          If you're experiencing slowness or timeouts while using SolBetX, it's likely due to congestion on the default public Solana RPC nodes. You can set your own custom RPC URL for faster performance and stability. Click the Network Settings located at the footer of the page to enter your RPC URL.
+          <br /><br />
+          <strong>Where to get a custom RPC URL:</strong>
+          <ul className="list-disc list-inside mt-2 ml-4 space-y-1">
+            <li>
+              <a className="text-blue-500 underline" href="https://dashboard.helius.dev/signup?redirectTo=onboarding" target="_blank" rel="noopener noreferrer">
+                Helius (https://www.helius.dev/)
+              </a>
+            </li>
+            <li>
+              <a className="text-blue-500 underline" href="https://www.alchemy.com/" target="_blank" rel="noopener noreferrer">
+                Alchemy (https://www.alchemy.com/)
+              </a>
+            </li>
+            <li>
+              <a className="text-blue-500 underline" href="https://www.quicknode.com/" target="_blank" rel="noopener noreferrer">
+                QuickNode (https://www.quicknode.com/)
+              </a>
+            </li>
+          </ul>
+
+          <br />
+          <strong>How to set your custom RPC in SolBetX:</strong>
+          <ol className="list-decimal list-inside ml-4 space-y-1 mt-2">
+            <li>Create an account on one of the RPC provider websites above.</li>
+            <li>Most providers offer a free plan — choose one based on your usage.</li>
+            <li>Make sure the <strong>Mainnet</strong> network is selected.</li>
+            <li>Copy the RPC URL provided by the dashboard.</li>
+            <li>On SolBetX, click the <strong>Network Settings</strong> to open the modal where you can set your own RPC url.</li>
+            <li>Paste your RPC URL and save. The app will now use your private endpoint.</li>
+          </ol>
+
+          <br />
+          Your RPC preference will be saved locally in your browser.
+        </li>
       </ul>
     </div>
   );
