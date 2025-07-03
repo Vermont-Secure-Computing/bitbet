@@ -1,5 +1,5 @@
 {
-  "address": "98ftixwWWStM2KE7dNHHr5ABPPckVkrCELqCjA2sJbJE",
+  "address": "i9ZJXnbDJBSDqZeNbpWm13UQ1YtAMEnzzbT1GuD28Er",
   "metadata": {
     "name": "betting_contract",
     "version": "0.1.0",
@@ -209,7 +209,7 @@
         },
         {
           "name": "betting_contract",
-          "address": "98ftixwWWStM2KE7dNHHr5ABPPckVkrCELqCjA2sJbJE"
+          "address": "i9ZJXnbDJBSDqZeNbpWm13UQ1YtAMEnzzbT1GuD28Er"
         },
         {
           "name": "vault",
@@ -342,7 +342,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "C26LU8DVw2c51gNWFLye1oAwH3hiRPGcGCA2crnER3mR"
+          "address": "9MLtAFYsh6FqK7hoN1DmMF6oQyMjzi9bPRzBJqA7MsWZ"
         },
         {
           "name": "system_program",
@@ -374,7 +374,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "C26LU8DVw2c51gNWFLye1oAwH3hiRPGcGCA2crnER3mR"
+          "address": "9MLtAFYsh6FqK7hoN1DmMF6oQyMjzi9bPRzBJqA7MsWZ"
         },
         {
           "name": "house_wallet",
@@ -506,7 +506,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "C26LU8DVw2c51gNWFLye1oAwH3hiRPGcGCA2crnER3mR"
+          "address": "9MLtAFYsh6FqK7hoN1DmMF6oQyMjzi9bPRzBJqA7MsWZ"
         },
         {
           "name": "system_program",
@@ -1128,15 +1128,15 @@
             "type": "string"
           },
           {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
             "name": "commit_end_time",
             "type": "i64"
           },
           {
             "name": "reveal_end_time",
-            "type": "i64"
-          },
-          {
-            "name": "rent_expiration",
             "type": "i64"
           },
           {
@@ -1153,6 +1153,10 @@
           },
           {
             "name": "committed_voters",
+            "type": "u64"
+          },
+          {
+            "name": "revealed_voters_count",
             "type": "u64"
           },
           {
@@ -1209,6 +1213,10 @@
           },
           {
             "name": "reward_drained",
+            "type": "bool"
+          },
+          {
+            "name": "action_in_progress",
             "type": "bool"
           },
           {
