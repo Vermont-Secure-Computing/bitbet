@@ -613,7 +613,6 @@ const QuestionDetails = () => {
             const truthVaultBalance = truthVaultAccountInfo?.lamports ?? 0;
 
             const vaultOnlyHasRent = (truthVaultBalance - truthRentExemption) < 1000;
-            const rentExpired = questionData.truth.rentExpiration <= now;
 
             
             /**
@@ -650,18 +649,18 @@ const QuestionDetails = () => {
                 }
             }
             
-            // console.log("truth network validation")
-            // console.log("isFinalized: ", isFinalized)
-            // console.log("vault lamports: ", vaultLamports - minRent < 1000)
-            // console.log("minRent: ", minRent)
-            // console.log("revealEnded: ", revealEnded)
-            // console.log("truthVaultBalance: ", truthVaultBalance)
-            // console.log("truthRentExemption: ", truthRentExemption)
-            // console.log("vaultOnlyHasRent: ", vaultOnlyHasRent)
-            // console.log("rentExpired: ", rentExpired)
-            // console.log("asker: ", questionData.truth.asker)
-            // console.log("truth creator: ", publicKey?.toBase58() === questionData.truth.asker)
-            // console.log("other check: ", (questionData.truth.committedVoters === 0 || (questionData.truth.voterRecordsCount === 0 || questionData.truth.voterRecordsClosed === questionData.truth.voterRecordsCount) &&(questionData.truth.totalDistributed >= questionData.truth.snapshotReward || questionData.truth.originalReward === 0)))
+            console.log("truth network validation")
+            console.log("isFinalized: ", isFinalized)
+            console.log("vault lamports: ", vaultLamports)
+            console.log("vault lamports check: ", vaultLamports - minRent < 1000)
+            console.log("minRent: ", minRent)
+            console.log("revealEnded: ", revealEnded)
+            console.log("truthVaultBalance: ", truthVaultBalance)
+            console.log("truthRentExemption: ", truthRentExemption)
+            console.log("vaultOnlyHasRent: ", vaultOnlyHasRent)
+            console.log("asker: ", questionData.truth.asker)
+            console.log("truth creator: ", publicKey?.toBase58() === questionData.truth.asker)
+            console.log("other check: ", (questionData.truth.committedVoters === 0 || (questionData.truth.voterRecordsCount === 0 || questionData.truth.voterRecordsClosed === questionData.truth.voterRecordsCount) &&(questionData.truth.totalDistributed >= questionData.truth.snapshotReward || questionData.truth.originalReward === 0)))
 
 
             if (
@@ -672,7 +671,6 @@ const QuestionDetails = () => {
                 publicKey?.toBase58() === questionData.truth.asker &&
                 revealEnded &&
                 vaultOnlyHasRent &&
-                rentExpired &&
                 (
                     // Allow delete if either:
                     // no one committed
@@ -786,7 +784,7 @@ const QuestionDetails = () => {
         )
     }
 
-    //console.log("question data: ", questionData)
+    console.log("question data: ", questionData)
     // console.log("bettor data: ", bettorData)
     
     // console.log("show delete event button: ", canDeleteEvent)
@@ -1081,10 +1079,22 @@ const QuestionDetails = () => {
                 {bettorData &&
                     publicKey &&
                     questionData?.truth.finalized && 
-                    questionData?.truth.winningOption !== null && 
-                    ((questionData?.truth.winningPercent < 75 || questionData?.truth.winningPercent == 0) || 
-                        (questionData?.truth.winningPercent >= 75 && (parseFloat(questionData?.betting.totalBetsOption1) == 0 || parseFloat(questionData?.betting.totalBetsOption2) == 0))
-                    ) && 
+                    // //questionData?.truth.winningOption !== null && updated to check if winningOption is null
+                    // !questionData?.truth.winningOption && 
+                    // ((questionData?.truth.winningPercent < 75 || questionData?.truth.winningPercent == 0) || 
+                    //     (questionData?.truth.winningPercent >= 75 && (parseFloat(questionData?.betting.totalBetsOption1) == 0 || parseFloat(questionData?.betting.totalBetsOption2) == 0))
+                    // ) && 
+
+                    (
+                        !questionData?.truth.winningOption || // not resolved or tie
+                        (
+                            ( questionData?.truth.winningPercent >= 75) &&
+                            (
+                                parseFloat(questionData?.betting.totalBetsOption1) === 0 ||
+                                parseFloat(questionData?.betting.totalBetsOption2) === 0
+                            )
+                        )
+                    ) &&
                     !bettorData.claimed && 
                 (
                     <button

@@ -21,7 +21,7 @@ use truth_network::accounts::Question;
 
 pub const HOUSE_WALLET: &str = "CQaZgx5jqQrz7c8shCG3vJLiiPGPrawSGhvkgXtGyxL";
 
-declare_id!("Dm3SXYSbQJJjiFR346vLh41wdPnXSJcq4pMsheuWnfU4");
+declare_id!("i9ZJXnbDJBSDqZeNbpWm13UQ1YtAMEnzzbT1GuD28Er");
 
 // Used for adding on-chain event logs
 #[event]
@@ -305,7 +305,7 @@ pub mod betting_contract {
         msg!("winning option: {}", winner);
         msg!("winning percent: {}", winning_percentage);
     
-        require!(winner == 1 || winner == 2, BettingError::InvalidWinner);
+        require!(winner == 0 || winner == 1 || winner == 2, BettingError::InvalidWinner);
     
         // Step 4: Update betting question result
         betting_question.winner = winner;
@@ -314,14 +314,30 @@ pub mod betting_contract {
     
         msg!("Winner Fetched & Stored: Option {} ({}%)", winner, winning_percentage);
     
-        // Step 5: Compute Winning Odds
-        let winning_odds = if winner == 1 {
-            betting_question.option1_odds
-        } else {
-            betting_question.option2_odds
-        };
+        // // Step 5: Compute Winning Odds
+        // let winning_odds = if winner == 1 {
+        //     betting_question.option1_odds
+        // } else {
+        //     betting_question.option2_odds
+        // };
     
-        msg!("Winning Option: {}", if winner == 1 { "Option 1" } else { "Option 2" });
+        // msg!("Winning Option: {}", if winner == 1 { "Option 1" } else { "Option 2" });
+
+        // Step 5: Compute Winning Odds
+        let winning_odds = match winner {
+            1 => betting_question.option1_odds,
+            2 => betting_question.option2_odds,
+            _ => 0.97, // Tie, no winner — use default or neutral odds
+        };
+
+        msg!(
+            "Winning Option: {}",
+            match winner {
+                1 => "Option 1",
+                2 => "Option 2",
+                _ => "Tie",
+            }
+        );
         msg!("Winning Odds: {}", winning_odds);
 
 
@@ -414,7 +430,7 @@ pub mod betting_contract {
             let winning_option = truth_network_question.winning_option;
             let winning_percentage = truth_network_question.winning_percent;
 
-            require!(winning_option == 1 || winning_option == 2, BettingError::InvalidWinner);
+            require!(winning_option == 0 || winning_option == 1 || winning_option == 2, BettingError::InvalidWinner);
             
             msg!(
                 "Winning option: {}, Winning percentage: {}%",
@@ -709,10 +725,6 @@ pub mod betting_contract {
 
             // Reveal phase should have ended
             require!(now >= truth_question.reveal_end_time, BettingError::RevealNotEnded);
-
-
-            // Rent must have expired on Truth Network
-            require!(now >= truth_question.rent_expiration, BettingError::TruthRentNotExpired);
 
             // Truth vault must only have rent remaining
             // allow a buffer of 1000 lamports to ensure lamports rounding
@@ -1169,7 +1181,7 @@ security_txt! {
     // Optional Fields
     preferred_languages: "en",
     source_code: "https://github.com/Vermont-Secure-Computing/bitbet",
-    source_revision: "Dm3SXYSbQJJjiFR346vLh41wdPnXSJcq4pMsheuWnfU4",
+    source_revision: "i9ZJXnbDJBSDqZeNbpWm13UQ1YtAMEnzzbT1GuD28Er",
     source_release: "",
     encryption: "",
     auditors: "vtscc.org",
