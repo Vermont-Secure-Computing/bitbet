@@ -1079,16 +1079,12 @@ const QuestionDetails = () => {
                 {bettorData &&
                     publicKey &&
                     questionData?.truth.finalized && 
-                    // //questionData?.truth.winningOption !== null && updated to check if winningOption is null
-                    // !questionData?.truth.winningOption && 
-                    // ((questionData?.truth.winningPercent < 75 || questionData?.truth.winningPercent == 0) || 
-                    //     (questionData?.truth.winningPercent >= 75 && (parseFloat(questionData?.betting.totalBetsOption1) == 0 || parseFloat(questionData?.betting.totalBetsOption2) == 0))
-                    // ) && 
-
                     (
-                        !questionData?.truth.winningOption || // not resolved or tie
+                        questionData?.truth.winningOption === null ||
+                        questionData?.truth.winningOption === 0 ||
+                        questionData?.truth.winningPercent < 75 ||
                         (
-                            ( questionData?.truth.winningPercent >= 75) &&
+                            questionData?.truth.winningPercent >= 75 &&
                             (
                                 parseFloat(questionData?.betting.totalBetsOption1) === 0 ||
                                 parseFloat(questionData?.betting.totalBetsOption2) === 0
@@ -1143,9 +1139,15 @@ const QuestionDetails = () => {
                         <p className="text-lg font-semibold text-gray-300">Result from truth.it network</p>   
                         {questionData.truth.winningPercent > 0 ? (
                             <>
-                                <p className="text-gray-400 mt-1">
-                                    <strong>Winner:</strong> {questionData.truth.winningOption === true ? questionData.betting.option1 : questionData.betting.option2}
-                                </p>
+                                {questionData.truth.winningPercent < 75 ?
+                                    <p className="text-gray-400 mt-1">
+                                        <strong>No Winner</strong>
+                                    </p>
+                                    :
+                                    <p className="text-gray-400 mt-1">
+                                        <strong>Winner:</strong> {questionData.truth.winningOption === true ? questionData.betting.option1 : questionData.betting.option2}
+                                    </p>
+                                }
                                 <p className="text-gray-400 mt-1">
                                     <strong>Winning Percentage:</strong> {questionData.truth.winningPercent.toFixed(2)}%
                                 </p>
