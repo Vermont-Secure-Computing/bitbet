@@ -4,14 +4,14 @@
 resolution = true
 skip-lint = false
 
-[programs.devnet]
-betting_contract = "i9ZJXnbDJBSDqZeNbpWm13UQ1YtAMEnzzbT1GuD28Er"
+[programs.mainnet]
+betting_contract = "B8XxuJynFpSVkuYumB6mXFxHEkDvdddavCudCHH7NJWM"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "https://api.devnet.solana.com"
+cluster = "https://api.mainnet-beta.solana.com"
 wallet = "~/.config/solana/bitbet-keypair.json"
 
 [scripts]

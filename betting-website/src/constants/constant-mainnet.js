@@ -1,8 +1,8 @@
 import { PublicKey } from "@solana/web3.js";
 
 // Program IDs
-export const BETTING_CONTRACT_PROGRAM_ID = new PublicKey("Dm3SXYSbQJJjiFR346vLh41wdPnXSJcq4pMsheuWnfU4");
-export const TRUTH_NETWORK_PROGRAM_ID = new PublicKey("4sC1fceX7osnaP8JkY4AfgK5tSFSfS44rXMhX361WEPF");
+export const BETTING_CONTRACT_PROGRAM_ID = new PublicKey("B8XxuJynFpSVkuYumB6mXFxHEkDvdddavCudCHH7NJWM");
+export const TRUTH_NETWORK_PROGRAM_ID = new PublicKey("FFL71XjBkjq5gce7EtpB7Wa5p8qnRNueLKSzM4tkEMoc");
 
 export const FALLBACK_RPC_URLS = [
     localStorage.getItem("customRpcUrl") || "https://solana-rpc.publicnode.com",

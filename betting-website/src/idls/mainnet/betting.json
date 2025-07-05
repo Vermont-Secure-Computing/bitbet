@@ -1,5 +1,5 @@
 {
-  "address": "Dm3SXYSbQJJjiFR346vLh41wdPnXSJcq4pMsheuWnfU4",
+  "address": "B8XxuJynFpSVkuYumB6mXFxHEkDvdddavCudCHH7NJWM",
   "metadata": {
     "name": "betting_contract",
     "version": "0.1.0",
@@ -209,7 +209,7 @@
         },
         {
           "name": "betting_contract",
-          "address": "Dm3SXYSbQJJjiFR346vLh41wdPnXSJcq4pMsheuWnfU4"
+          "address": "B8XxuJynFpSVkuYumB6mXFxHEkDvdddavCudCHH7NJWM"
         },
         {
           "name": "vault",
@@ -342,7 +342,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "4sC1fceX7osnaP8JkY4AfgK5tSFSfS44rXMhX361WEPF"
+          "address": "FFL71XjBkjq5gce7EtpB7Wa5p8qnRNueLKSzM4tkEMoc"
         },
         {
           "name": "system_program",
@@ -374,7 +374,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "4sC1fceX7osnaP8JkY4AfgK5tSFSfS44rXMhX361WEPF"
+          "address": "FFL71XjBkjq5gce7EtpB7Wa5p8qnRNueLKSzM4tkEMoc"
         },
         {
           "name": "house_wallet",
@@ -506,7 +506,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "4sC1fceX7osnaP8JkY4AfgK5tSFSfS44rXMhX361WEPF"
+          "address": "FFL71XjBkjq5gce7EtpB7Wa5p8qnRNueLKSzM4tkEMoc"
         },
         {
           "name": "system_program",
@@ -1128,15 +1128,15 @@
             "type": "string"
           },
           {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
             "name": "commit_end_time",
             "type": "i64"
           },
           {
             "name": "reveal_end_time",
-            "type": "i64"
-          },
-          {
-            "name": "rent_expiration",
             "type": "i64"
           },
           {
@@ -1153,6 +1153,10 @@
           },
           {
             "name": "committed_voters",
+            "type": "u64"
+          },
+          {
+            "name": "revealed_voters_count",
             "type": "u64"
           },
           {
@@ -1209,6 +1213,10 @@
           },
           {
             "name": "reward_drained",
+            "type": "bool"
+          },
+          {
+            "name": "action_in_progress",
             "type": "bool"
           },
           {
