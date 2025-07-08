@@ -4,12 +4,15 @@
  * @param {*} param0 
  * @returns 
  */
+import { getTimeRemaining } from './getRemainingTime';
+
 export function getQuestionStatus({ closeDate, revealEndTime, finalized, truthNetworkWinner, winningPercentage, bettorData, bettingData }) {
     const now = Date.now() / 1000;
   
     if (now < closeDate.getTime() / 1000) {
+    
         return {
-            label: "Open for betting",
+            label: getTimeRemaining(Math.floor(closeDate.getTime() / 1000)),
             className: "text-green-400",
         };
     }

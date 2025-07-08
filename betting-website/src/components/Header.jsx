@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { FaBars, FaTimes } from "react-icons/fa";
+import { FaBars, FaTimes, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { getConstants } from "../constants";
+import VersionDropdown from "./VersionDropdown";
 
 
 const Header = () => {
@@ -18,9 +19,10 @@ const Header = () => {
                     {/* Logo + Label */}
                     <div className="flex-1 min-w-[220px]">
                         <Link to="/" className="text-xl md:text-2xl font-bold text-white hover:underline block">
-                            SolBetX - {constants.NETWORK_NAME} - v0.9
+
+                            SolBetX - {constants.NETWORK_NAME} {constants.VERSION_NAME}
                         </Link>
-                        <p className="text-sm text-gray-300">Open Source No-Token Smart contract prediction platform resolved by Truth.it network</p>
+                        <p className="text-sm text-gray-300">Community Prediction Market</p>
                         
                     </div>
 
@@ -41,7 +43,7 @@ const Header = () => {
                         <Link to="/instructions" className="hover:underline text-gray-300">
                             Instructions
                         </Link>
-                        
+
                         <a
                             href={constants.SWITCH_LINK_URL}
                             target="_blank"
@@ -54,6 +56,9 @@ const Header = () => {
                         <div className="max-w-[140px] sm:max-w-[180px]">
                             <WalletMultiButton className="truncate w-full !text-sm !px-2" />
                         </div>
+
+                        {/* Version Dropdown */}
+                        {/* <VersionDropdown /> */}
 
                     </nav>
 
@@ -100,6 +105,22 @@ const Header = () => {
                         <div className="flex justify-center">
                             <WalletMultiButton />
                         </div>
+                        {/* <div>
+                            <p className="text-white text-sm mb-1">Select Version:</p>
+                            {constants.SOLBETX_VERSIONS.map((v) => (
+                                <a
+                                    key={v.name}
+                                    href={v.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block text-sm text-gray-200 hover:text-yellow-400"
+                                >
+                                    {v.name}
+                                    {constants.VERSION_NAME === v.name && <FaCheckSquare />}
+                                </a>
+                            ))}
+                        </div> */}
+                        
                     </div>
                 )}
             </header>

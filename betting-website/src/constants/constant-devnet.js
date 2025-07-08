@@ -18,6 +18,12 @@ export const RPC_HELP_LINKS = [
     "https://quicknode.com/",
 ];
 
+export const SOLBETX_VERSIONS = [
+    { label: "Latest - MainNet", url: "https://solbetx.com" },
+    { label: "Coucal - MainNet", url: "https://coucal.solbetx.com" },
+    { label: "Malkoha - MainNet", url: "https://malkoha.solbetx.com" },
+];
+
 // Header title
 export const NETWORK_NAME = "DevNet"
 

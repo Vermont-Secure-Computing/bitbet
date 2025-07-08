@@ -12,6 +12,7 @@ import { FiLogIn } from "react-icons/fi";
 import BetChart from "./BetChart";
 import { getConstants } from "../constants";
 import { getIdls } from "../idls";
+import { getTimeRemaining } from "../utils/getRemainingTime";
 
 import { getQuestionStatus } from "../utils/eventStatus";
 
@@ -801,7 +802,7 @@ const QuestionDetails = () => {
     const option2Percentage = 100 - option1Percentage;
 
     return (
-        <div className="flex flex-col min-h-screen justify-center items-center bg-gray-900 text-white">  
+        <div className="flex flex-col min-h-screen justify-center pb-4 items-center bg-gray-900 text-white">  
             <Link to="/">Back to List</Link>      
 
             <div className="w-full max-w-2xl mx-auto p-6 border border-gray-600 rounded-lg shadow-lg bg-gray-800">
@@ -819,8 +820,6 @@ const QuestionDetails = () => {
                 <h2 className="text-2xl font-bold text-gray-200">{questionData?.betting.title}</h2>
                 {sharingComponent()}
                 
-
-
                 <p className="text-gray-400 mt-2">
                     <strong>Status:</strong>{" "}
                     <span className={status?.className}>{status?.label}</span>
@@ -846,7 +845,7 @@ const QuestionDetails = () => {
                     );
                 })()}
 
-                <p className="text-gray-300 mt-1"><strong>Options:</strong> {questionData?.betting.option1} vs {questionData?.betting.option2}</p>
+                {/* <p className="text-sm text-gray-300 mt-1"><strong>Options:</strong> {questionData?.betting.option1} vs {questionData?.betting.option2}</p> */}
 
                 {bettorData && (
                     <div className="mt-6 bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-md">
@@ -975,6 +974,23 @@ const QuestionDetails = () => {
 
                     </div>
                 )}
+
+                {/* Resolution Dates */}
+                <div className="mt-6 bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-md">
+                    <h3 className="text-lg font-semibold text-gray-300">Truth.it Resolution date</h3>
+                    <p className="text-gray-400 text-sm">
+                        Commit End Time:{" "}
+                        <span className="text-white" title={new Date(Number(questionData?.truth.commitEndTime) * 1000).toLocaleString()}>
+                            {new Date(Number(questionData?.truth.commitEndTime) * 1000).toLocaleDateString()} {new Date(Number(questionData?.truth.commitEndTime) * 1000).toLocaleTimeString()}
+                        </span>
+                    </p>
+                    <p className="text-gray-400 text-sm">
+                        Reveal End Tme:{" "}
+                        <span className="text-white" title={new Date(Number(questionData?.truth.revealEndTime) * 1000).toLocaleString()}>
+                            {new Date(Number(questionData?.truth.revealEndTime) * 1000).toLocaleDateString()} {new Date(Number(questionData?.truth.revealEndTime) * 1000).toLocaleTimeString()}
+                        </span>
+                    </p>
+                </div>
 
 
                 {/* Betting Pool & Commissions */}
