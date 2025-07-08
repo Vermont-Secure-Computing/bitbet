@@ -176,7 +176,7 @@ const CreateQuestion = ({setActiveTab}) => {
             // const commitEndTimeTimestamp = new BN(bettingTimestamp + 3 * 60); // +3 minutes for testing purposes
             // const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60); // +6 minutes for testing purposes
 
-            const commitEndTimeTimestamp = new BN(Math.floor(new Date(commitEndTime).getTime() / 1000));
+            const commitEndTimeTimestamp = new BN(Math.floor(new Date().getTime() / 1000));
             const revealEndTimeTimestamp = new BN(Math.floor(new Date(revealEndTime).getTime() / 1000));
 
 
