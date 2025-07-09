@@ -167,7 +167,6 @@ const FetchQuestion = () => {
 
                 const filteredQuestions = questionsWithDetails.filter((q) => {
                     if (!q) return false;
-                    if (q.id === "Cx7izX3LXxJCGYAfsNEYwj6h5uFGvcFnT6cu1X579apa") return false;
                     if (filter === "active") return q.closeDate > now;
                     if (filter === "closed") return q.closeDate <= now;
                     return true; // for "all"
@@ -273,7 +272,6 @@ const FetchQuestion = () => {
         
                 const filteredQuestions = questionsWithDetails.filter((q) => {
                     if (!q) return false;
-                    if (q.id === "Cx7izX3LXxJCGYAfsNEYwj6h5uFGvcFnT6cu1X579apa") return false;
                     if (filter === "active") return q.closeDate > now;
                     if (filter === "closed") return q.closeDate <= now;
                     return true;
