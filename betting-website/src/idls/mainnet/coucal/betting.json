@@ -1,0 +1,1246 @@
+{
+  "address": "Dm3SXYSbQJJjiFR346vLh41wdPnXSJcq4pMsheuWnfU4",
+  "metadata": {
+    "name": "betting_contract",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "check_betting_question",
+      "discriminator": [
+        87,
+        216,
+        102,
+        228,
+        54,
+        166,
+        225,
+        74
+      ],
+      "accounts": [
+        {
+          "name": "betting_question",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claim_creator_commission",
+      "discriminator": [
+        183,
+        154,
+        139,
+        216,
+        192,
+        255,
+        106,
+        136
+      ],
+      "accounts": [
+        {
+          "name": "betting_question",
+          "writable": true
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  101,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "betting_question"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claim_winnings",
+      "discriminator": [
+        161,
+        215,
+        24,
+        59,
+        14,
+        236,
+        242,
+        221
+      ],
+      "accounts": [
+        {
+          "name": "betting_question",
+          "writable": true
+        },
+        {
+          "name": "bettor_account",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "truth_network_question",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  101,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "betting_question"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_betting_question",
+      "docs": [
+        "Create Betting Question (References the Truth-Network Question)"
+      ],
+      "discriminator": [
+        197,
+        226,
+        107,
+        196,
+        36,
+        160,
+        151,
+        113
+      ],
+      "accounts": [
+        {
+          "name": "betting_question",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  101,
+                  116,
+                  116,
+                  105,
+                  110,
+                  103,
+                  95,
+                  113,
+                  117,
+                  101,
+                  115,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "betting_contract"
+              },
+              {
+                "kind": "account",
+                "path": "question_pda"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "question_pda",
+          "writable": true
+        },
+        {
+          "name": "betting_contract",
+          "address": "Dm3SXYSbQJJjiFR346vLh41wdPnXSJcq4pMsheuWnfU4"
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  101,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "betting_question"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "close_date",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "delete_bettor_account",
+      "discriminator": [
+        52,
+        186,
+        54,
+        226,
+        98,
+        236,
+        195,
+        175
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "bettor_account",
+          "writable": true
+        },
+        {
+          "name": "truth_question"
+        },
+        {
+          "name": "betting_question"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "delete_event",
+      "discriminator": [
+        103,
+        111,
+        95,
+        106,
+        232,
+        24,
+        190,
+        84
+      ],
+      "accounts": [
+        {
+          "name": "betting_question",
+          "writable": true
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "truth_question",
+          "writable": true
+        },
+        {
+          "name": "betting_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  101,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "betting_question"
+              }
+            ]
+          }
+        },
+        {
+          "name": "truth_vault",
+          "writable": true
+        },
+        {
+          "name": "truth_network_program",
+          "address": "4sC1fceX7osnaP8JkY4AfgK5tSFSfS44rXMhX361WEPF"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "fetch_and_store_winner",
+      "discriminator": [
+        95,
+        179,
+        39,
+        9,
+        120,
+        215,
+        130,
+        21
+      ],
+      "accounts": [
+        {
+          "name": "betting_question",
+          "writable": true
+        },
+        {
+          "name": "truth_network_question",
+          "writable": true
+        },
+        {
+          "name": "truth_network_program",
+          "address": "4sC1fceX7osnaP8JkY4AfgK5tSFSfS44rXMhX361WEPF"
+        },
+        {
+          "name": "house_wallet",
+          "writable": true,
+          "address": "CQaZgx5jqQrz7c8shCG3vJLiiPGPrawSGhvkgXtGyxL"
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  101,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "betting_question"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "question_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "place_bet",
+      "docs": [
+        "Function to place a bet on a question"
+      ],
+      "discriminator": [
+        222,
+        62,
+        67,
+        220,
+        63,
+        166,
+        126,
+        33
+      ],
+      "accounts": [
+        {
+          "name": "betting_question",
+          "writable": true
+        },
+        {
+          "name": "bettor_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  101,
+                  116,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "betting_question"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  101,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "betting_question"
+              }
+            ]
+          }
+        },
+        {
+          "name": "truth_network_question",
+          "writable": true
+        },
+        {
+          "name": "bet_program"
+        },
+        {
+          "name": "truth_network_program",
+          "address": "4sC1fceX7osnaP8JkY4AfgK5tSFSfS44rXMhX361WEPF"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "truth_network_vault",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "is_option_1",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "set_claim_tx_id",
+      "discriminator": [
+        36,
+        11,
+        252,
+        3,
+        48,
+        43,
+        238,
+        170
+      ],
+      "accounts": [
+        {
+          "name": "bettor_account",
+          "writable": true
+        },
+        {
+          "name": "bettor_address",
+          "signer": true,
+          "relations": [
+            "bettor_account"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "tx_sig",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "BettingQuestion",
+      "discriminator": [
+        100,
+        65,
+        49,
+        159,
+        0,
+        227,
+        43,
+        98
+      ]
+    },
+    {
+      "name": "BettorAccount",
+      "discriminator": [
+        122,
+        110,
+        158,
+        151,
+        236,
+        225,
+        6,
+        38
+      ]
+    },
+    {
+      "name": "Question",
+      "discriminator": [
+        111,
+        22,
+        150,
+        220,
+        181,
+        122,
+        118,
+        127
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "BetPlaced",
+      "discriminator": [
+        88,
+        88,
+        145,
+        226,
+        126,
+        206,
+        32,
+        0
+      ]
+    },
+    {
+      "name": "BettorRecordDeleted",
+      "discriminator": [
+        82,
+        207,
+        184,
+        141,
+        80,
+        254,
+        151,
+        157
+      ]
+    },
+    {
+      "name": "CreatorCommissionClaimed",
+      "discriminator": [
+        62,
+        232,
+        108,
+        8,
+        248,
+        215,
+        65,
+        109
+      ]
+    },
+    {
+      "name": "EventCreated",
+      "discriminator": [
+        59,
+        186,
+        199,
+        175,
+        242,
+        25,
+        238,
+        94
+      ]
+    },
+    {
+      "name": "EventDeleted",
+      "discriminator": [
+        140,
+        28,
+        249,
+        192,
+        46,
+        170,
+        15,
+        241
+      ]
+    },
+    {
+      "name": "WinningsClaimed",
+      "discriminator": [
+        187,
+        184,
+        29,
+        196,
+        54,
+        117,
+        70,
+        150
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "BettingActive",
+      "msg": "Betting is still active."
+    },
+    {
+      "code": 6001,
+      "name": "BettingClosed",
+      "msg": "Betting is now closed."
+    },
+    {
+      "code": 6002,
+      "name": "InvalidWinner",
+      "msg": "Invalid winning option."
+    },
+    {
+      "code": 6003,
+      "name": "WinnerNotFinalized",
+      "msg": "Truth Network question not finalize."
+    },
+    {
+      "code": 6004,
+      "name": "AlreadyClaimed",
+      "msg": "Winnings already claimed."
+    },
+    {
+      "code": 6005,
+      "name": "UserDidNotWin",
+      "msg": "User did not win."
+    },
+    {
+      "code": 6006,
+      "name": "InsufficientVaultBalance",
+      "msg": "Insufficient vault balance."
+    },
+    {
+      "code": 6007,
+      "name": "NoWinningsAvailable",
+      "msg": "No winnings available.."
+    },
+    {
+      "code": 6008,
+      "name": "UnauthorizedBettor",
+      "msg": "User is not authorized to claim winnings."
+    },
+    {
+      "code": 6009,
+      "name": "InvalidBettingQuestion",
+      "msg": "Betting question mismatch."
+    },
+    {
+      "code": 6010,
+      "name": "NoCommissionAvailable",
+      "msg": "No commission available to claim."
+    },
+    {
+      "code": 6011,
+      "name": "UnauthorizedCreator",
+      "msg": "Unathorized question creator."
+    },
+    {
+      "code": 6012,
+      "name": "CommissionAlreadyClaimed",
+      "msg": "Commission already claimed."
+    },
+    {
+      "code": 6013,
+      "name": "InvalidCloseDate",
+      "msg": "Invalid close date. The close date must be in the future."
+    },
+    {
+      "code": 6014,
+      "name": "InvalidTitleLength",
+      "msg": "Invalid title length. Title must be between 10 and 150 characters."
+    },
+    {
+      "code": 6015,
+      "name": "MinimumBetNotMet",
+      "msg": "Minimum bet is 0.1 SOL."
+    },
+    {
+      "code": 6016,
+      "name": "DeleteUnauthorizedBettor",
+      "msg": "Only the original bettor can delete this record."
+    },
+    {
+      "code": 6017,
+      "name": "NotReadyToDelete",
+      "msg": "You haven't claimed, refunded, or lost the bet."
+    },
+    {
+      "code": 6018,
+      "name": "BettingNotYetFinalized",
+      "msg": "The event is not finalized yet."
+    },
+    {
+      "code": 6019,
+      "name": "RevealNotExpired",
+      "msg": "Reveal end time hasn't expired."
+    },
+    {
+      "code": 6020,
+      "name": "VaultNotEmpty",
+      "msg": "Vault is not empty."
+    },
+    {
+      "code": 6021,
+      "name": "TruthVaultNotEmpty",
+      "msg": "Truth Network vault still holds balance."
+    },
+    {
+      "code": 6022,
+      "name": "QuestionAccountNotEmpty",
+      "msg": "Question account still holds lamports."
+    },
+    {
+      "code": 6023,
+      "name": "RentNotExpired",
+      "msg": "Truth-network rent period has not expired yet."
+    },
+    {
+      "code": 6024,
+      "name": "VaultEmptyAlready",
+      "msg": "Vault has already been emptied."
+    },
+    {
+      "code": 6025,
+      "name": "Unauthorized",
+      "msg": "Unauthorized: Only the creator can delete this event."
+    },
+    {
+      "code": 6026,
+      "name": "TruthRentNotExpired",
+      "msg": "Truth Network rent has not expired yet."
+    },
+    {
+      "code": 6027,
+      "name": "RevealNotEnded",
+      "msg": "Reveal end time hasn't expired."
+    },
+    {
+      "code": 6028,
+      "name": "RemainingRewardExists",
+      "msg": "Truth Network vault still contains rewards."
+    },
+    {
+      "code": 6029,
+      "name": "RemainingBettingBalance",
+      "msg": "Betting vault still contains rewards."
+    },
+    {
+      "code": 6030,
+      "name": "ActionInProgress",
+      "msg": "Function already being processed. Try again."
+    }
+  ],
+  "types": [
+    {
+      "name": "BetPlaced",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bettor",
+            "type": "pubkey"
+          },
+          {
+            "name": "question",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "option",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BettingQuestion",
+      "docs": [
+        "Betting Question Struct (Linked to Truth-Network Question)"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "pubkey"
+          },
+          {
+            "name": "question_pda",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "name": "option1",
+            "type": "string"
+          },
+          {
+            "name": "option2",
+            "type": "string"
+          },
+          {
+            "name": "option1_odds",
+            "type": "f64"
+          },
+          {
+            "name": "option2_odds",
+            "type": "f64"
+          },
+          {
+            "name": "total_bets_option1",
+            "type": "u64"
+          },
+          {
+            "name": "total_bets_option2",
+            "type": "u64"
+          },
+          {
+            "name": "total_bets_before_commission",
+            "type": "u64"
+          },
+          {
+            "name": "total_pool",
+            "type": "u64"
+          },
+          {
+            "name": "total_creator_commission",
+            "type": "u64"
+          },
+          {
+            "name": "total_house_commision",
+            "type": "u64"
+          },
+          {
+            "name": "close_date",
+            "type": "i64"
+          },
+          {
+            "name": "reward_date",
+            "type": "i64"
+          },
+          {
+            "name": "status",
+            "type": "string"
+          },
+          {
+            "name": "result",
+            "type": {
+              "option": "string"
+            }
+          },
+          {
+            "name": "winner",
+            "type": "u8"
+          },
+          {
+            "name": "winning_percentage",
+            "type": "f64"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator_commission_claimed",
+            "type": "bool"
+          },
+          {
+            "name": "house_commission_claimed",
+            "type": "bool"
+          },
+          {
+            "name": "action_in_progress",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BettorAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bettor_address",
+            "type": "pubkey"
+          },
+          {
+            "name": "question_pda",
+            "type": "pubkey"
+          },
+          {
+            "name": "chosen_option",
+            "type": "bool"
+          },
+          {
+            "name": "bet_amount",
+            "type": "u64"
+          },
+          {
+            "name": "won",
+            "type": "bool"
+          },
+          {
+            "name": "winnings",
+            "type": "u64"
+          },
+          {
+            "name": "claimed",
+            "type": "bool"
+          },
+          {
+            "name": "claim_tx_id",
+            "type": {
+              "array": [
+                "u8",
+                88
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "BettorRecordDeleted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bettor",
+            "type": "pubkey"
+          },
+          {
+            "name": "betting_question",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreatorCommissionClaimed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "betting_question",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EventCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "betting_question",
+            "type": "pubkey"
+          },
+          {
+            "name": "close_date",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EventDeleted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "betting_question",
+            "type": "pubkey"
+          },
+          {
+            "name": "refund_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Question",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "u64"
+          },
+          {
+            "name": "asker",
+            "type": "pubkey"
+          },
+          {
+            "name": "question_key",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_address",
+            "type": "pubkey"
+          },
+          {
+            "name": "question_text",
+            "type": "string"
+          },
+          {
+            "name": "option_1",
+            "type": "string"
+          },
+          {
+            "name": "option_2",
+            "type": "string"
+          },
+          {
+            "name": "commit_end_time",
+            "type": "i64"
+          },
+          {
+            "name": "reveal_end_time",
+            "type": "i64"
+          },
+          {
+            "name": "rent_expiration",
+            "type": "i64"
+          },
+          {
+            "name": "votes_option_1",
+            "type": "u64"
+          },
+          {
+            "name": "votes_option_2",
+            "type": "u64"
+          },
+          {
+            "name": "finalized",
+            "type": "bool"
+          },
+          {
+            "name": "committed_voters",
+            "type": "u64"
+          },
+          {
+            "name": "eligible_voters",
+            "type": "u64"
+          },
+          {
+            "name": "winning_option",
+            "type": "u8"
+          },
+          {
+            "name": "winning_percent",
+            "type": "f64"
+          },
+          {
+            "name": "reward_fee_taken",
+            "type": "bool"
+          },
+          {
+            "name": "snapshot_reward",
+            "type": "u64"
+          },
+          {
+            "name": "original_reward",
+            "type": "u64"
+          },
+          {
+            "name": "claimed_remainder_count",
+            "type": "u64"
+          },
+          {
+            "name": "snapshot_total_weight",
+            "type": "u64"
+          },
+          {
+            "name": "total_distributed",
+            "type": "u64"
+          },
+          {
+            "name": "claimed_voters_count",
+            "type": "u64"
+          },
+          {
+            "name": "claimed_weight",
+            "type": "u64"
+          },
+          {
+            "name": "voter_records_count",
+            "type": "u64"
+          },
+          {
+            "name": "voter_records_closed",
+            "type": "u64"
+          },
+          {
+            "name": "reward_drained",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WinningsClaimed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bettor",
+            "type": "pubkey"
+          },
+          {
+            "name": "question",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "won",
+            "type": "bool"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -44,21 +44,21 @@ const Header = () => {
                             Instructions
                         </Link>
 
-                        <a
+                        {/* <a
                             href={constants.SWITCH_LINK_URL}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-white text-sm hover:text-yellow-400 transition"
                         >
                             {constants.SWITCH_LINK_LABEL}
-                        </a>
+                        </a> */}
                         
                         <div className="max-w-[140px] sm:max-w-[180px]">
                             <WalletMultiButton className="truncate w-full !text-sm !px-2" />
                         </div>
 
                         {/* Version Dropdown */}
-                        {/* <VersionDropdown /> */}
+                        <VersionDropdown />
 
                     </nav>
 
@@ -83,7 +83,7 @@ const Header = () => {
                         <Link to="/instructions" className="hover:underline text-gray-300">
                             Instructions
                         </Link>
-                        <div>
+                        {/* <div>
                             <a
                                 href={constants.SWITCH_LINK_URL}
                                 target="_blank"
@@ -92,7 +92,7 @@ const Header = () => {
                             >
                                 {constants.SWITCH_LINK_LABEL}
                             </a>
-                        </div>
+                        </div> */}
                         {publicKey && (
                             <Link
                                 to="/dashboard"
@@ -105,7 +105,7 @@ const Header = () => {
                         <div className="flex justify-center">
                             <WalletMultiButton />
                         </div>
-                        {/* <div>
+                        <div>
                             <p className="text-white text-sm mb-1">Select Version:</p>
                             {constants.SOLBETX_VERSIONS.map((v) => (
                                 <a
@@ -119,7 +119,7 @@ const Header = () => {
                                     {constants.VERSION_NAME === v.name && <FaCheckSquare />}
                                 </a>
                             ))}
-                        </div> */}
+                        </div>
                         
                     </div>
                 )}

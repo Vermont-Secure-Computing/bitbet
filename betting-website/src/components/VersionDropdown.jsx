@@ -7,10 +7,10 @@ const VersionDropdown = () => {
     const [open, setOpen] = useState(false);
     const dropdownRef = useRef(null);
 
-    // Toggle dropdown
+    const currentVersion = (import.meta.env.VITE_VERSION || "").toLowerCase();
+
     const toggleDropdown = () => setOpen(!open);
 
-    // Close dropdown on outside click
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -32,23 +32,28 @@ const VersionDropdown = () => {
             </button>
 
             {open && (
-                <div className="absolute right-0 mt-2 bg-gray-600 border border-gray-400 rounded shadow-lg z-50 w-48 text-left">
-                    {constants.AVAILABLE_VERSIONS.map((version) => (
-                        <a
-                        key={version.name}
-                        href={version.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`block px-4 py-2 text-sm hover:bg-yellow-100 ${
-                            constants.VERSION_NAME === version.name
-                            ? "font-bold text-yellow-500"
-                            : "text-gray-700"
-                        }`}
-                        >
-                            {version.name}
-                            {constants.VERSION_NAME === version.name && <FaCheckSquare />}
-                        </a>
-                    ))}
+                <div className="absolute right-0 mt-2 bg-gray-800 border border-gray-400 rounded shadow-lg z-50 w-56 text-left">
+                    {constants.AVAILABLE_VERSIONS.map((version) => {
+                        const versionLabel = version.label || "";
+                        const versionMatch = version.value?.toLowerCase() === currentVersion;
+
+                        return (
+                            <a
+                                key={versionLabel}
+                                href={version.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`flex justify-between items-center px-4 py-2 text-sm ${
+                                    versionMatch
+                                        ? "font-bold !text-yellow-400"
+                                        : "text-gray-300 hover:text-yellow-200"
+                                }`}
+                            >
+                                <span>{version.label}</span>
+                                {versionMatch && <FaCheckSquare />}
+                            </a>
+                        );
+                    })}
                 </div>
             )}
         </div>
