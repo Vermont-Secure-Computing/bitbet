@@ -1,10 +1,9 @@
 import { PublicKey } from "@solana/web3.js";
 
-// Define version-specific program IDs
+// Program IDs
 export const BETTING_CONTRACT_PROGRAM_ID = new PublicKey("H7bHnh15df8mfnnWC9K861bGh8DLD1rTqmu86NKRTf6e");
 export const TRUTH_NETWORK_PROGRAM_ID = new PublicKey("31wdq6EJgHKRjZotAjc6vkuJ7aRyQPauwmgadPiEm8EY");
 
-// Fallback RPCs
 export const FALLBACK_RPC_URLS = [
     localStorage.getItem("customRpcUrl") || "https://api.devnet.solana.com",
     "https://api.devnet.solana.com",
@@ -14,15 +13,15 @@ export const FALLBACK_RPC_URLS = [
 export const DEFAULT_RPC_URL = FALLBACK_RPC_URLS[0];
 
 export const RPC_HELP_LINKS = [
-  "https://www.helius.xyz/",
-  "https://alchemy.com",
-  "https://quicknode.com/",
+    "https://www.helius.xyz/",
+    "https://alchemy.com",
+    "https://quicknode.com/",
 ];
 
 export const SOLBETX_VERSIONS = [
-  { label: "Latest", value: "latest", url: "https://solbetx.com" },
-  { label: "Coucal", value: "coucal", url: "https://coucal.solbetx.com" },
-  { label: "Malkoha", value: "malkoha", url: "https://malkoha.solbetx.com" },
+    { label: "Latest - MainNet", url: "https://solbetx.com" },
+    { label: "Coucal - MainNet", url: "https://coucal.solbetx.com" },
+    { label: "Malkoha - MainNet", url: "https://malkoha.solbetx.com" },
 ];
 
 // Header title

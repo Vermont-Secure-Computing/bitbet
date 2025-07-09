@@ -1,36 +1,42 @@
-// export async function getIdls() {
-//     if (import.meta.env.VITE_NETWORK === "mainnet") {
-//         return {
-//             bettingIDL: (await import("./mainnet/betting.json")).default,
-//             truthNetworkIDL: (await import("./mainnet/truth_network.json")).default,
-//         };
-//     } else {
-//         return {
-//             bettingIDL: (await import("./devnet/betting.json")).default,
-//             truthNetworkIDL: (await import("./devnet/truth_network.json")).default,
-//         };
-//     }
-// }
-  
+import bettingLatest from "./mainnet/latest/betting.json";
+import truthLatest from "./mainnet/latest/truth_network.json";
 
-// idls/index.js (or getIdls.js)
+import bettingCoucal from "./mainnet/coucal/betting.json";
+import truthCoucal from "./mainnet/coucal/truth_network.json";
 
-import bettingIDLMainnet from "./mainnet/betting.json";
-import truthNetworkIDLMainnet from "./mainnet/truth_network.json";
+import bettingMalkoha from "./mainnet/malkoha/betting.json";
+import truthMalkoha from "./mainnet/malkoha/truth_network.json";
 
-import bettingIDLDevnet from "./devnet/betting.json";
-import truthNetworkIDLDevnet from "./devnet/truth_network.json";
+import bettingDevnet from "./devnet/betting.json";
+import truthDevnet from "./devnet/truth_network.json";
 
 export function getIdls() {
-  if (import.meta.env.VITE_NETWORK === "mainnet") {
-    return {
-      bettingIDL: bettingIDLMainnet,
-      truthNetworkIDL: truthNetworkIDLMainnet,
-    };
-  } else {
-    return {
-      bettingIDL: bettingIDLDevnet,
-      truthNetworkIDL: truthNetworkIDLDevnet,
-    };
-  }
+    const network = import.meta.env.VITE_NETWORK;
+    const version = import.meta.env.VITE_VERSION;
+
+    if (network === "devnet") {
+        return {
+            bettingIDL: bettingDevnet,
+            truthNetworkIDL: truthDevnet,
+        };
+    }
+
+    // Mainnet version selection
+    switch (version) {
+        case "coucal":
+            return {
+                bettingIDL: bettingCoucal,
+                truthNetworkIDL: truthCoucal,
+            };
+        case "malkoha":
+            return {
+                bettingIDL: bettingMalkoha,
+                truthNetworkIDL: truthMalkoha,
+            };
+        default:
+            return {
+                bettingIDL: bettingLatest,
+                truthNetworkIDL: truthLatest,
+            };
+    }
 }
