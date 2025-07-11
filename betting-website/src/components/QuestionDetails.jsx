@@ -15,6 +15,7 @@ import { getIdls } from "../idls";
 import { getTimeRemaining } from "../utils/getRemainingTime";
 
 import { getQuestionStatus } from "../utils/eventStatus";
+import { getTruthEventUrl } from "../utils/getTruthEventUrl";
 
 
 
@@ -141,6 +142,8 @@ const QuestionDetails = () => {
                         winningOption: truthNetworkQuestion.winningOption === 1 ? true : (truthNetworkQuestion.winningOption === 2 ? false : null),
                         winningPercent: truthNetworkQuestion.winningPercent,
                         committedVoters: truthNetworkQuestion.committedVoters.toNumber(),
+                        votesOption1: truthNetworkQuestion.votesOption1.toNumber(),
+                        votesOption2: truthNetworkQuestion.votesOption2.toNumber(),
                         voterRecordsCount: truthNetworkQuestion.voterRecordsCount.toNumber(),
                         voterRecordsClosed: truthNetworkQuestion.voterRecordsClosed.toNumber(),
                         totalDistributed: truthNetworkQuestion.totalDistributed.toNumber(),
@@ -1165,7 +1168,30 @@ const QuestionDetails = () => {
                                     </p>
                                 }
                                 <p className="text-gray-400 mt-1">
-                                    <strong>Winning Percentage:</strong> {questionData.truth.winningPercent.toFixed(2)}%
+                                    <strong>Consensus:</strong> {questionData.truth.winningPercent.toFixed(2)}% 
+                                    {questionData.truth.votesOption1 > questionData.truth.votesOption2 ? 
+                                        ` (${questionData.truth.votesOption1} / ${questionData.truth.votesOption + questionData.truth.votesOption2} votes)`
+                                        :
+                                        ` (${questionData.truth.votesOption2} / ${questionData.truth.votesOption1 + questionData.truth.votesOption2} votes)`
+                                    }
+                                </p>
+
+                                <p className="text-gray-400 mt-1">
+                                    <strong>Vote Breakdown:</strong>{" "}
+                                    True {((questionData.truth.votesOption1 / (questionData.truth.votesOption1 + questionData.truth.votesOption2)) * 100).toFixed(0)}% ·{" "}
+                                    False {((questionData.truth.votesOption2 / (questionData.truth.votesOption1 + questionData.truth.votesOption2)) * 100).toFixed(0)}%
+                                </p>
+
+                                <p className="text-gray-400 mt-1">
+                                    Resolution Source:{" "}
+                                    <a
+                                        href={getTruthEventUrl(questionData?.truth?.questionKey)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-400 hover:underline"
+                                    >
+                                        Truth Network Event
+                                    </a>
                                 </p>
 
                                 <p className="text-gray-400 text-sm mt-2">

@@ -14,15 +14,15 @@ export const FALLBACK_RPC_URLS = [
 export const DEFAULT_RPC_URL = FALLBACK_RPC_URLS[0];
 
 export const RPC_HELP_LINKS = [
-  "https://www.helius.xyz/",
-  "https://alchemy.com",
-  "https://quicknode.com/",
+    "https://www.helius.xyz/",
+    "https://alchemy.com",
+    "https://quicknode.com/",
 ];
 
 export const SOLBETX_VERSIONS = [
-  { label: "Latest", value: "latest", url: "https://solbetx.com" },
-  { label: "Coucal", value: "coucal", url: "https://coucal.solbetx.com" },
-  { label: "Malkoha", value: "malkoha", url: "https://malkoha.solbetx.com" },
+    { label: "Latest", value: "latest", url: "https://solbetx.com" },
+    { label: "Coucal", value: "coucal", url: "https://coucal.solbetx.com" },
+    { label: "Malkoha", value: "malkoha", url: "https://malkoha.solbetx.com" },
 ];
 
 // Header title
