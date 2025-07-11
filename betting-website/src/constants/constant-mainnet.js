@@ -45,7 +45,7 @@ export const SOLBETX_VERSIONS = [
     { label: "Coucal", value: "coucal", url: "https://coucal.solbetx.com" },
     { label: "Malkoha", value: "malkoha", url: "https://malkoha.solbetx.com" },
     {
-      label: "Open in DevNet",
+      label: "DevNet",
       value: "devnet",
       url: "https://devnet.solbetx.com",
     },
