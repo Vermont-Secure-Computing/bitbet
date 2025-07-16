@@ -9,11 +9,13 @@ import { Buffer } from "buffer";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import App from "./App";
 import { clusterApiUrl } from "@solana/web3.js";
+import { getConstants } from "./constants";
 
 window.Buffer = Buffer;
 
 const Root = () => {
-    const endpoint = clusterApiUrl("devnet");
+    const constants = getConstants();
+    const endpoint = constants.DEFAULT_RPC_URL;
     const wallets = useMemo(() => [new PhantomWalletAdapter(), new SolflareWalletAdapter()], []);
 
     return (
