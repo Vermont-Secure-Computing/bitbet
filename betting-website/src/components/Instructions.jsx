@@ -101,6 +101,26 @@ export default function InstructionsPage() {
         {"\n"}Vote Breakdown: True 85% · False 15%
         {"\n"}Resolution Source: https://truth.it.com/event/xxxxx
       </pre>
+      
+      <ul className="list-disc list-inside space-y-2 mb-6">
+        <li>
+          <strong>Winner : </strong>  
+          The option that received the majority of votes and met the threshold (“True” or “False”).
+        </li>
+        <li>
+          <strong>Consensus: </strong>  
+          Percentage of selected voters who agreed on the winning option.
+          Example: 17 voters out of 20 voted "True", giving 85% consensus.
+        </li>
+        <li>
+          <strong>Vote Breakdown: </strong>  
+          Shows how the voters split their votes.
+        </li>
+        <li>
+          <strong>Resolution Source: </strong>  
+          A direct link to the event page on the Truth Network, where you can verify the result.
+        </li>
+      </ul>
       <p className="text-justify mb-6">
           Note: A winner is declared only if the winning percentage is
           <strong> 75% or higher</strong>. Otherwise, the event is considered

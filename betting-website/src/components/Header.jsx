@@ -105,21 +105,9 @@ const Header = () => {
                         <div className="flex justify-center">
                             <WalletMultiButton />
                         </div>
-                        <div>
-                            <p className="text-white text-sm mb-1">Select Version:</p>
-                            {constants.SOLBETX_VERSIONS.map((v) => (
-                                <a
-                                    key={v.name}
-                                    href={v.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="block text-sm text-gray-200 hover:text-yellow-400"
-                                >
-                                    {v.name}
-                                    {constants.VERSION_NAME === v.name && <FaCheckSquare />}
-                                </a>
-                            ))}
-                        </div>
+                        
+                        {/* Version Dropdown */}
+                        <VersionDropdown />
                         
                     </div>
                 )}

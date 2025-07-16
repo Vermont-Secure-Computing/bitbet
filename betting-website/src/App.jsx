@@ -15,7 +15,7 @@ import Footer from "./components/Footer";
 function App() {
 
     return (
-        <Router>
+        <>
             <Header />
             <Routes>
                 {/* Home Page (Tabs for Viewing & Creating Questions) */}
@@ -36,7 +36,7 @@ function App() {
             {/* Toast Notification */}
             <ToastContainer />
             <Footer />
-        </Router>
+        </>
     );
 }
 
