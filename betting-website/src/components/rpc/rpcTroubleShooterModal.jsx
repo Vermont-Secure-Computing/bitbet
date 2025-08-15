@@ -31,12 +31,12 @@ export default function RpcTroubleshooterModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white text-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-6">
-        <h2 className="text-xl font-semibold mb-2">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
+      <div className="bg-white text-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-4 sm:p-6 overflow-y-auto max-h-[90vh]">
+        <h2 className="text-lg sm:text-xl font-semibold mb-2">
           We’re having trouble connecting to Solana
         </h2>
-        <p className="text-sm mb-3">
+        <p className="text-xs sm:text-sm mb-3">
           We tried all available RPC endpoints for <b>{data?.networkName || constants.NETWORK_NAME}</b> but none responded successfully.
         </p>
 
@@ -58,7 +58,7 @@ export default function RpcTroubleshooterModal({
               </div>
             )}
             <div className="text-sm mb-1"><b>Endpoints tried:</b></div>
-            <ul className="text-xs list-disc pl-5 space-y-1 max-h-28 overflow-auto">
+            <ul className="text-xs sm:text-[13px] list-disc pl-5 space-y-1 max-h-28 overflow-auto">
               {(data?.triedUrls || []).map((u, i) => (
                 <li key={i} className="opacity-70 break-all">
                   {u} <span className="ml-2 inline-block px-2 py-0.5 text-[10px] rounded bg-red-100 text-red-700">failed</span>
@@ -70,10 +70,10 @@ export default function RpcTroubleshooterModal({
 
         <div className="rounded-lg border p-3 mb-4 bg-gray-50">
           <div className="text-sm mb-2"><b>Need an RPC provider?</b></div>
-          <ul className="text-sm list-disc pl-5 space-y-1">
+          <ul className="text-xs sm:text-sm list-disc pl-5 space-y-1">
             {providers.map((link, i) => (
               <li key={i}>
-                <a className="text-blue-600 underline" href={link} target="_blank" rel="noreferrer">
+                <a className="text-blue-600 underline break-all" href={link} target="_blank" rel="noreferrer">
                   {link}
                 </a>
               </li>
@@ -81,28 +81,28 @@ export default function RpcTroubleshooterModal({
           </ul>
         </div>
 
-        <div className="flex flex-wrap gap-2 justify-end">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:justify-end">
           <button
             onClick={retry}
-            className="px-4 py-2 rounded !bg-blue-600 text-white hover:!bg-blue-700"
+            className="w-full sm:w-auto px-3 py-2 text-sm rounded !bg-blue-600 text-white hover:!bg-blue-700"
           >
             Retry now
           </button>
           <button
             onClick={onOpenAdvanced}
-            className="px-4 py-2 rounded !bg-indigo-600 text-white hover:!bg-indigo-700"
+            className="w-full sm:w-auto px-3 py-2 text-sm rounded !bg-indigo-600 text-white hover:!bg-indigo-700"
           >
             Open RPC settings
           </button>
           <button
             onClick={dontShowFor24h}
-            className="px-4 py-2 rounded !bg-gray-200 hover:!bg-gray-300"
+            className="w-full sm:w-auto px-3 py-2 text-sm rounded !bg-gray-200 hover:!bg-gray-300"
           >
             Don’t show for 24h
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded !bg-gray-200 hover:!bg-gray-300"
+            className="w-full sm:w-auto px-3 py-2 text-sm rounded !bg-gray-200 hover:!bg-gray-300"
           >
             Close
           </button>

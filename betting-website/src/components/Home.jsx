@@ -20,12 +20,13 @@ function Home() {
             <div className="w-full flex justify-center px-0 sm:px-6 lg:px-8 mt-6">
                 
                 <div className="w-full max-w-[1600px] bg-gray-800 rounded-lg shadow-md p-6">
-                    <p className="text-sm text-gray-300 mb-4">
+                    <p className="text-sm text-gray-300 mb-4 break-all">
                         Program Id: 
                         <a 
                             href={`https://explorer.solana.com/address/${constants.BETTING_CONTRACT_PROGRAM_ID.toBase58()}`}
                             target="_blank"
-                            className="px-2"
+                            rel="noopener noreferrer"
+                            className="px-2 break-all inline-block max-w-full truncate sm:whitespace-normal"
                         > 
                             {constants.BETTING_CONTRACT_PROGRAM_ID.toBase58()}
                         </a>
