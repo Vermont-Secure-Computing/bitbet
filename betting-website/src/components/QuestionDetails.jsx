@@ -32,7 +32,9 @@ const QuestionDetails = () => {
     const navigate = useNavigate();
     const { bettingIDL, truthNetworkIDL } = getIdls();
     const [fetchingQuestionDetails, setFetchingQuestionDetails] = useState(false);
-    const { publicKey, connected, signTransaction, signAllTransactions } = useWallet();
+    //const { publicKey, connected, signTransaction, signAllTransactions } = useWallet();
+    const wallet = useWallet();
+    const { publicKey, connected, signTransaction, signAllTransactions } = wallet;
     //console.log("Wallet status:", publicKey?.toBase58(), connected);
 
     const [txSig, setTxSig] = useState(null);
@@ -84,94 +86,137 @@ const QuestionDetails = () => {
 
     const fetchQuestionDetails = async () => {
         const { RPC_HELP_LINKS } = constants;
-        setFetchingQuestionDetails(true);
-
-        const allRpcUrls = [
-            ...(localStorage.getItem("customRpcUrl") ? [localStorage.getItem("customRpcUrl")] : []),
-            ...constants.FALLBACK_RPC_URLS
-        ];
-
+      
         let success = false;
-
-        for (const rpcUrl of allRpcUrls) {
-            if (rpcUrl == null) continue;
-            console.log("============ trying rpc: ", rpcUrl)
-
+        let lastError = null;
+        const tried = [];
+      
+        const allRpcUrls = [
+          ...(localStorage.getItem("customRpcUrl") ? [localStorage.getItem("customRpcUrl")] : []),
+          ...constants.FALLBACK_RPC_URLS
+        ];
+      
+        setFetchingQuestionDetails(true);
+        try {
+          for (const rpcUrl of allRpcUrls) {
+            if (!rpcUrl) continue;
+            tried.push(rpcUrl);
+            console.log("============ trying rpc: ", rpcUrl);
+      
             try {
-
-                const bettingQuestion = await bettingProgram.account.bettingQuestion.fetch(questionPda);
-                const truthNetworkQuestion = await truthNetworkProgram.account.question.fetch(bettingQuestion.questionPda);
-
-                const totalPool = new BN(bettingQuestion.totalPool);
-                const totalBetsOption1 = new BN(bettingQuestion.totalBetsOption1);
-                const totalBetsOption2 = new BN(bettingQuestion.totalBetsOption2);
-                const option1Odds = bettingQuestion.option1Odds
-                const option2Odds = bettingQuestion.option2Odds
-                const totalHouseCommission = new BN(bettingQuestion.totalHouseCommision);
-                const totalCreatorCommission = new BN(bettingQuestion.totalCreatorCommission);
-                const betClosing = new BN(bettingQuestion.closeDate);
-                const betCreator = bettingQuestion.creator.toString();
-                const truthAsker = truthNetworkQuestion.asker.toString();
-
-                // Save working RPC
-                localStorage.setItem("lastWorkingRpc", rpcUrl); 
-
-                setQuestionData({
-                    betting: {
-                        ...bettingQuestion,
-                        id: bettingQuestion.id.toBase58(),
-                        questionPda: bettingQuestion.questionPda.toBase58(),
-                        totalPool: totalPool.toString(),
-                        totalBetsOption1: totalBetsOption1.toString(),
-                        totalBetsOption2: totalBetsOption2.toString(),
-                        option1Odds: option1Odds,
-                        option2Odds: option2Odds,
-                        totalHouseCommision: totalHouseCommission.toString(),
-                        totalCreatorCommission: totalCreatorCommission.toString(),
-                        vault: bettingQuestion.vault.toBase58(),
-                        closeDate: betClosing.toNumber(),
-                        creator: betCreator
-                    },
-                    truth: {
-                        ...truthNetworkQuestion,
-                        asker: truthAsker,
-                        questionKey: truthNetworkQuestion.questionKey.toBase58(),
-                        vaultAddress: truthNetworkQuestion.vaultAddress.toBase58(),
-                        id: truthNetworkQuestion.id.toString(),
-                        revealEndTime: truthNetworkQuestion.revealEndTime.toNumber(),
-                        winningOption: truthNetworkQuestion.winningOption === 1 ? true : (truthNetworkQuestion.winningOption === 2 ? false : null),
-                        winningPercent: truthNetworkQuestion.winningPercent,
-                        committedVoters: truthNetworkQuestion.committedVoters.toNumber(),
-                        votesOption1: truthNetworkQuestion.votesOption1.toNumber(),
-                        votesOption2: truthNetworkQuestion.votesOption2.toNumber(),
-                        voterRecordsCount: truthNetworkQuestion.voterRecordsCount.toNumber(),
-                        voterRecordsClosed: truthNetworkQuestion.voterRecordsClosed.toNumber(),
-                        totalDistributed: truthNetworkQuestion.totalDistributed.toNumber(),
-                        originalReward: truthNetworkQuestion.originalReward.toNumber(),
-                        snapshotReward: truthNetworkQuestion.snapshotReward.toNumber(),
-                    },
-                });
-                success = true; 
-                break;
-
-            } catch (error) {
-                console.warn(`Error using RPC ${rpcUrl}:`, error.message);
-                continue; // try next RPC
-            } finally {
-                setFetchingQuestionDetails(false);
+              // Build connection/provider/programs for THIS rpcUrl
+              const connection = new web3.Connection(rpcUrl, "confirmed");
+              const provider = new AnchorProvider(connection, wallet, { preflightCommitment: "processed" });
+      
+              // Recreate programs bound to this provider
+              const bettingProg = new Program(bettingIDL, provider);
+              const truthProg = new Program(truthNetworkIDL, provider);
+      
+              // Fetch data
+              const bettingQuestion = await bettingProg.account.bettingQuestion.fetch(questionPda);
+              const truthNetworkQuestion = await truthProg.account.question.fetch(bettingQuestion.questionPda);
+      
+              // Parse numbers
+              const totalPool = new BN(bettingQuestion.totalPool);
+              const totalBetsOption1 = new BN(bettingQuestion.totalBetsOption1);
+              const totalBetsOption2 = new BN(bettingQuestion.totalBetsOption2);
+              const option1Odds = bettingQuestion.option1Odds;
+              const option2Odds = bettingQuestion.option2Odds;
+              const totalHouseCommission = new BN(bettingQuestion.totalHouseCommision);
+              const totalCreatorCommission = new BN(bettingQuestion.totalCreatorCommission);
+              const betClosing = new BN(bettingQuestion.closeDate);
+              const betCreator = bettingQuestion.creator.toString();
+              const truthAsker = truthNetworkQuestion.asker.toString();
+      
+              // Save the working RPC
+              localStorage.setItem("lastWorkingRpc", rpcUrl);
+      
+              setQuestionData({
+                betting: {
+                  ...bettingQuestion,
+                  id: bettingQuestion.id.toBase58(),
+                  questionPda: bettingQuestion.questionPda.toBase58(),
+                  totalPool: totalPool.toString(),
+                  totalBetsOption1: totalBetsOption1.toString(),
+                  totalBetsOption2: totalBetsOption2.toString(),
+                  option1Odds,
+                  option2Odds,
+                  totalHouseCommision: totalHouseCommission.toString(),
+                  totalCreatorCommission: totalCreatorCommission.toString(),
+                  vault: bettingQuestion.vault.toBase58(),
+                  closeDate: betClosing.toNumber(),
+                  creator: betCreator
+                },
+                truth: {
+                  ...truthNetworkQuestion,
+                  asker: truthAsker,
+                  questionKey: truthNetworkQuestion.questionKey.toBase58(),
+                  vaultAddress: truthNetworkQuestion.vaultAddress.toBase58(),
+                  id: truthNetworkQuestion.id.toString(),
+                  revealEndTime: truthNetworkQuestion.revealEndTime.toNumber(),
+                  winningOption:
+                    truthNetworkQuestion.winningOption === 1
+                      ? true
+                      : truthNetworkQuestion.winningOption === 2
+                      ? false
+                      : null,
+                  winningPercent: truthNetworkQuestion.winningPercent,
+                  committedVoters: truthNetworkQuestion.committedVoters.toNumber(),
+                  votesOption1: truthNetworkQuestion.votesOption1.toNumber(),
+                  votesOption2: truthNetworkQuestion.votesOption2.toNumber(),
+                  voterRecordsCount: truthNetworkQuestion.voterRecordsCount.toNumber(),
+                  voterRecordsClosed: truthNetworkQuestion.voterRecordsClosed.toNumber(),
+                  totalDistributed: truthNetworkQuestion.totalDistributed.toNumber(),
+                  originalReward: truthNetworkQuestion.originalReward.toNumber(),
+                  snapshotReward: truthNetworkQuestion.snapshotReward.toNumber()
+                }
+              });
+      
+              success = true;
+              break; // stop trying more RPCs
+      
+            } catch (err) {
+              lastError = err;
+              console.warn(`Error using RPC ${rpcUrl}:`, err?.message || err);
+              // continue to next rpcUrl
             }
+          }
+        } finally {
+          setFetchingQuestionDetails(false);
         }
-
-        // All RPCs failed
-        const network = constants.NETWORK_NAME;
-        const linksList = RPC_HELP_LINKS.map(link => ` ${link}`).join("\n");
-
+      
         if (!success) {
-            alert(
-                `Failed to fetch events on ${network}.\n\nAll available RPCs failed.\n\nYou can set a custom RPC URL in "Network Settings".\nFree RPC providers:\n${linksList}`
+          // Defer so App's event listener is definitely mounted
+          setTimeout(() => {
+            window.dispatchEvent(
+              new CustomEvent("open-rpc-troubleshooter", {
+                detail: {
+                  reason: "fetch-question-failed",
+                  triedUrls: tried,
+                  lastError: lastError?.message || String(lastError || "Unknown error"),
+                  networkName: constants.NETWORK_NAME
+                }
+              })
             );
+          }, 0);
         }
+      
+        // If you want to force-show the modal even on success (for testing), uncomment:
+        // else {
+        //   setTimeout(() => {
+        //     window.dispatchEvent(
+        //       new CustomEvent("open-rpc-troubleshooter", {
+        //         detail: {
+        //           reason: "forced-test",
+        //           triedUrls: tried,
+        //           networkName: constants.NETWORK_NAME
+        //         }
+        //       })
+        //     );
+        //   }, 0);
+        // }
     };
+      
     
 
     const [bettingQuestionPDA, setBettingQuestionPDA] = useState(null);

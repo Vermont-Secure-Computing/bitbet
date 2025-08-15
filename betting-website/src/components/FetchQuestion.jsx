@@ -78,139 +78,140 @@ const FetchQuestion = () => {
         );
     };
 
-    const fetchAllQuestions = async (retried = false) => {
-        //console.log("Fetching all Questions ============> ");
-
+    const fetchAllQuestions = async () => {
+        let success = false;
+        let lastError = null;
+        const tried = [];
+      
         const allRpcUrls = [
             ...(localStorage.getItem("customRpcUrl") ? [localStorage.getItem("customRpcUrl")] : []),
             ...constants.FALLBACK_RPC_URLS
         ];
-
-        for (const rpcUrl of allRpcUrls) {
-
-            if (rpcUrl == null) continue;
-
-            try {
-                setRefreshingList(true);
-
-                const fallbackConnection = new web3.Connection(rpcUrl, "confirmed");
-                const fallbackProvider = new AnchorProvider(fallbackConnection, wallet, { preflightCommitment: "processed" });
-                const programToUse = new Program(bettingIDL, fallbackProvider);
-
-                if (!programToUse.account?.bettingQuestion) {
-                    console.warn("Skipping uninitialized program");
-                    continue;
-                }
-
-                // Check if bettingProgram is initialized
-                if (!programToUse.account?.bettingQuestion) {
-                    console.error("Betting program account not initialized!");
-                    return;
-                }
-
-                // Fetch all betting questions
-                const accounts = await programToUse.account.bettingQuestion.all();
-                //console.log("Fetched Betting Questions:", accounts);
-
-                if (!accounts.length) {
-                    console.warn("No betting questions found!");
-                    setRefreshingList(false);
-                    return;
-                }
-
-                // parse / format betting question details
-                const questionsWithDetails = await Promise.all(
-                    accounts.map(async (bettingQuestion) => {
-                        const totalPool = new BN(bettingQuestion.account.totalPool);
-                        const totalBetsOption1 = new BN(bettingQuestion.account.totalBetsOption1);
-                        const totalBetsOption2 = new BN(bettingQuestion.account.totalBetsOption2);
-                        const option1Odds = bettingQuestion.account.option1Odds
-                        const option2Odds = bettingQuestion.account.option2Odds
-                        const totalHouseCommission = new BN(bettingQuestion.account.totalHouseCommision);
-                        const totalCreatorCommission = new BN(bettingQuestion.account.totalCreatorCommission);
-                        const betClosing = new BN(bettingQuestion.account.closeDate);
-                        const betCreator = bettingQuestion.account.creator.toString();
-                        
+      
+        try {
+            setRefreshingList(true);
+        
+            for (const rpcUrl of allRpcUrls) {
+                if (!rpcUrl) continue;
+                tried.push(rpcUrl);
+        
+                try {
+                    const fallbackConnection = new web3.Connection(rpcUrl, "confirmed");
+                    const fallbackProvider = new AnchorProvider(fallbackConnection, wallet, { preflightCommitment: "processed" });
+                    const programToUse = new Program(bettingIDL, fallbackProvider);
+            
+                    if (!programToUse.account?.bettingQuestion) {
+                        console.warn("Skipping uninitialized program");
+                        continue;
+                    }
+            
+                    const accounts = await programToUse.account.bettingQuestion.all();
+            
+                    if (!accounts.length) {
+                        console.warn("No betting questions found!");
+                        // This is a successful RPC call but empty dataset; decide whether you consider this “success”.
+                        // I’ll treat it as success to avoid triggering the troubleshooter for an empty list.
+                        setAllQuestions([]);
+                        success = true;
+                        break;
+                    }
+            
+                    const questionsWithDetails = await Promise.all(
+                        accounts.map(async (bettingQuestion) => {
                         try {
-                            
-                            setRefreshingList(false)
+                            const totalPool = new BN(bettingQuestion.account.totalPool);
+                            const totalBetsOption1 = new BN(bettingQuestion.account.totalBetsOption1);
+                            const totalBetsOption2 = new BN(bettingQuestion.account.totalBetsOption2);
+                            const option1Odds = bettingQuestion.account.option1Odds;
+                            const option2Odds = bettingQuestion.account.option2Odds;
+                            const totalHouseCommission = new BN(bettingQuestion.account.totalHouseCommision);
+                            const totalCreatorCommission = new BN(bettingQuestion.account.totalCreatorCommission);
+                            const betClosing = new BN(bettingQuestion.account.closeDate);
+                            const betCreator = bettingQuestion.account.creator.toString();
+            
                             return {
-                                ...bettingQuestion.account,
-                                id: bettingQuestion.account.id.toBase58(),
-                                questionPda: bettingQuestion.account.questionPda.toBase58(),
-                                totalPool: totalPool.toString(),
-                                totalBetsOption1: totalBetsOption1.toString(),
-                                totalBetsOption2: totalBetsOption2.toString(),
-                                option1Odds: option1Odds,
-                                option2Odds: option2Odds,
-                                totalHouseCommision: totalHouseCommission.toString(),
-                                totalCreatorCommission: totalCreatorCommission.toString(),
-                                vault: bettingQuestion.account.vault.toBase58(),
-                                closeDate: betClosing.toNumber(),
-                                creator: betCreator
+                            ...bettingQuestion.account,
+                            id: bettingQuestion.account.id.toBase58(),
+                            questionPda: bettingQuestion.account.questionPda.toBase58(),
+                            totalPool: totalPool.toString(),
+                            totalBetsOption1: totalBetsOption1.toString(),
+                            totalBetsOption2: totalBetsOption2.toString(),
+                            option1Odds,
+                            option2Odds,
+                            totalHouseCommision: totalHouseCommission.toString(),
+                            totalCreatorCommission: totalCreatorCommission.toString(),
+                            vault: bettingQuestion.account.vault.toBase58(),
+                            closeDate: betClosing.toNumber(),
+                            creator: betCreator
                             };
-
-                        } catch (error) {
-                            console.error("Error fetching Truth-Network question:", error);
+                        } catch (err) {
+                            console.error("Error formatting question:", err);
                             return null;
+                        }
+                        })
+                    );
+            
+                    const now = Math.floor(Date.now() / 1000);
+                    const filtered = questionsWithDetails.filter(Boolean).filter((q) => {
+                        if (filter === "active") return q.closeDate > now;
+                        if (filter === "closed") return q.closeDate <= now;
+                        return true;
+                    });
+            
+                    const sortByClosingOpenEvent = (a, b) => a.closeDate - b.closeDate;
+                    const sortByClosingClosedEvent = (a, b) => b.closeDate - a.closeDate;
+                    const sortByBets = (a, b) => new BN(b.totalPool).cmp(new BN(a.totalPool));
+            
+                    const openQuestions = filtered.filter(q => q.closeDate > now);
+                    const closedQuestions = filtered.filter(q => q.closeDate <= now);
+            
+                    const sortedOpen = [...openQuestions].sort(sortType === "bets" ? sortByBets : sortByClosingOpenEvent);
+                    const sortedClosed = [...closedQuestions].sort(sortType === "bets" ? sortByBets : sortByClosingClosedEvent);
+            
+                    const sortedQuestions = [...sortedOpen, ...sortedClosed];
+
+                    // Save the working RPC
+                    localStorage.setItem("lastWorkingRpc", rpcUrl);
+                    setAllQuestions(sortedQuestions);
+            
+                    // mark success and stop trying more RPCs
+                    success = true;
+                    break;
+        
+                } catch (err) {
+                    console.warn(`Error using RPC ${rpcUrl}:`, err?.message || err);
+                    lastError = err;
+                    // keep looping to try the next RPC
+                }
+            }
+        } finally {
+            setRefreshingList(false);
+        }
+      
+        // record success state
+        setDataFetched(success);
+      
+        // Show troubleshooter ONLY if all RPCs failed:
+        if (!success) {
+            // Optional: clear the suppression to force-show while testing:
+            // localStorage.removeItem("hideRpcTroubleshooterUntil");
+        
+            // Fire after a microtask to ensure App has mounted its event listener:
+            setTimeout(() => {
+                window.dispatchEvent(
+                    new CustomEvent("open-rpc-troubleshooter", {
+                        detail: {
+                            reason: "fetch-question-failed",
+                            triedUrls: tried,
+                            lastError: lastError?.message || String(lastError || "Unknown error"),
+                            networkName: constants.NETWORK_NAME
                         }
                     })
                 );
-
-                /***
-                 * Sort the questionsWithDetails from active to closed events
-                 * Active - sort open questions by soonest close date
-                 */
-                const now = Math.floor(Date.now() / 1000);
-
-                console.log("Question IDs:", questionsWithDetails.map((q) => q.id));
-
-                const filteredQuestions = questionsWithDetails.filter((q) => {
-                    if (!q) return false;
-                    if (filter === "active") return q.closeDate > now;
-                    if (filter === "closed") return q.closeDate <= now;
-                    return true; // for "all"
-                });
-
-
-                const openQuestions = filteredQuestions
-                    .filter(q => q && q.closeDate > now)
-                const closedQuestions = filteredQuestions
-                    .filter(q => q && q.closeDate <= now)
-
-                // Apply sorting here
-                const sortByClosingOpenEvent = (a, b) => a.closeDate - b.closeDate;
-                const sortByClosingClosedEvent = (a, b) => b.closeDate - a.closeDate;
-                const sortByBets = (a, b) => new BN(b.totalPool).cmp(new BN(a.totalPool));
-
-                const sortedOpen = [...openQuestions].sort(sortType === "bets" ? sortByBets : sortByClosingOpenEvent);
-                const sortedClosed = [...closedQuestions].sort(sortType === "bets" ? sortByBets : sortByClosingClosedEvent);
-
-                const sortedQuestions = [...sortedOpen, ...sortedClosed];
-                setAllQuestions(sortedQuestions);
-                setDataFetched(true);
-                return;
-                
-            } catch (error) {
-                console.warn(`Error using RPC ${rpcUrl}:`, error.message);
-                continue; // try next RPC
-            } finally {
-                setRefreshingList(false);
-            }
+            }, 0);
         }
-
-
-        // All RPCs failed
-        const network = constants.NETWORK_NAME;
-        const linksList = RPC_HELP_LINKS.map(link => ` ${link}`).join("\n");
-
-        if (!dataFetched) {
-            alert(
-                `Failed to fetch events on ${network}.\n\nAll available RPCs failed.\n\nYou can set a custom RPC URL in "Network Settings".\nFree RPC providers:\n${linksList}`
-            );
-        }
-
     };
+      
 
 
     const fetchAllQuestionsWithUserInfo = async (retried = false) => {
