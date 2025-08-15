@@ -25,37 +25,37 @@ export default function RpcHelpModal({ open, onClose }) {
     if (!show) return null;
 
     return (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
-            <div className="bg-white text-gray-600 text-sm rounded-lg p-6 w-96">
-                <h2 className="text-lg font-bold mb-3">{NETWORK_NAME} RPC Node Information</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
+            <div className="bg-white text-gray-600 rounded-2xl shadow-2xl w-full max-w-md p-4 sm:p-6 overflow-y-auto max-h-[90vh]">
+                <h2 className="text-lg sm:text-xl font-bold mb-3">{NETWORK_NAME} RPC Node Information</h2>
 
-                <p className="mb-3">
+                <p className="text-xs sm:text-sm mb-3">
                     SolBetX connects to the Solana blockchain using the default RPC node and a set of fallback RPC nodes for better reliability.
                 </p>
 
-                <p className="mb-3">
+                <p className="text-xs sm:text-sm mb-3">
                     <strong>Default RPC:</strong> <span className="font-mono break-all">{DEFAULT_RPC_URL}</span>
                 </p>
 
-                <p className="mb-3">Fallback RPCs:</p>
-                <ul className="list-disc pl-5 mb-4">
+                <p className="text-xs sm:text-sm mb-3">Fallback RPCs:</p>
+                <ul className="list-disc pl-5 mb-4 text-xs sm:text-sm space-y-1">
                     {FALLBACK_RPC_URLS.map((url, i) => (
                         <li key={i} className="break-all">{url}</li>
                     ))}
                 </ul>
 
-                <p className="mb-3">
+                <p className="text-xs sm:text-sm mb-3">
                     If you experience slow loading, lag, or missing events in the future, you can set your own custom RPC node using the{" "}
-                    <button onClick={openRpcSettings} className="text-blue-500 underline">
+                    <button onClick={openRpcSettings} className="!bg-white text-blue-500 underline">
                       Network Settings
                     </button>{" "}
                     in the footer.
                 </p>
 
-                <p className="mb-3">Need your own RPC provider?</p>
-                <ul className="list-disc pl-5">
+                <p className="text-xs sm:text-sm mb-3">Need your own RPC provider?</p>
+                <ul className="list-disc pl-5 mb-4 text-xs sm:text-sm space-y-1">
                     {RPC_HELP_LINKS.map((link, i) => (
-                        <li key={i}>
+                        <li key={i} className="break-all">
                             <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
                                 {link}
                             </a>
@@ -63,17 +63,17 @@ export default function RpcHelpModal({ open, onClose }) {
                     ))}
                 </ul>
 
-                <div className="flex justify-end gap-3 mt-4">
+                <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:justify-end mt-4">
                     <button
                         onClick={() => {
                             localStorage.setItem("dismissRpcHelp", "true");
                             setShow(false);
                         }}
-                        className="px-4 py-2 !bg-gray-300 rounded"
+                        className="w-full sm:w-auto px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 text-sm"
                     >
                         Do not show again
                     </button>
-                    <button onClick={close} className="px-4 py-2 !bg-blue-500 text-white rounded">
+                    <button onClick={close} className="w-full sm:w-auto px-3 py-2 rounded !bg-blue-600 text-white hover:!bg-blue-700 text-sm">
                       Close
                     </button>
                 </div>
