@@ -7,9 +7,11 @@ export const TRUTH_NETWORK_PROGRAM_ID = new PublicKey("31wdq6EJgHKRjZotAjc6vkuJ7
 // Fallback RPCs
 export const FALLBACK_RPC_URLS = [
     localStorage.getItem("customRpcUrl") || "https://api.devnet.solana.com",
-    "https://api.devnet.solana.com",
-    "https://solana-testnet.drpc.org/"
-];
+    "https://solana-devnet.api.onfinality.io/public",
+    "https://solana-devnet.drpc.org",
+    "https://rpc.ankr.com/solana_devnet",
+    "https://solana-devnet.g.alchemy.com/public",
+  ];
 
 export const DEFAULT_RPC_URL = FALLBACK_RPC_URLS[0];
 
