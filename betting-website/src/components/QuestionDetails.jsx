@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import { Program, AnchorProvider, web3, BN } from "@coral-xyz/anchor";
 import { toast, Bounce } from "react-toastify";
 import { useNavigate } from "react-router-dom";
@@ -365,94 +365,331 @@ const QuestionDetails = () => {
     };
     
 
-    const handleBet = async (isOption1) => {
-        if (!publicKey) return toast.error("Please connect your wallet.");
+    // const handleBet = async (isOption1) => {
+    //     if (!publicKey) return toast.error("Please connect your wallet.");
         
-        const parsedBet = parseFloat(betAmount);
+    //     const parsedBet = parseFloat(betAmount);
 
+    //     if (!parsedBet || isNaN(parsedBet) || parsedBet <= 0) {
+    //         return toast.error("Enter a valid bet amount.", { transition: Bounce });
+    //     }
+
+    //     if (parsedBet < 0.01) {
+    //         return toast.error("Minimum bet is 0.01 SOL.", { transition: Bounce });
+    //     }
+
+
+    //     setLoading(true);
+
+    //     try {
+
+    //         const betAmountLamports = new BN(parseFloat(betAmount) * 1_000_000_000);
+
+    //         if (!bettingProgram) {
+    //             console.error("Betting Program is NOT initialized!");
+    //             return alert("Betting program is not ready. Try reloading the page.");
+    //         }
+
+    //         if (!truthNetworkProgram) {
+    //             console.error("Truth network Program is NOT initialized!");
+    //             return alert("Truth network program is not ready. Try reloading the page.");
+    //         }
+    //         //console.log("bettingQuestion_pda: ", bettingQuestion_PDA.toString())
+    //         const [vaultPDA] = PublicKey.findProgramAddressSync(
+    //             [
+    //                 Buffer.from("bet_vault"),
+    //                 bettingQuestion_PDA.toBuffer()
+    //             ],
+    //             bettingProgram.programId
+    //         );
+
+    //         const [bettorPda] = PublicKey.findProgramAddressSync(
+    //             [
+    //                 Buffer.from("bettor"),
+    //                 publicKey.toBuffer(),
+    //                 bettingQuestion_PDA.toBuffer(),
+    //             ],
+    //             BETTING_CONTRACT_PROGRAM_ID
+    //         );
+
+    //         // Fetching Sysvar Rent account (Required for new accounts)
+    //         const sysvarRent = web3.SYSVAR_RENT_PUBKEY;
+
+    //         const tx = await bettingProgram.methods
+    //             .placeBet(betAmountLamports, isOption1)
+    //             .accounts({
+    //                 bettingQuestion: bettingQuestion_PDA,
+    //                 vault: vaultPDA,
+    //                 user: publicKey,
+    //                 bettorAccount: bettorPda,
+    //                 truthNetworkQuestion: new PublicKey(questionData.truth.questionKey),
+    //                 betProgram: bettingProgram.programId,
+    //                 truthNetworkProgram: truthNetworkProgram.programId,
+    //                 systemProgram: web3.SystemProgram.programId,
+    //                 truthNetworkVault: new PublicKey(questionData.truth.vaultAddress),
+    //                 rent: sysvarRent,
+    //             })
+    //             .rpc();
+
+    //         setTxSig(tx);
+    //         setTxStatus("pending");
+        
+    //         const { value } = await connection.confirmTransaction(tx, "confirmed");
+    //         if (value.err) {
+    //             setTxStatus("failed");
+    //         } else {
+    //             setTxStatus("confirmed");
+    //         }
+
+    //         setBetAmount("");
+            
+    //         await fetchQuestionDetails();
+    //         await fetchBettorData(); 
+    //         await fetchVaultBalance();
+    //         toast.success("Bet placed successfully!", { transition: Bounce });
+    //     } catch (error) {
+    //         console.error("Error placing bet:", error);
+    //         toast.error("Failed to place bet.", { transition: Bounce });
+    //     }
+
+    //     setLoading(false);
+    // };
+
+    // ---------------- helpers ----------------
+
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    const waitForSig = async (connection, sig, timeoutMs = 60_000) => {
+        const start = Date.now();
+        let lastStatus = null;
+
+        while (Date.now() - start < timeoutMs) {
+            const { value } = await connection.getSignatureStatuses([sig], {
+                searchTransactionHistory: true,
+            });
+            console.log("waitForSig value ===========> ", value)
+            const st = value && value[0];
+            console.log("st ========> ", st)
+            if (st) {
+                lastStatus = st;
+                if (st.err) {
+                    const e = new Error("Transaction failed on-chain");
+                    e.status = st;
+                    throw e;
+                }
+                
+                if (
+                    st.confirmations === null ||
+                    st.confirmationStatus === "confirmed" ||
+                    st.confirmationStatus === "finalized"
+                ) {
+                    return st;
+                }
+            }
+            await sleep(1200);
+        }
+
+        const e = new Error("Confirmation timeout");
+        e.status = lastStatus;
+        throw e;
+    };
+
+    const fetchFailureDetails = (connection, sig) =>
+        connection.getTransaction(sig, {
+            maxSupportedTransactionVersion: 0,
+            commitment: "confirmed",
+        });
+
+    const parseAnchorLogHint = (logs = []) => {
+        const anchor = logs.find((l) => l.includes("AnchorError"));
+        if (anchor) return anchor;
+        const generic = logs.find(
+            (l) =>
+            l.includes("Program failed to complete") ||
+            l.includes("custom program error")
+        );
+        return anchor || generic || null;
+    };
+
+    const isTransientRpcError = (err) => {
+        const m = String(err?.message || "").toLowerCase();
+        return (
+            m.includes("blockhash not found") ||
+            m.includes("node is behind") ||
+            m.includes("too many requests") ||
+            m.includes("rate limit") ||
+            m.includes("unavailable") ||
+            m.includes("timeout")
+        );
+    };
+
+    const handleBet = async (isOption1) => {
+        console.log("updated handle bet")
+        if (!publicKey) return toast.error("Please connect your wallet.");
+
+        const parsedBet = parseFloat(betAmount);
         if (!parsedBet || isNaN(parsedBet) || parsedBet <= 0) {
             return toast.error("Enter a valid bet amount.", { transition: Bounce });
         }
-
         if (parsedBet < 0.01) {
             return toast.error("Minimum bet is 0.01 SOL.", { transition: Bounce });
         }
 
-
         setLoading(true);
+        setTxSig(undefined);
+        setTxStatus(undefined);
 
         try {
-
-            const betAmountLamports = new BN(parseFloat(betAmount) * 1_000_000_000);
-
             if (!bettingProgram) {
-                console.error("Betting Program is NOT initialized!");
-                return alert("Betting program is not ready. Try reloading the page.");
+                setLoading(false);
+                return toast.error("Betting program is not ready. Try reloading the page.", { transition: Bounce });
+            }
+            if (!truthNetworkProgram) {
+                setLoading(false);
+                return toast.error("Truth network program is not ready. Try reloading the page.", { transition: Bounce });
             }
 
-            if (!truthNetworkProgram) {
-                console.error("Truth network Program is NOT initialized!");
-                return alert("Truth network program is not ready. Try reloading the page.");
-            }
-            //console.log("bettingQuestion_pda: ", bettingQuestion_PDA.toString())
+            const betAmountLamports = new BN(Math.round(parsedBet * 1_000_000_000));
+
+            // PDAs
             const [vaultPDA] = PublicKey.findProgramAddressSync(
-                [
-                    Buffer.from("bet_vault"),
-                    bettingQuestion_PDA.toBuffer()
-                ],
+                [Buffer.from("bet_vault"), bettingQuestion_PDA.toBuffer()],
                 bettingProgram.programId
             );
-
             const [bettorPda] = PublicKey.findProgramAddressSync(
-                [
-                    Buffer.from("bettor"),
-                    publicKey.toBuffer(),
-                    bettingQuestion_PDA.toBuffer(),
-                ],
+                [Buffer.from("bettor"), publicKey.toBuffer(), bettingQuestion_PDA.toBuffer()],
                 BETTING_CONTRACT_PROGRAM_ID
             );
 
-            // Fetching Sysvar Rent account (Required for new accounts)
-            const sysvarRent = web3.SYSVAR_RENT_PUBKEY;
-
-            const tx = await bettingProgram.methods
-                .placeBet(betAmountLamports, isOption1)
-                .accounts({
-                    bettingQuestion: bettingQuestion_PDA,
-                    vault: vaultPDA,
-                    user: publicKey,
-                    bettorAccount: bettorPda,
-                    truthNetworkQuestion: new PublicKey(questionData.truth.questionKey),
-                    betProgram: bettingProgram.programId,
-                    truthNetworkProgram: truthNetworkProgram.programId,
-                    systemProgram: web3.SystemProgram.programId,
-                    truthNetworkVault: new PublicKey(questionData.truth.vaultAddress),
-                    rent: sysvarRent,
-                })
-                .rpc();
-
-            setTxSig(tx);
-            setTxStatus("pending");
-        
-            const { value } = await connection.confirmTransaction(tx, "confirmed");
-            if (value.err) {
-                setTxStatus("failed");
-            } else {
-                setTxStatus("confirmed");
+            // ---------- 1) Pre-simulate via Anchor ----------
+            try {
+                await bettingProgram.methods
+                    .placeBet(betAmountLamports, isOption1)
+                    .accounts({
+                        bettingQuestion: bettingQuestion_PDA,
+                        vault: vaultPDA,
+                        user: publicKey,
+                        bettorAccount: bettorPda,
+                        truthNetworkQuestion: new PublicKey(questionData.truth.questionKey),
+                        betProgram: bettingProgram.programId,
+                        truthNetworkProgram: truthNetworkProgram.programId,
+                        systemProgram: SystemProgram.programId,
+                        truthNetworkVault: new PublicKey(questionData.truth.vaultAddress),
+                        rent: PublicKey.default,
+                    })
+                    .simulate();
+            } catch (simErr) {
+                console.error("Simulation error:", simErr);
+                const hint =
+                    parseAnchorLogHint(simErr?.logs || simErr?.error?.logs || []) ||
+                    simErr?.message ||
+                    "Transaction simulation failed.";
+                setLoading(false);
+                return toast.error(hint, { transition: Bounce });
             }
 
-            setBetAmount("");
-            
-            await fetchQuestionDetails();
-            await fetchBettorData(); 
-            await fetchVaultBalance();
-            toast.success("Bet placed successfully!", { transition: Bounce });
-        } catch (error) {
-            console.error("Error placing bet:", error);
-            toast.error("Failed to place bet.", { transition: Bounce });
-        }
+            // ---------- 2) Build the instruction ----------
+            const ix = await bettingProgram.methods
+            .placeBet(betAmountLamports, isOption1)
+            .accounts({
+                bettingQuestion: bettingQuestion_PDA,
+                vault: vaultPDA,
+                user: publicKey,
+                bettorAccount: bettorPda,
+                truthNetworkQuestion: new PublicKey(questionData.truth.questionKey),
+                betProgram: bettingProgram.programId,
+                truthNetworkProgram: truthNetworkProgram.programId,
+                systemProgram: SystemProgram.programId,
+                truthNetworkVault: new PublicKey(questionData.truth.vaultAddress),
+                rent: new PublicKey("SysvarRent111111111111111111111111111111111"),
+            })
+            .instruction();
 
-        setLoading(false);
+            // ---------- 3) Send & confirm robustly ----------
+            const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+
+            const tx = new Transaction({
+                feePayer: publicKey,
+                recentBlockhash: blockhash,
+            }).add(ix);
+
+            let signature;
+            try {
+                signature = await wallet.sendTransaction(tx, connection);
+            } catch (sendErr) {
+                console.error("sendTransaction error:", sendErr);
+                if (isTransientRpcError(sendErr)) {
+                    setLoading(false);
+                    return toast.info(
+                    "Your bet is being processed. Network is busy; we'll check the status shortly.",
+                    { transition: Bounce }
+                    );
+                }
+                setLoading(false);
+                return toast.error(sendErr?.message || "Failed to send transaction.", { transition: Bounce });
+            }
+
+            setTxSig(signature);
+            setTxStatus("pending");
+
+            // Try fast confirm (non-fatal if it throws)
+            try {
+                await connection.confirmTransaction(
+                    { signature, blockhash, lastValidBlockHeight },
+                    "confirmed"
+                );
+            } catch (confErr) {
+                console.warn("confirmTransaction threw (non-definitive):", confErr);
+            }
+
+            // Poll until definitive (handles public RPC lag)
+            try {
+                await waitForSig(connection, signature, 60_000);
+                setTxStatus("confirmed");
+                setBetAmount("");
+
+                await Promise.allSettled([
+                    fetchQuestionDetails(),
+                    fetchBettorData(),
+                    fetchVaultBalance(),
+                ]);
+
+                toast.success("Bet placed successfully!", { transition: Bounce });
+            } catch (pollErr) {
+                // See if chain says it failed
+                const { value } = await connection.getSignatureStatuses([signature], {
+                    searchTransactionHistory: true,
+                });
+                const finalSt = value && value[0];
+
+                if (finalSt && finalSt.err) {
+                    setTxStatus("failed");
+                    const txInfo = await fetchFailureDetails(connection, signature);
+                    const hint = parseAnchorLogHint(txInfo?.meta?.logMessages || []);
+                    console.error("On-chain failure:", finalSt.err, txInfo?.meta?.logMessages);
+                    toast.error(
+                    hint ? `Bet failed: ${hint}` : "Bet failed on-chain. Please check balance and try again.",
+                    { transition: Bounce }
+                    );
+                } else {
+                    setTxStatus("pending");
+                    await Promise.allSettled([
+                    fetchQuestionDetails(),
+                    fetchBettorData(),
+                    fetchVaultBalance(),
+                    ]);
+                    toast.info("Bet submitted. Network is catching up; your balance may update shortly.", {
+                    transition: Bounce,
+                    });
+                }
+            }
+        } catch (e) {
+            console.error("Error placing bet:", e);
+            toast.error(e?.message || "Failed to place bet.", { transition: Bounce });
+            setTxStatus((prev) => prev || "failed");
+        } finally {
+            setLoading(false);
+        }
     };
 
 
