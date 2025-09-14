@@ -69,7 +69,7 @@ export default function RpcHelpModal({ open, onClose }) {
                             localStorage.setItem("dismissRpcHelp", "true");
                             setShow(false);
                         }}
-                        className="w-full sm:w-auto px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 text-sm"
+                        className="w-full sm:w-auto px-3 py-2 rounded !bg-gray-200 hover:!bg-gray-300 text-sm"
                     >
                         Do not show again
                     </button>
