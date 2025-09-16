@@ -16,6 +16,10 @@ import { getTimeRemaining } from "../utils/getRemainingTime";
 
 import { getQuestionStatus } from "../utils/eventStatus";
 import { getTruthEventUrl } from "../utils/getTruthEventUrl";
+import { simulateAndBuildIx } from "../utils/anchorUtils";
+import { sendAndConfirmIx, isTransientRpcError } from "../utils/txUtils";
+import { parseAnchorLogHint } from "../utils/logUtils";
+import { findVaultPda, findBettorPda, findBettingQuestionPda } from "../utils/pda";
 
 
 
@@ -550,48 +554,20 @@ const QuestionDetails = () => {
             }
 
             const betAmountLamports = new BN(Math.round(parsedBet * 1_000_000_000));
+            const vaultPDA = findVaultPda(bettingQuestion_PDA, bettingProgram.programId);
+            const bettorPda = findBettorPda(publicKey, bettingQuestion_PDA, BETTING_CONTRACT_PROGRAM_ID)
 
             // PDAs
-            const [vaultPDA] = PublicKey.findProgramAddressSync(
-                [Buffer.from("bet_vault"), bettingQuestion_PDA.toBuffer()],
-                bettingProgram.programId
-            );
-            const [bettorPda] = PublicKey.findProgramAddressSync(
-                [Buffer.from("bettor"), publicKey.toBuffer(), bettingQuestion_PDA.toBuffer()],
-                BETTING_CONTRACT_PROGRAM_ID
-            );
+            // const [vaultPDA] = PublicKey.findProgramAddressSync(
+            //     [Buffer.from("bet_vault"), bettingQuestion_PDA.toBuffer()],
+            //     bettingProgram.programId
+            // );
+            // const [bettorPda] = PublicKey.findProgramAddressSync(
+            //     [Buffer.from("bettor"), publicKey.toBuffer(), bettingQuestion_PDA.toBuffer()],
+            //     BETTING_CONTRACT_PROGRAM_ID
+            // );
 
-            // ---------- 1) Pre-simulate via Anchor ----------
-            try {
-                await bettingProgram.methods
-                    .placeBet(betAmountLamports, isOption1)
-                    .accounts({
-                        bettingQuestion: bettingQuestion_PDA,
-                        vault: vaultPDA,
-                        user: publicKey,
-                        bettorAccount: bettorPda,
-                        truthNetworkQuestion: new PublicKey(questionData.truth.questionKey),
-                        betProgram: bettingProgram.programId,
-                        truthNetworkProgram: truthNetworkProgram.programId,
-                        systemProgram: SystemProgram.programId,
-                        truthNetworkVault: new PublicKey(questionData.truth.vaultAddress),
-                        rent: PublicKey.default,
-                    })
-                    .simulate();
-            } catch (simErr) {
-                console.error("Simulation error:", simErr);
-                const hint =
-                    parseAnchorLogHint(simErr?.logs || simErr?.error?.logs || []) ||
-                    simErr?.message ||
-                    "Transaction simulation failed.";
-                setLoading(false);
-                return toast.error(hint, { transition: Bounce });
-            }
-
-            // ---------- 2) Build the instruction ----------
-            const ix = await bettingProgram.methods
-            .placeBet(betAmountLamports, isOption1)
-            .accounts({
+            const accounts = {
                 bettingQuestion: bettingQuestion_PDA,
                 vault: vaultPDA,
                 user: publicKey,
@@ -602,85 +578,35 @@ const QuestionDetails = () => {
                 systemProgram: SystemProgram.programId,
                 truthNetworkVault: new PublicKey(questionData.truth.vaultAddress),
                 rent: new PublicKey("SysvarRent111111111111111111111111111111111"),
-            })
-            .instruction();
-
-            // ---------- 3) Send & confirm robustly ----------
-            const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-
-            const tx = new Transaction({
-                feePayer: publicKey,
-                recentBlockhash: blockhash,
-            }).add(ix);
-
-            let signature;
+            };
+          
+            let ix;
             try {
-                signature = await wallet.sendTransaction(tx, connection);
-            } catch (sendErr) {
-                console.error("sendTransaction error:", sendErr);
-                if (isTransientRpcError(sendErr)) {
-                    setLoading(false);
-                    return toast.info(
-                    "Your bet is being processed. Network is busy; we'll check the status shortly.",
-                    { transition: Bounce }
-                    );
-                }
-                setLoading(false);
-                return toast.error(sendErr?.message || "Failed to send transaction.", { transition: Bounce });
-            }
-
-            setTxSig(signature);
-            setTxStatus("pending");
-
-            // Try fast confirm (non-fatal if it throws)
-            try {
-                await connection.confirmTransaction(
-                    { signature, blockhash, lastValidBlockHeight },
-                    "confirmed"
+                ix = await simulateAndBuildIx(
+                    bettingProgram.methods.placeBet(betAmountLamports, isOption1),
+                    accounts
                 );
-            } catch (confErr) {
-                console.warn("confirmTransaction threw (non-definitive):", confErr);
+            } catch (simErr) {
+                const hint = parseAnchorLogHint(simErr?.logs) || simErr?.message;
+                setLoading(false);
+                return toast.error(hint || "Simulation failed", { transition: Bounce });
             }
-
-            // Poll until definitive (handles public RPC lag)
+          
             try {
-                await waitForSig(connection, signature, 60_000);
+                const sig = await sendAndConfirmIx(ix, { connection, wallet, feePayer: publicKey });
+                setTxSig(sig);
                 setTxStatus("confirmed");
                 setBetAmount("");
-
-                await Promise.allSettled([
-                    fetchQuestionDetails(),
-                    fetchBettorData(),
-                    fetchVaultBalance(),
-                ]);
-
+        
+                await Promise.allSettled([fetchQuestionDetails(), fetchBettorData(), fetchVaultBalance()]);
                 toast.success("Bet placed successfully!", { transition: Bounce });
-            } catch (pollErr) {
-                // See if chain says it failed
-                const { value } = await connection.getSignatureStatuses([signature], {
-                    searchTransactionHistory: true,
-                });
-                const finalSt = value && value[0];
-
-                if (finalSt && finalSt.err) {
-                    setTxStatus("failed");
-                    const txInfo = await fetchFailureDetails(connection, signature);
-                    const hint = parseAnchorLogHint(txInfo?.meta?.logMessages || []);
-                    console.error("On-chain failure:", finalSt.err, txInfo?.meta?.logMessages);
-                    toast.error(
-                    hint ? `Bet failed: ${hint}` : "Bet failed on-chain. Please check balance and try again.",
-                    { transition: Bounce }
-                    );
-                } else {
+            } catch (e) {
+                if (e?.code === "TRANSIENT_SEND") {
                     setTxStatus("pending");
-                    await Promise.allSettled([
-                    fetchQuestionDetails(),
-                    fetchBettorData(),
-                    fetchVaultBalance(),
-                    ]);
-                    toast.info("Bet submitted. Network is catching up; your balance may update shortly.", {
-                    transition: Bounce,
-                    });
+                    toast.info("Bet submitted. Network is catching up.", { transition: Bounce });
+                } else {
+                    toast.error(e?.message || "Failed to place bet.", { transition: Bounce });
+                    setTxStatus("failed");
                 }
             }
         } catch (e) {
@@ -697,24 +623,36 @@ const QuestionDetails = () => {
         if (!publicKey) return toast.error("Please connect your wallet.");
         setLoading(true)
         try {
-            
-            const tx = await bettingProgram.methods
-                .fetchAndStoreWinner(new BN(questionData.truth.id))
-                .accounts({
-                    bettingQuestion: bettingQuestion_PDA,
-                    truthNetworkQuestion: questionData.truth.questionKey,
-                    truthNetworkProgram: truthNetworkProgram.programId,
-                })
-                .rpc();
+            const accounts = {
+                bettingQuestion: bettingQuestion_PDA,
+                truthNetworkQuestion: questionData.truth.questionKey,
+                truthNetworkProgram: truthNetworkProgram.programId,
+            }
 
+            let ix;
+            try {
+                ix = await simulateAndBuildIx(
+                  bettingProgram.methods.fetchAndStoreWinner(new BN(questionData.truth.id)),
+                  accounts
+                );
+            } catch (simErr) {
+                const hint = parseAnchorLogHint(simErr?.logs) || simErr?.message;
+                setLoading(false);
+                return toast.error(hint || "Simulation failed", { transition: Bounce });
+            }
+          
+            await sendAndConfirmIx(ix, { connection, wallet, feePayer: publicKey });
+          
             toast.success("Winner fetched & winnings calculated!", { transition: Bounce });
-
             await fetchQuestionDetails();
-            await fetchBettorData(); 
+            await fetchBettorData();
+            
         } catch (error) {
             setLoading(true)
             console.error("Error fetching winner & determining winners:", error);
             toast.error("Failed to fetch winner & calculate winnings.", { transition: Bounce });
+        } finally {
+            setLoading(false)
         }
     };
 
@@ -726,59 +664,48 @@ const QuestionDetails = () => {
         setLoadingWinnings(true);
     
         try {
-    
-            const [bettorPda] = PublicKey.findProgramAddressSync(
-                [
-                    Buffer.from("bettor"),
-                    publicKey.toBuffer(),
-                    bettingQuestion_PDA.toBuffer(),
-                ],
-                BETTING_CONTRACT_PROGRAM_ID
-            );
-    
-            const [vaultPDA] = PublicKey.findProgramAddressSync(
-                [
-                    Buffer.from("bet_vault"),
-                    bettingQuestion_PDA.toBuffer()
-                ],
-                bettingProgram.programId
-            );
-    
-            //console.log("Vault PDA:", vaultPDA.toBase58());
-    
-            const tx = await bettingProgram.methods
-                .claimWinnings()
-                .accounts({
-                    bettingQuestion: bettingQuestion_PDA,
-                    bettorAccount: bettorPda,
-                    user: publicKey,
-                    truthNetworkQuestion: new PublicKey(questionData.truth.questionKey),
-                    vault: vaultPDA,
-                    systemProgram: web3.SystemProgram.programId,
-                })
-                .rpc();
+            const bettorPda = findBettorPda(publicKey, bettingQuestion_PDA, BETTING_CONTRACT_PROGRAM_ID);
+            const vaultPDA = findVaultPda(bettingQuestion_PDA, bettingProgram.programId);
             
+            const accounts = {
+                bettingQuestion: bettingQuestion_PDA,
+                bettorAccount: bettorPda,
+                user: publicKey,
+                truthNetworkQuestion: new PublicKey(questionData.truth.questionKey),
+                vault: vaultPDA,
+                systemProgram: web3.SystemProgram.programId,
+            }
 
-            await bettingProgram.methods
-                .setClaimTxId(tx)
-                .accounts({
-                    bettorAccount: bettorPda,
-                    bettorAddress: publicKey,
-                })
-                .rpc();
+            let ix;
+            try {
+                ix = await simulateAndBuildIx(bettingProgram.methods.claimWinnings(), accounts);
+            } catch(simErr) {
+                const hint = parseAnchorLogHint(simErr?.logs) || simErr?.message;
+                setLoadingWinnings(false);
+                return toast.error(hint || "Simulation failed", { transition: Bounce });
+            }
+            
+            const sig = await sendAndConfirmIx(ix, { connection, wallet, feePayer: publicKey });
+
+            const ix2 = await simulateAndBuildIx(
+                bettingProgram.methods.setClaimTxId(sig),
+                { bettorAccount: bettorPda, bettorAddress: publicKey }
+            );
+            await sendAndConfirmIx(ix2, { connection, wallet, feePayer: publicKey });
 
             toast.success("Winnings successfully claimed!");
-    
+            
             // Fetch updated bettor data
             await fetchBettorData();
             await fetchVaultBalance();
-            setLoadingWinnings(false);
         } catch (error) {
             console.error("Error claiming winnings:", error);
             toast.error("Failed to claim winnings.");
+        } finally {
+            setLoadingWinnings(false);
         }
     
-        setLoadingWinnings(false);
+        
     };
 
 
@@ -790,43 +717,31 @@ const QuestionDetails = () => {
         setLoadingCommission(true);
     
         try {
-            if (!bettingProgram) {
-                console.error("Betting Program is NOT initialized!");
-                return alert("Betting program is not ready. Try reloading the page.");
-            }
-            
+            const truthPk = new PublicKey(questionData.truth.questionKey);
+            const bqPDA   = findBettingQuestionPda(truthPk, BETTING_CONTRACT_PROGRAM_ID);
+            const vault   = findVaultPda(bqPDA, bettingProgram.programId);
 
-            const [bettingQuestionPDA] = PublicKey.findProgramAddressSync(
-                [
-                    Buffer.from("betting_question"),
-                    BETTING_CONTRACT_PROGRAM_ID.toBuffer(), 
-                    new PublicKey(questionData.truth.questionKey).toBuffer(), 
-                ],
-                BETTING_CONTRACT_PROGRAM_ID
-            );
-            console.log("Claiming Commission for Betting Question PDA:", bettingQuestionPDA.toBase58());
+            const accounts = {
+                bettingQuestion: bqPDA,
+                creator: publicKey,
+                vault,
+                systemProgram: web3.SystemProgram.programId,
+            };
+
+            let ix;
+            try {
+                ix = await simulateAndBuildIx(bettingProgram.methods.claimCreatorCommission(), accounts);
+            } catch (simErr) {
+                const hint = parseAnchorLogHint(simErr?.logs) || simErr?.message;
+                setLoadingCommission(false);
+                return toast.error(hint || "Simulation failed", { transition: Bounce });
+            }
+
+            await sendAndConfirmIx(ix, { connection, wallet, feePayer: publicKey });
+
+            await Promise.allSettled([fetchBettorData(), fetchVaultBalance(), fetchQuestionDetails()]);
     
-            const [vaultPDA] = PublicKey.findProgramAddressSync(
-                [
-                    Buffer.from("bet_vault"),
-                    bettingQuestionPDA.toBuffer()
-                ],
-                bettingProgram.programId
-            );
-    
-            console.log("Vault PDA: ", vaultPDA.toBase58());
-    
-            const tx = await bettingProgram.methods
-                .claimCreatorCommission()
-                .accounts({
-                    bettingQuestion: bettingQuestionPDA,
-                    creator: publicKey,
-                    vault: vaultPDA,
-                    systemProgram: web3.SystemProgram.programId,
-                })
-                .rpc();
-    
-            console.log("Commission Claimed! Transaction:", tx);
+            console.log("Commission Claimed! Transaction:", ix);
 
             // Fetch updated bettor data
             await fetchBettorData();
@@ -838,43 +753,44 @@ const QuestionDetails = () => {
         } catch (error) {
             console.error("Error claiming commission:", error);
             toast.error("Failed to claim commission.");
+        } finally {
+            setLoadingCommission(false);
         }
     
-        setLoadingCommission(false);
     };
 
 
     const deleteBettorAccount = async () => {
+        if (!publicKey) return toast.error("Please connect your wallet.");
+        setLoadingDeleting(true);
         try {
-            setLoadingDeleting(true);
-            const [bettorPda] = PublicKey.findProgramAddressSync(
-                [
-                    Buffer.from("bettor"),
-                    publicKey.toBuffer(),
-                    bettingQuestion_PDA.toBuffer(),
-                ],
-                BETTING_CONTRACT_PROGRAM_ID
-            );
+            const bettorPda = findBettorPda(publicKey, bettingQuestion_PDA, BETTING_CONTRACT_PROGRAM_ID);
 
-            const tx = await bettingProgram.methods
-                .deleteBettorAccount()
-                .accounts({
-                    user: publicKey,
-                    bettorAccount: bettorPda,
-                    bettingQuestion: bettingQuestion_PDA,
-                    truthQuestion: truthNetworkQuestionPDA,
-                })
-                .rpc();
-                
+            const accounts = {
+                user: publicKey,
+                bettorAccount: bettorPda,
+                bettingQuestion: bettingQuestion_PDA,
+                truthQuestion: truthNetworkQuestionPDA,
+            };
+
+            let ix;
+            try {
+                ix = await simulateAndBuildIx(bettingProgram.methods.deleteBettorAccount(), accounts);
+            } catch (simErr) {
+                const hint = parseAnchorLogHint(simErr?.logs) || simErr?.message;
                 setLoadingDeleting(false);
+                return toast.error(hint || "Simulation failed", { transition: Bounce });
+            }
+
+            await sendAndConfirmIx(ix, { connection, wallet, feePayer: publicKey });
+
             toast.success("Bettor record deleted. Rent refunded!");
-            
-            // Fetch updated bettor data
             await fetchBettorData();
             
         } catch (err) {
             console.error("Failed to delete bettor account", err);
             toast.error("Failed to delete bettor record.");
+        } finally {
             setLoadingDeleting(false);
         }
     };

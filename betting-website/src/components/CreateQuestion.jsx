@@ -11,6 +11,10 @@ import ConfirmModal from "./ConfirmModal";
 import { getConstants } from "../constants";
 import { getIdls } from "../idls";
 
+import { simulateAndBuildIx } from "../utils/anchorUtils";
+import { sendAndConfirmIx } from "../utils/txUtils";
+import { parseAnchorLogHint } from "../utils/logUtils";
+
 const CreateQuestion = ({setActiveTab}) => {
     const constants = getConstants();
     const BETTING_CONTRACT_PROGRAM_ID = constants.BETTING_CONTRACT_PROGRAM_ID;
@@ -18,7 +22,7 @@ const CreateQuestion = ({setActiveTab}) => {
 
     const { bettingIDL, truthNetworkIDL } = getIdls();
     const navigate = useNavigate();
-    const { wallet, publicKey, signTransaction, signAllTransactions, connected } = useWallet(); 
+    const { wallet, publicKey, signTransaction, signAllTransactions, sendTransaction, connected } = useWallet(); 
     const [questionText, setQuestionText] = useState("");
     const [bettingEndTime, setBettingEndTime] = useState(0);
     const [loading, setLoading] = useState(false);
@@ -142,16 +146,35 @@ const CreateQuestion = ({setActiveTab}) => {
 
             if (!questionCounterAccount) {
                 console.log("Initializing question counter...");
-                const tx = await truthNetworkProgram.methods
-                    .initializeCounter()
-                    .accounts({
-                        questionCounter: questionCounterPDA,
-                        asker: publicKey,
-                        systemProgram: web3.SystemProgram.programId,
-                    })
-                    .rpc();
 
-                console.log("Question counter initialized: ", tx);
+                let ixInit;
+                try {
+                    ixInit = await simulateAndBuildIx(
+                        truthNetworkProgram.methods.initializeCounter(),
+                        {
+                            questionCounter: questionCounterPDA,
+                            asker: publicKey,
+                            systemProgram: web3.SystemProgram.programId,
+                        }
+                    );
+                } catch (simErr) {
+                    const hint = parseAnchorLogHint(simErr?.logs) || simErr?.message;
+                    setLoading(false);
+                    return alert(`Initialize counter failed: ${hint || "simulation error"}`);
+                }
+
+                // send & confirm (WS/poll safe)
+                try {
+                    const sigInit = await sendAndConfirmIx(ixInit, {
+                        connection,
+                        wallet: { sendTransaction },
+                        feePayer: publicKey,
+                    });
+                    console.log("Question counter initialized:", sigInit);
+                } catch (sendErr) {
+                    setLoading(false);
+                    return alert(sendErr?.message || "Failed to initialize question counter.");
+                }
 
                 questionCounterAccount = await truthNetworkProgram.account.questionCounter.fetch(questionCounterPDA);
             }
@@ -183,79 +206,135 @@ const CreateQuestion = ({setActiveTab}) => {
             const [truthVaultPDA] = await PublicKey.findProgramAddress(
                 [Buffer.from("vault"), questionPDA.toBuffer()],
                 TRUTH_NETWORK_PROGRAM_ID
-              );
+            );
             console.log("Truth network Vault PDA: ", truthVaultPDA)
             console.log("Calling truth network create question function")
+            
 
+            // ===== 2) Truth Network createQuestion (simulate -> ix -> send) =====
+            let ixTruth;
             try {
-                const tx = await truthNetworkProgram.methods
-                    .createQuestion(questionText, rewardLamports, commitEndTimeTimestamp, revealEndTimeTimestamp)
-                    .accounts({
-                        asker: publicKey,
-                        questionCounter: questionCounterPDA,
-                        question: questionPDA,
-                        vault: truthVaultPDA,
-                        systemProgram: web3.SystemProgram.programId,
-                    })
-                    .rpc();
-                console.log("Successfully created question in the truth network with tx: ", tx)
-                console.log("Successfully created question in Truth Network:", questionPDA.toString());
-            } catch (err) {
-                // Check if already exists
-                const exists = await truthNetworkProgram.account.question.fetch(questionPDA).catch(() => null);
-                if (!exists) throw err;
+                ixTruth = await simulateAndBuildIx(
+                    truthNetworkProgram.methods.createQuestion(
+                    questionText,
+                    rewardLamports,
+                    commitEndTimeTimestamp,
+                    revealEndTimeTimestamp
+                    ),
+                    {
+                    asker: publicKey,
+                    questionCounter: questionCounterPDA,
+                    question: questionPDA,
+                    vault: truthVaultPDA,
+                    systemProgram: web3.SystemProgram.programId,
+                    }
+                );
+            } catch (simErr) {
+                // if it might already exist, verify before failing
+                const exists = await truthNetworkProgram.account.question
+                    .fetch(questionPDA)
+                    .catch(() => null);
+                if (!exists) {
+                    const hint = parseAnchorLogHint(simErr?.logs) || simErr?.message;
+                    setLoading(false);
+                    return alert(`Create question failed: ${hint || "simulation error"}`);
+                }
+                console.log("Truth question already exists; continuing.");
             }
 
+            if (ixTruth) {
+                try {
+                    const sigTruth = await sendAndConfirmIx(ixTruth, {
+                        connection,
+                        wallet: { sendTransaction },
+                        feePayer: publicKey,
+                    });
+                    console.log("Truth question created, tx:", sigTruth);
+                } catch (sendErr) {
+                    // confirm existence just in case the tx landed
+                    const exists = await truthNetworkProgram.account.question
+                    .fetch(questionPDA)
+                    .catch(() => null);
+                    if (!exists) {
+                        setLoading(false);
+                        return alert(sendErr?.message || "Failed to create truth question.");
+                    }
+                    console.log("Truth question exists post-error; proceeding.");
+                }
+            }
+
+            console.log("Successfully created question in Truth Network:", questionPDA.toBase58());
+
+            // ===== 3) PDAs (Betting Program) =====
             const [bettingQuestionPDA] = PublicKey.findProgramAddressSync(
                 [
                     Buffer.from("betting_question"),
                     BETTING_CONTRACT_PROGRAM_ID.toBuffer(),
-                    questionPDA.toBuffer()
+                    questionPDA.toBuffer(),
                 ],
                 BETTING_CONTRACT_PROGRAM_ID
             );
-
-            console.log("Derived BettingQuestion PDA:", bettingQuestionPDA.toString());
+            console.log("Derived BettingQuestion PDA:", bettingQuestionPDA.toBase58());
 
             const [bettingVaultPDA] = PublicKey.findProgramAddressSync(
-                [
-                    Buffer.from("bet_vault"),
-                    new PublicKey(bettingQuestionPDA).toBuffer()
-                ],
+                [Buffer.from("bet_vault"), bettingQuestionPDA.toBuffer()],
                 bettingProgram.programId
             );
+            console.log("Vault PDA:", bettingVaultPDA.toBase58());
 
-            console.log("Vault PDA: ", bettingVaultPDA.toBase58());
+            // ===== 4) Betting createBettingQuestion (simulate -> ix -> send) =====
+            let ixBet;
+            try {
+                ixBet = await simulateAndBuildIx(
+                    bettingProgram.methods.createBettingQuestion(
+                        questionText,
+                        bettingEndTimeTimestamp
+                    ),
+                    {
+                        bettingQuestion: bettingQuestionPDA,
+                        creator: publicKey,
+                        questionPda: questionPDA,
+                        systemProgram: web3.SystemProgram.programId,
+                        vault: bettingVaultPDA,
+                    }
+                );
+            } catch (simErr) {
+                const hint = parseAnchorLogHint(simErr?.logs) || simErr?.message;
+                setLoading(false);
+                return alert(`Create betting event failed: ${hint || "simulation error"}`);
+            }
 
-            const txBet = await bettingProgram.methods
-                .createBettingQuestion(questionText, bettingEndTimeTimestamp)
-                .accounts({
-                    bettingQuestion: bettingQuestionPDA,
-                    creator: publicKey,
-                    questionPda: questionPDA,
-                    systemProgram: web3.SystemProgram.programId,
-                    vault: bettingVaultPDA
-                })
-                .rpc();
-            
+            try {
+                const sigBet = await sendAndConfirmIx(ixBet, {
+                    connection,
+                    wallet: { sendTransaction },
+                    feePayer: publicKey,
+                });
+                console.log("Betting Smart Contract Event Created! TX:", sigBet);
+                console.log("Successfully created event in Betting Contract:", bettingQuestionPDA.toBase58());
+            } catch (sendErr) {
+                setLoading(false);
+                return alert(sendErr?.message || "Failed to create betting event.");
+            }
 
-            console.log("Betting Smart Contract Event Created! TX:", txBet);
-            console.log("Successfully created event in Betting Contract:", bettingQuestionPDA.toString());
-            setLoading(false)
+            // ===== 5) OG metadata for sharing =====
+            try {
+                await fetch("https://solbetx.com/api/event", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        id: bettingQuestionPDA.toString(),
+                        title: questionText,
+                        image: "https://solbetx.com/og/solbetx-preview.png",
+                    }),
+                });
+            } catch (e) {
+                console.warn("OG post failed (non-fatal):", e?.message || e);
+            }
+
+            setLoading(false);
             toast.success("Event successfully created!");
-            // Add event to OG metadata backend
-            await fetch("https://solbetx.com/api/event", {
-                method: "POST",
-                headers: {
-                "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    id: bettingQuestionPDA.toString(),
-                    title: questionText,
-                    image: "https://solbetx.com/og/solbetx-preview.png"
-                })
-            });
-            setActiveTab("fetch")
+            setActiveTab("fetch");
         } catch (error) {
             setLoading(false)
             console.error("Transaction failed:", error);
