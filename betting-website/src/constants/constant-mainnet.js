@@ -26,7 +26,7 @@ export const TRUTH_NETWORK_PROGRAM_ID = selected.TRUTH_NETWORK_PROGRAM_ID;
 
 // Fallback RPCs
 export const FALLBACK_RPC_URLS = [
-    localStorage.getItem("customRpcUrl") || "https://go.getblock.us/86aac42ad4484f3c813079afc201451c",
+    localStorage.getItem("customRpcUrl") || "https://truth.it.com/rpc",
     "https://solana-rpc.publicnode.com",
     "https://solana.drpc.org/",
     "https://solana.rpc.grove.city/v1/01fdb492",
