@@ -1,4 +1,4 @@
-import { Connection, Transaction, PublicKey } from "@solana/web3.js";
+import { Transaction, VersionedTransaction, TransactionMessage } from "@solana/web3.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -135,3 +135,84 @@ export const sendAndConfirmIx = async (
   await waitForSig(connection, sig, waitMs);
   return sig;
 };
+
+/**
+ * Send + confirm a list of instructions on the given connection.
+ * Works with wallet-adapter wallets that support signTransaction.
+ */
+export async function sendAndConfirmIxs({ ixs, connection, wallet, feePayer }) {
+  // Normalize wallet fields (supports either useWallet() object or a thin adapter)
+  const wp = wallet || {};
+  const publicKey       = wp.publicKey || wp?.adapter?.publicKey;
+  const sendTransaction = wp.sendTransaction || wp?.adapter?.sendTransaction;
+  const signTransaction = wp.signTransaction || wp?.adapter?.signTransaction;
+
+  const payer = feePayer || publicKey;
+  if (!payer) throw new Error("Missing feePayer/publicKey");
+  if (!sendTransaction && !signTransaction)
+    throw new Error("Wallet cannot sign transactions");
+
+  // Try v0 first
+  try {
+    const { blockhash, lastValidBlockHeight } =
+      await connection.getLatestBlockhash("finalized");
+
+    const msg = new TransactionMessage({
+      payerKey: payer,
+      recentBlockhash: blockhash,
+      instructions: ixs,
+    }).compileToV0Message();
+
+    const vtx = new VersionedTransaction(msg);
+
+    let sig;
+    if (sendTransaction) {
+      // Wallet signs & sends
+      sig = await sendTransaction(vtx, connection, {
+        skipPreflight: false,
+        maxRetries: 3,
+      });
+    } else {
+      // Manual sign + raw send
+      const signed = await signTransaction(vtx);
+      const raw = signed.serialize();
+      sig = await connection.sendRawTransaction(raw, {
+        skipPreflight: false,
+        maxRetries: 3,
+      });
+    }
+
+    await connection.confirmTransaction(
+      { signature: sig, blockhash, lastValidBlockHeight },
+      "confirmed"
+    );
+    return sig;
+  } catch (e) {
+    // Fallback to legacy
+    const { blockhash, lastValidBlockHeight } =
+      await connection.getLatestBlockhash("finalized");
+    const ltx = new Transaction({ recentBlockhash: blockhash, feePayer: payer });
+    ixs.forEach((ix) => ltx.add(ix));
+
+    let sig;
+    if (sendTransaction) {
+      sig = await sendTransaction(ltx, connection, {
+        skipPreflight: false,
+        maxRetries: 3,
+      });
+    } else {
+      const signed = await signTransaction(ltx);
+      const raw = signed.serialize();
+      sig = await connection.sendRawTransaction(raw, {
+        skipPreflight: false,
+        maxRetries: 3,
+      });
+    }
+
+    await connection.confirmTransaction(
+      { signature: sig, blockhash, lastValidBlockHeight },
+      "confirmed"
+    );
+    return sig;
+  }
+}
