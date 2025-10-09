@@ -78,7 +78,7 @@ function App() {
                 <Route path="/security-policy" element={<SecurityPolicy />} />
             </Routes>
             {/* Toast Notification */}
-            <ToastContainer />
+            <ToastContainer position="top-center"/>
             <RpcHelpModal open={showRpcModal} onClose={() => setShowRpcModal(false)} />
 
             {/* Troubleshooter on failure */}
