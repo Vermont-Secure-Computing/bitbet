@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { ToastContainer } from "react-toastify";
 
-import CallHelloWorld from "./components/CallHelloWorld";
 import QuestionDetails from "./components/QuestionDetails";
 import Home from "./components/Home";
 import UserDashboard from "./components/UserDashboard";
@@ -47,7 +45,7 @@ function App() {
         };
         window.addEventListener("open-rpc-troubleshooter", openTrouble);
       
-        // ✅ NEW: open settings event
+        // open settings event
         const openSettings = () => setShowRpcSettings(true);
         window.addEventListener("open-rpc-settings", openSettings);
       
