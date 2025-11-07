@@ -90,6 +90,10 @@ const CreateQuestion = ({setActiveTab}) => {
         const close = new Date(bettingEndTime);
         const commit = new Date(commitEndTime);
         const reveal = new Date(revealEndTime);
+
+        console.log("close: ", close)
+        console.log("commit: ", commit)
+        console.log("reveal: ", reveal)
     
         // Basic validations
         if (questionText.length < 10) 
@@ -101,14 +105,14 @@ const CreateQuestion = ({setActiveTab}) => {
         if (!bettingEndTime || close <= now) 
             return toast.error("Close date must be in the future.");
     
-        //Commit must be at least 1 hour after betting close
-        if (commit.getTime() - close.getTime() < 60 * 60 * 1000) {
-            return toast.error("Commit End Time must be at least 1 hour after Betting Close Date.");
+        //Commit must be at least 1 dat after betting close
+        if (commit.getTime() - close.getTime() < 1 * 24 * 60 * 60 * 1000) {
+            return toast.error("Commit End Time must be at least 1 day after Betting Close Date.");
         }
     
-        // Reveal must be at least 1 hour after commit end
-        if (reveal.getTime() - commit.getTime() < 60 * 60 * 1000) {
-            return toast.error("Reveal End Time must be at least 1 hour after Commit End Time.");
+        // Reveal must be at least 1 day after commit end
+        if (reveal.getTime() - commit.getTime() < 1 * 24 * 60 * 60 * 1000) {
+            return toast.error("Reveal End Time must be at least 1 day after Commit End Time.");
         }
     
         setShowConfirm(true);
@@ -375,8 +379,8 @@ const CreateQuestion = ({setActiveTab}) => {
 
                                 if (selected) {
                                     const closeDate = new Date(selected);
-                                    const commitDate = new Date(closeDate.getTime() + 24 * 60 * 60 * 1000);
-                                    const revealDate = new Date(closeDate.getTime() + 48 * 60 * 60 * 1000);
+                                    const commitDate = new Date(closeDate.getTime() + 7 * 24 * 60 * 60 * 1000); // default: 1 week after betting end time
+                                    const revealDate = new Date(closeDate.getTime() + 10 * 24 * 60 * 60 * 1000); // default: 3 days after betting end time
 
                                   
                                     // Convert to local datetime format
@@ -403,14 +407,14 @@ const CreateQuestion = ({setActiveTab}) => {
                         <>
                             <InfoWithTooltip
                                 label="Commit End Time"
-                                tooltip="Used by the Truth Network. This is the deadline for voters to commit their votes. It must be at least 1 hour after the betting close date. The reveal phase will begin immediately after and end based on the Reveal End Time."
+                                tooltip="Used by the Truth Network. This is the deadline for voters to commit their votes. It must be at least 1 week after the betting close date. The reveal phase will begin immediately after and end based on the Reveal End Time."
                             >
                                 <input
                                     type="datetime-local"
                                     value={commitEndTime}
                                     min={
                                         bettingEndTime
-                                            ? new Date(new Date(bettingEndTime).getTime() + 60 * 60 * 1000)
+                                            ? new Date(new Date(bettingEndTime).getTime() + 1 * 24 * 60 * 60 * 1000) // min of 1 day after betting end time
                                                   .toLocaleString("sv-SE")
                                                   .replace(" ", "T")
                                                   .slice(0, 16)
@@ -422,7 +426,7 @@ const CreateQuestion = ({setActiveTab}) => {
 
                                         if (selected) {
                                             const commitDate = new Date(selected);
-                                            const revealDate = new Date(commitDate.getTime() + 2 * 60 * 60 * 1000); // testing
+                                            const revealDate = new Date(commitDate.getTime() + 3 * 24 * 60 * 60 * 1000); // 3 days after commit end time
                                         
                                             const format = (d) => d.toLocaleString("sv-SE").replace(" ", "T").slice(0, 16);
                                             setRevealEndTime(format(revealDate));
@@ -434,14 +438,14 @@ const CreateQuestion = ({setActiveTab}) => {
 
                             <InfoWithTooltip
                                 label="Reveal End Time"
-                                tooltip="Used by the Truth Network. This is the deadline for voters to reveal their committed votes. It must be at least 1 hour after the commit end time."
+                                tooltip="Used by the Truth Network. This is the deadline for voters to reveal their committed votes. It must be at least 3 days after the commit end time."
                             >
                                 <input
                                     type="datetime-local"
                                     value={revealEndTime}
                                     min={
                                         commitEndTime
-                                            ? new Date(new Date(commitEndTime).getTime() + 60 * 60 * 1000)
+                                            ? new Date(new Date(commitEndTime).getTime() + 1 * 24 * 60 * 60 * 1000) // min of 1 day after betting end time
                                                 .toLocaleString("sv-SE")
                                                 .replace(" ", "T")
                                                 .slice(0, 16)
