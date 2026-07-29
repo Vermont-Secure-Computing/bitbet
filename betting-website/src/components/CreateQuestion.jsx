@@ -10,7 +10,6 @@ import ConfirmModal from "./ConfirmModal";
 import { getConstants } from "../constants";
 import { getIdls } from "../idls";
 
-import { simulateAndBuildIxWithFallback } from "../utils/anchorSim";
 import { sendAndConfirmIxs } from "../utils/txUtils";
 import { computeBudgetIxs } from "../utils/rpcClient"
 import { parseAnchorLogHint } from "../utils/logUtils";
@@ -120,11 +119,8 @@ const CreateQuestion = ({setActiveTab}) => {
 
 
     const createQuestion = async () => {
-
-        const thinWallet = { publicKey, sendTransaction, signTransaction };
         
         if (!publicKey) return alert("Please connect your wallet");
-        if (!questionText || !bettingEndTime ) return alert("All fields are required");
         
         if (!connected) {
             console.error("Wallet is not connected.");
@@ -135,14 +131,30 @@ const CreateQuestion = ({setActiveTab}) => {
             console.error("Wallet is not fully connected.");
             return alert("Please connect your wallet before proceeding.");
         }
+
+        if (!questionText || !bettingEndTime ) return alert("All fields are required");
+
         if (!truthNetworkProgram || !bettingProgram) {
             return alert("Programs not ready yet. Please retry in a moment.");
         }
+
+        const thinWallet = {publicKey, sendTransaction, signTransaction, signAllTransactions}
 
         setLoading(true);
         console.log("Creating question...");
 
         try {
+            /*
+            * All blockchain instructions are placed in this array
+            * and submitted together using one wallet confirmation.
+            */
+            const instructions = [
+                ...computeBudgetIxs(),
+            ];
+
+            /*
+            * Truth Network question counter
+            */
             const [questionCounterPDA] = await PublicKey.findProgramAddress(
                 [
                     Buffer.from("question_counter"), 
@@ -150,129 +162,90 @@ const CreateQuestion = ({setActiveTab}) => {
                 ],
                 TRUTH_NETWORK_PROGRAM_ID
             );
-            let questionCounterAccount = await truthNetworkProgram.account.questionCounter.fetch(questionCounterPDA).catch(() => null);
+
+            const questionCounterAccount = await truthNetworkProgram.account.questionCounter.fetch(questionCounterPDA).catch(() => null);
+
+            let questionCount;
 
             if (!questionCounterAccount) {
-                console.log("Initializing question counter...");
+                console.log("Initializing question counter instruction...");
 
-                let simInit;
-                try {
-                    simInit = await simulateAndBuildIxWithFallback({
-                        methodBuilder: truthNetworkProgram.methods.initializeCounter(),
-                        accounts: {
-                            questionCounter: questionCounterPDA,
-                            asker: publicKey,
-                            systemProgram: web3.SystemProgram.programId,
-                        },
-                        wallet: thinWallet,
-                    });
-                } catch (simErr) {
-                    const hint = parseAnchorLogHint(simErr?.logs) || simErr?.message || "simulation error";
-                    setLoading(false);
-                    return alert(`Initialize counter failed: ${hint}`);
-                }
+                const initializeCounterTx = await truthNetworkProgram.methods
+                    .initializeCounter()
+                    .accounts({
+                        questionCounter: questionCounterPDA,
+                        asker: publicKey,
+                        systemProgram: web3.SystemProgram.programId,
+                    })
+                    .instruction();
 
-                try {
-                    const sigInit = await sendAndConfirmIxs({
-                        ixs: [...computeBudgetIxs(), simInit.ix],
-                        connection: simInit.conn,
-                        wallet: thinWallet,
-                        feePayer: publicKey,
-                    });
-                    console.log("Question counter initialized:", sigInit);
-                } catch (sendErr) {
-                    setLoading(false);
-                    return alert(sendErr?.message || "Failed to initialize question counter.");
-                }
-                questionCounterAccount = await truthNetworkProgram.account.questionCounter.fetch(questionCounterPDA);
+                instructions.push(initializeCounterTx);
+
+                questionCount = 0;
+            } else {
+                questionCount = new BN(questionCounterAccount.count.toString()).toNumber();
             }
-            
-            const questionCount = new BN(questionCounterAccount.count).toNumber();
 
             const questionIdBuffer = new BN(questionCount).toArrayLike(Buffer, "le", 8);
+
             const [questionPDA] = PublicKey.findProgramAddressSync(
-                [Buffer.from("question"), publicKey.toBuffer(), questionIdBuffer],
+                [
+                    Buffer.from("question"),
+                    publicKey.toBuffer(),
+                    questionIdBuffer,
+                ],
                 TRUTH_NETWORK_PROGRAM_ID
-            );
+            )
 
+            console.log("Truth Network question PDA:", questionPDA.toBase58());
+
+            /**
+             * Event times
+             */
             const bettingEndTimeTimestamp = new BN(Math.floor(new Date(bettingEndTime).getTime() / 1000));
-
-            const rewardLamports = new BN(100_000_000); // For now, rewards defaults to 0.1 sol
-            //const selectedTime = new Date(bettingEndTime);
-            //const bettingTimestamp = Math.floor(selectedTime.getTime() / 1000);
-
-            // Calculate commit and reveal times
-            // const commitEndTimeTimestamp = new BN(bettingTimestamp + 24 * 60 * 60); // +one day after betting close date
-            // const revealEndTimeTimestamp = new BN(bettingTimestamp + 48 * 60 * 60); // +two days after betting close date
-            // const commitEndTimeTimestamp = new BN(bettingTimestamp + 3 * 60); // +3 minutes for testing purposes
-            // const revealEndTimeTimestamp = new BN(bettingTimestamp + 6 * 60); // +6 minutes for testing purposes
-
             const commitEndTimeTimestamp = new BN(Math.floor(new Date(commitEndTime).getTime() / 1000));
-            const revealEndTimeTimestamp = new BN(Math.floor(new Date(revealEndTime).getTime() / 1000));
+            const revealEndTimeTimestamp = new BN(Math.floor(new Date(revealEndTime).getTime() / 1000));  
 
+            const rewardLamports = new BN(100_000_000);
 
-            const [truthVaultPDA] = await PublicKey.findProgramAddress(
-                [Buffer.from("vault"), questionPDA.toBuffer()],
+            /**
+             * Truth Network vault
+             */
+            const [truthVaultPDA] = PublicKey.findProgramAddressSync(
+                [
+                    Buffer.from("vault"),
+                    questionPDA.toBuffer(),
+                ], 
                 TRUTH_NETWORK_PROGRAM_ID
             );
-            console.log("Truth network Vault PDA: ", truthVaultPDA)
-            console.log("Calling truth network create question function")
-            
 
-            // ===== 2) Truth Network createQuestion (simulate -> ix -> send) =====
-            let simTruth;
-            try {
-                simTruth = await simulateAndBuildIxWithFallback({
-                    methodBuilder: truthNetworkProgram.methods.createQuestion(
+            console.log("Truth Network vault PDA: ", truthVaultPDA.toBase58());
+
+            /**
+             * Create the Truth Network Question
+             */
+            const createTruthQuestionIx = await truthNetworkProgram.methods
+                .createQuestion(
                     questionText,
                     rewardLamports,
                     commitEndTimeTimestamp,
                     revealEndTimeTimestamp
-                    ),
-                    accounts: {
-                        asker: publicKey,
-                        questionCounter: questionCounterPDA,
-                        question: questionPDA,
-                        vault: truthVaultPDA,
-                        systemProgram: web3.SystemProgram.programId,
-                    },
-                    wallet: thinWallet,
-                });
-            } catch (simErr) {
-                // If it might already exist, verify before failing
-                const exists = await truthNetworkProgram.account.question.fetch(questionPDA).catch(() => null);
-                if (!exists) {
-                    const hint = parseAnchorLogHint(simErr?.logs) || simErr?.message || "simulation error";
-                    setLoading(false);
-                    return alert(`Create question failed: ${hint}`);
-                }
-                console.log("Truth question already exists; continuing.");
-            }
+                )
+                .accounts({
+                    asker: publicKey,
+                    questionCounter: questionCounterPDA,
+                    question: questionPDA,
+                    vault: truthVaultPDA,
+                    systemProgram: web3.SystemProgram.programId,
+                })
+                .instruction();
+            
+            instructions.push(createTruthQuestionIx);
 
-            if (simTruth && simTruth?.ix) {
-                try {
-                    console.log('feePayer:', wallet.publicKey?.toBase58());
-                    const sigTruth = await sendAndConfirmIxs({
-                        ixs: [...computeBudgetIxs(), simTruth.ix],
-                        connection: simTruth.conn,
-                        wallet: thinWallet,
-                        feePayer: publicKey,
-                    });
-                    console.log("Truth question created, tx:", sigTruth);
-                } catch (sendErr) {
-                    // Confirm on-chain existence just in case
-                    const exists = await truthNetworkProgram.account.question.fetch(questionPDA).catch(() => null);
-                    if (!exists) {
-                    setLoading(false);
-                    return alert(sendErr?.message || "Failed to create truth question.");
-                    }
-                    console.log("Truth question exists post-error; proceeding.");
-                }
-            }
 
-            console.log("Successfully created question in Truth Network:", questionPDA.toBase58());
-
-            // ===== 3) PDAs (Betting Program) =====
+            /**
+             * Betting programs PDAs
+             */
             const [bettingQuestionPDA] = PublicKey.findProgramAddressSync(
                 [
                     Buffer.from("betting_question"),
@@ -281,73 +254,87 @@ const CreateQuestion = ({setActiveTab}) => {
                 ],
                 BETTING_CONTRACT_PROGRAM_ID
             );
-            console.log("Derived BettingQuestion PDA:", bettingQuestionPDA.toBase58());
+
+            console.log("Betting question PDA: ", bettingQuestionPDA.toBase58());
 
             const [bettingVaultPDA] = PublicKey.findProgramAddressSync(
-                [Buffer.from("bet_vault"), bettingQuestionPDA.toBuffer()],
+                [
+                    Buffer.from("bet_vault"),
+                    bettingQuestionPDA.toBuffer(),
+                ],
                 bettingProgram.programId
             );
-            console.log("Vault PDA:", bettingVaultPDA.toBase58());
 
-            // ===== 4) Betting createBettingQuestion (simulate -> ix -> send) =====
-            let simBet;
-            try {
-                simBet = await simulateAndBuildIxWithFallback({
-                    methodBuilder: bettingProgram.methods.createBettingQuestion(
+            console.log("Betting vault PDA: ", bettingVaultPDA.toBase58());
+
+            /**
+             * Create the SolBetX betting event
+             */
+            const createBettingQuestion = await bettingProgram.methods
+                .createBettingQuestion(
                     questionText,
                     bettingEndTimeTimestamp
-                    ),
-                    accounts: {
-                        bettingQuestion: bettingQuestionPDA,
-                        creator: publicKey,
-                        questionPda: questionPDA,
-                        systemProgram: web3.SystemProgram.programId,
-                        vault: bettingVaultPDA,
-                    },
-                    wallet,
-                });
-            } catch (simErr) {
-                const hint = parseAnchorLogHint(simErr?.logs) || simErr?.message || "simulation error";
-                setLoading(false);
-                return alert(`Create betting event failed: ${hint}`);
-            }
+                )
+                .accounts({
+                    bettingQuestion: bettingQuestionPDA,
+                    creator: publicKey,
+                    questionPda: questionPDA,
+                    systemProgram: web3.SystemProgram.programId
+                })
+                .instruction();
 
-            try {
-                console.log('feePayer:', wallet.publicKey?.toBase58());
-                const sigBet = await sendAndConfirmIxs({
-                    ixs: [...computeBudgetIxs(), simBet.ix],
-                    connection: simBet.conn,
-                    wallet: thinWallet,
-                    feePayer: publicKey,
-                });
-                console.log("Betting Smart Contract Event Created! TX:", sigBet);
-            } catch (sendErr) {
-                setLoading(false);
-                return alert(sendErr?.message || "Failed to create betting event.");
-            }
+            instructions.push(createBettingQuestion);
 
-            // ===== 5) OG metadata for sharing =====
+            console.log(`Sending one transaction containing ${instructions.length} instructions`);
+
+            const signature = await sendAndConfirmIxs({
+                ixs: instructions,
+                connection,
+                wallet: thinWallet,
+                feePayer: publicKey,
+            });
+
+            console.log("SolBetX event created successfully: ", signature);
+
+            /*
+            * Store social-sharing metadata.
+            * This is a normal API request and does not open the wallet.
+            */
             try {
                 await fetch("https://solbetx.com/api/event", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
                     body: JSON.stringify({
-                        id: bettingQuestionPDA.toString(),
+                        id: bettingQuestionPDA.toBase58(),
                         title: questionText,
-                        image: "https://solbetx.com/og/solbetx-preview.png",
+                        image:
+                            "https://solbetx.com/og/solbetx-preview.png",
                     }),
                 });
-            } catch (e) {
-                console.warn("OG post failed (non-fatal):", e?.message || e);
+            } catch (metadataError) {
+                console.warn(
+                    "OG metadata request failed:",
+                    metadataError?.message || metadataError
+                );
             }
 
-            setLoading(false);
             toast.success("Event successfully created!");
             setActiveTab("fetch");
+
         } catch (error) {
-            setLoading(false)
-            console.error("Transaction failed:", error);
-            alert(`Failed to create event. Error: ${error.message}`);
+            console.error("Create event transaction failed:", error);
+            console.error("Error logs:", error?.logs);
+
+            const hint =
+                parseAnchorLogHint(error?.logs) ||
+                error?.message ||
+                "Unknown transaction error";
+
+            alert(`Failed to create event. Error: ${hint}`);
+        } finally {
+            setLoading(false);
         }
     };
 

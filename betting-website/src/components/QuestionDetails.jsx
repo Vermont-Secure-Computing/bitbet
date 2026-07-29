@@ -16,9 +16,6 @@ import { getTimeRemaining } from "../utils/getRemainingTime";
 
 import { getQuestionStatus } from "../utils/eventStatus";
 import { getTruthEventUrl } from "../utils/getTruthEventUrl";
-import { simulateAndBuildIx } from "../utils/anchorUtils";
-import { sendAndConfirmIx } from "../utils/txUtils";
-import { parseAnchorLogHint } from "../utils/logUtils";
 import { findVaultPda, findBettorPda, findBettingQuestionPda } from "../utils/pda";
 import { simulateAndBuildIxWithFallback } from "../utils/anchorSim";
 import { computeBudgetIxs } from "../utils/rpcClient";
@@ -47,21 +44,25 @@ const QuestionDetails = () => {
     const [txSig, setTxSig] = useState(null);
     const [txStatus, setTxStatus] = useState(null);
 
+    const [txAction, setTxAction] = useState(null);
+
     const dummyWallet = new PublicKey("11111111111111111111111111111111")
     const walletAdapter = useMemo(() => {
-        return publicKey && signTransaction
-            ? {
+        if (publicKey && signTransaction) {
+            return {
                 publicKey,
                 signTransaction,
                 signAllTransactions,
                 network: import.meta.env.VITE_NETWORK,
-            }
-            : {
-                dummyWallet,
-                signTransaction,
-                signAllTransactions,
-                network: import.meta.env.VITE_NETWORK,
             };
+        }
+
+        return {
+            publicKey: dummyWallet,
+            signTransaction,
+            signAllTransactions,
+            network: import.meta.env.VITE_NETWORK,
+        };
     }, [publicKey, signTransaction, signAllTransactions]);
 
 
@@ -121,7 +122,14 @@ const QuestionDetails = () => {
       
               // Fetch data
               const bettingQuestion = await bettingProg.account.bettingQuestion.fetch(questionPda);
-              const truthNetworkQuestion = await truthProg.account.question.fetch(bettingQuestion.questionPda);
+              //const truthNetworkQuestion = await truthProg.account.question.fetch(bettingQuestion.questionPda);
+              let truthNetworkQuestion = null;
+
+              try {
+                truthNetworkQuestion = await truthProg.account.question.fetch(bettingQuestion.questionPda);
+              } catch (e) {
+                console.warn("Truth question missing/closed:", bettingQuestion.questionPda.toBase58(), e?.message || e);
+              }
       
               // Parse numbers
               const totalPool = new BN(bettingQuestion.totalPool);
@@ -133,7 +141,6 @@ const QuestionDetails = () => {
               const totalCreatorCommission = new BN(bettingQuestion.totalCreatorCommission);
               const betClosing = new BN(bettingQuestion.closeDate);
               const betCreator = bettingQuestion.creator.toString();
-              const truthAsker = truthNetworkQuestion.asker.toString();
       
               // Save the working RPC
               localStorage.setItem("lastWorkingRpc", rpcUrl);
@@ -154,29 +161,56 @@ const QuestionDetails = () => {
                   closeDate: betClosing.toNumber(),
                   creator: betCreator
                 },
-                truth: {
-                  ...truthNetworkQuestion,
-                  asker: truthAsker,
-                  questionKey: truthNetworkQuestion.questionKey.toBase58(),
-                  vaultAddress: truthNetworkQuestion.vaultAddress.toBase58(),
-                  id: truthNetworkQuestion.id.toString(),
-                  revealEndTime: truthNetworkQuestion.revealEndTime.toNumber(),
-                  winningOption:
-                    truthNetworkQuestion.winningOption === 1
-                      ? true
-                      : truthNetworkQuestion.winningOption === 2
-                      ? false
-                      : null,
-                  winningPercent: truthNetworkQuestion.winningPercent,
-                  committedVoters: truthNetworkQuestion.committedVoters.toNumber(),
-                  votesOption1: truthNetworkQuestion.votesOption1.toNumber(),
-                  votesOption2: truthNetworkQuestion.votesOption2.toNumber(),
-                  voterRecordsCount: truthNetworkQuestion.voterRecordsCount.toNumber(),
-                  voterRecordsClosed: truthNetworkQuestion.voterRecordsClosed.toNumber(),
-                  totalDistributed: truthNetworkQuestion.totalDistributed.toNumber(),
-                  originalReward: truthNetworkQuestion.originalReward.toNumber(),
-                  snapshotReward: truthNetworkQuestion.snapshotReward.toNumber()
-                }
+                // truth: {
+                //   ...truthNetworkQuestion,
+                //   asker: truthAsker,
+                //   questionKey: truthNetworkQuestion.questionKey.toBase58(),
+                //   vaultAddress: truthNetworkQuestion.vaultAddress.toBase58(),
+                //   id: truthNetworkQuestion.id.toString(),
+                //   revealEndTime: truthNetworkQuestion.revealEndTime.toNumber(),
+                //   winningOption:
+                //     truthNetworkQuestion.winningOption === 1
+                //       ? true
+                //       : truthNetworkQuestion.winningOption === 2
+                //       ? false
+                //       : null,
+                //   winningPercent: truthNetworkQuestion.winningPercent,
+                //   committedVoters: truthNetworkQuestion.committedVoters.toNumber(),
+                //   votesOption1: truthNetworkQuestion.votesOption1.toNumber(),
+                //   votesOption2: truthNetworkQuestion.votesOption2.toNumber(),
+                //   voterRecordsCount: truthNetworkQuestion.voterRecordsCount.toNumber(),
+                //   voterRecordsClosed: truthNetworkQuestion.voterRecordsClosed.toNumber(),
+                //   totalDistributed: truthNetworkQuestion.totalDistributed.toNumber(),
+                //   originalReward: truthNetworkQuestion.originalReward.toNumber(),
+                //   snapshotReward: truthNetworkQuestion.snapshotReward.toNumber()
+                // }
+                truth: truthNetworkQuestion
+                    ? {
+                        ...truthNetworkQuestion,
+                        asker: truthNetworkQuestion.asker.toString(),
+                        questionKey: truthNetworkQuestion.questionKey.toBase58(),
+                        vaultAddress: truthNetworkQuestion.vaultAddress.toBase58(),
+                        id: truthNetworkQuestion.id.toString(),
+                        commitEndTime: truthNetworkQuestion.commitEndTime.toNumber(),
+                        revealEndTime: truthNetworkQuestion.revealEndTime.toNumber(),
+                        winningOption:
+                            truthNetworkQuestion.winningOption === 1 ? true :
+                            truthNetworkQuestion.winningOption === 2 ? false : null,
+                        winningPercent: truthNetworkQuestion.winningPercent,
+                        finalized: truthNetworkQuestion.finalized,
+                        votesOption1: truthNetworkQuestion.votesOption1.toNumber(),
+                        votesOption2: truthNetworkQuestion.votesOption2.toNumber(),
+                        committedVoters: truthNetworkQuestion.committedVoters.toNumber(),
+                        voterRecordsCount: truthNetworkQuestion.voterRecordsCount.toNumber(),
+                        voterRecordsClosed: truthNetworkQuestion.voterRecordsClosed.toNumber(),
+                        totalDistributed: truthNetworkQuestion.totalDistributed.toNumber(),
+                        originalReward: truthNetworkQuestion.originalReward.toNumber(),
+                        snapshotReward: truthNetworkQuestion.snapshotReward.toNumber(),
+                    }
+                    : {
+                        missing: true,           
+                        questionKey: bettingQuestion.questionPda.toBase58(),
+                    },
               });
       
               success = true;
@@ -263,20 +297,29 @@ const QuestionDetails = () => {
     }, [questionData]);
 
     useEffect(() => {
-        //console.log("Fetching event status")
-        if (!questionData) return;
+        if (!questionData || questionData.truth?.missing) {
+            setStatus({
+                label: "Truth question unavailable",
+                className: "text-yellow-400",
+            });
+            return;
+        }
 
-        const getStatus = getQuestionStatus({
-            closeDate: new Date(questionData.betting.closeDate * 1000),
+        const nextStatus = getQuestionStatus({
+            closeDate: new Date(
+                questionData.betting.closeDate * 1000
+            ),
             revealEndTime: questionData.truth.revealEndTime,
             finalized: questionData.truth.finalized,
-            truthNetworkWinner: questionData.truth.winningOption,
-            winningPercentage: questionData.truth.winningPercent,
+            truthNetworkWinner:
+                questionData.truth.winningOption,
+            winningPercentage:
+                questionData.truth.winningPercent,
             bettorData,
-            bettingData: questionData.betting
+            bettingData: questionData.betting,
         });
 
-        setStatus(getStatus);
+        setStatus(nextStatus);
     }, [bettorData, questionData])
 
 
@@ -313,10 +356,10 @@ const QuestionDetails = () => {
     }, [questionData]);
 
     useEffect(() => {
-        if (bettingQuestionPDA && publicKey && !bettorData) {
+        if (bettingQuestion_PDA && publicKey) {
             fetchBettorData();
         }
-    }, [bettingQuestionPDA, publicKey]);
+    }, [bettingQuestion_PDA, publicKey]);
 
     const fetchBettorData = async () => {
         if (!publicKey || !bettingQuestion_PDA) {
@@ -372,96 +415,6 @@ const QuestionDetails = () => {
     };
     
 
-    // const handleBet = async (isOption1) => {
-    //     if (!publicKey) return toast.error("Please connect your wallet.");
-        
-    //     const parsedBet = parseFloat(betAmount);
-
-    //     if (!parsedBet || isNaN(parsedBet) || parsedBet <= 0) {
-    //         return toast.error("Enter a valid bet amount.", { transition: Bounce });
-    //     }
-
-    //     if (parsedBet < 0.01) {
-    //         return toast.error("Minimum bet is 0.01 SOL.", { transition: Bounce });
-    //     }
-
-
-    //     setLoading(true);
-
-    //     try {
-
-    //         const betAmountLamports = new BN(parseFloat(betAmount) * 1_000_000_000);
-
-    //         if (!bettingProgram) {
-    //             console.error("Betting Program is NOT initialized!");
-    //             return alert("Betting program is not ready. Try reloading the page.");
-    //         }
-
-    //         if (!truthNetworkProgram) {
-    //             console.error("Truth network Program is NOT initialized!");
-    //             return alert("Truth network program is not ready. Try reloading the page.");
-    //         }
-    //         //console.log("bettingQuestion_pda: ", bettingQuestion_PDA.toString())
-    //         const [vaultPDA] = PublicKey.findProgramAddressSync(
-    //             [
-    //                 Buffer.from("bet_vault"),
-    //                 bettingQuestion_PDA.toBuffer()
-    //             ],
-    //             bettingProgram.programId
-    //         );
-
-    //         const [bettorPda] = PublicKey.findProgramAddressSync(
-    //             [
-    //                 Buffer.from("bettor"),
-    //                 publicKey.toBuffer(),
-    //                 bettingQuestion_PDA.toBuffer(),
-    //             ],
-    //             BETTING_CONTRACT_PROGRAM_ID
-    //         );
-
-    //         // Fetching Sysvar Rent account (Required for new accounts)
-    //         const sysvarRent = web3.SYSVAR_RENT_PUBKEY;
-
-    //         const tx = await bettingProgram.methods
-    //             .placeBet(betAmountLamports, isOption1)
-    //             .accounts({
-    //                 bettingQuestion: bettingQuestion_PDA,
-    //                 vault: vaultPDA,
-    //                 user: publicKey,
-    //                 bettorAccount: bettorPda,
-    //                 truthNetworkQuestion: new PublicKey(questionData.truth.questionKey),
-    //                 betProgram: bettingProgram.programId,
-    //                 truthNetworkProgram: truthNetworkProgram.programId,
-    //                 systemProgram: web3.SystemProgram.programId,
-    //                 truthNetworkVault: new PublicKey(questionData.truth.vaultAddress),
-    //                 rent: sysvarRent,
-    //             })
-    //             .rpc();
-
-    //         setTxSig(tx);
-    //         setTxStatus("pending");
-        
-    //         const { value } = await connection.confirmTransaction(tx, "confirmed");
-    //         if (value.err) {
-    //             setTxStatus("failed");
-    //         } else {
-    //             setTxStatus("confirmed");
-    //         }
-
-    //         setBetAmount("");
-            
-    //         await fetchQuestionDetails();
-    //         await fetchBettorData(); 
-    //         await fetchVaultBalance();
-    //         toast.success("Bet placed successfully!", { transition: Bounce });
-    //     } catch (error) {
-    //         console.error("Error placing bet:", error);
-    //         toast.error("Failed to place bet.", { transition: Bounce });
-    //     }
-
-    //     setLoading(false);
-    // };
-
     // ---------------- helpers ----------------
 
     const parseAnchorLogHint = (logs = []) => {
@@ -477,7 +430,8 @@ const QuestionDetails = () => {
 
 
     const handleBet = async (isOption1) => {
-        console.log("updated handle bet")
+        //console.log("updated handle bet")
+        setTxAction("bet");
         const thinWallet = { publicKey, sendTransaction, signTransaction };
 
         if (!publicKey) return toast.error("Please connect your wallet.");
@@ -611,22 +565,28 @@ const QuestionDetails = () => {
             await Promise.allSettled([fetchQuestionDetails(), fetchBettorData()]);
             
         } catch (error) {
-            setLoading(true)
+            setLoading(false);
             console.error("Error fetching winner & determining winners:", error);
             toast.error("Failed to fetch winner & calculate winnings.", { transition: Bounce });
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
     };
 
     const claimWinnings = async () => {
-        const thinWallet = { publicKey, sendTransaction, signTransaction };
+        setTxAction("claim");
+        const thinWallet = { publicKey, sendTransaction, signTransaction, signAllTransactions, };
 
         if (!publicKey) return toast.error("Please connect your wallet.");
+        if (!bettingProgram) {return toast.error("Betting program is not ready. Please reload the page.");}
+        if (!bettingQuestion_PDA) {return toast.error("Betting question is not ready. Please try again.");}
+        if (!questionData?.truth?.questionKey) {return toast.error("Truth Network question is not ready.");}
         if (!bettorData) return toast.error("No bettor data found.");
         if (bettorData.claimed) return toast.info("Winnings already claimed.");
     
         setLoadingWinnings(true);
+        setTxSig(undefined);
+        setTxStatus(undefined);
     
         try {
             const bettorPda = findBettorPda(publicKey, bettingQuestion_PDA, BETTING_CONTRACT_PROGRAM_ID);
@@ -642,60 +602,48 @@ const QuestionDetails = () => {
             }
 
             // 1) Claim winnings
-            let sim1;
-            try {
-                sim1 = await simulateAndBuildIxWithFallback({
-                    methodBuilder: bettingProgram.methods.claimWinnings(),
-                    accounts,
-                    wallet: thinWallet,
-                });
-            } catch (simErr) {
-                const hint = parseAnchorLogHint(simErr?.logs) || simErr?.message || "Simulation failed";
-                setLoadingWinnings(false);
-                return toast.error(hint, { transition: Bounce });
-            }
+            const built = await simulateAndBuildIxWithFallback({
+                methodBuilder: bettingProgram.methods.claimWinnings(),
+                accounts,
+                wallet: thinWallet,
+            });
 
-            const sig1 = await sendAndConfirmIxs({
-                ixs: [...computeBudgetIxs(), sim1.ix],
-                connection: sim1.conn,
+            const signature = await sendAndConfirmIxs({
+                ixs: [
+                    ...computeBudgetIxs(),
+                    built.ix,
+                ],
+                connection: built.conn,
                 wallet: thinWallet,
                 feePayer: publicKey,
             });
 
-            // 2) Save claim tx id into bettor account
-            let sim2;
-            try {
-                sim2 = await simulateAndBuildIxWithFallback({
-                    methodBuilder: bettingProgram.methods.setClaimTxId(sig1),
-                    accounts: { bettorAccount: bettorPda, bettorAddress: publicKey },
-                    wallet: thinWallet,
-                });
-            } catch (simErr) {
-                // Non-fatal for user funds (already claimed), but surface the error.
-                const hint = parseAnchorLogHint(simErr?.logs) || simErr?.message || "Simulation failed (setClaimTxId)";
-                toast.error(hint, { transition: Bounce });
-                // still continue to refresh local UI state
-            } 
+            console.log("winnings / refund claimed: ", signature);
 
-            if (sim2?.ix) {
-                await sendAndConfirmIxs({
-                    ixs: [...computeBudgetIxs(), sim2.ix],
-                    connection: sim2.conn,
-                    wallet: thinWallet,
-                    feePayer: publicKey,
-                });
-            }
+            setTxSig(signature);
+            setTxStatus("confirmed");
 
             toast.success("Winnings successfully claimed!");
-            await Promise.allSettled([fetchBettorData(), fetchVaultBalance()]);
-        } catch (error) {
+            await Promise.allSettled([
+                fetchBettorData(),
+                fetchVaultBalance(),
+                fetchQuestionDetails(),
+            ]);
+
+        } catch(error) {
             console.error("Error claiming winnings:", error);
-            toast.error("Failed to claim winnings.");
+
+            if (error?.code === "TRANSIENT_SEND") {
+                setTxStatus("pending");
+                toast.info("Claim submitted. The network is still confirming it.", { transition: Bounce } );
+            } else {
+                const hint =  parseAnchorLogHint(error?.logs) || error?.message || "Failed to claim winnings.";
+                setTxStatus("failed");
+                toast.error(hint, { transition: Bounce, });
+            }
         } finally {
             setLoadingWinnings(false);
         }
-    
-        
     };
 
 
@@ -802,7 +750,15 @@ const QuestionDetails = () => {
 
     useEffect(() => {
         const checkCanDelete = async () => {
-            if (!questionData || !questionData.truth || !questionData.betting) return;
+            if (
+                !questionData ||
+                questionData.truth?.missing ||
+                !questionData.truth?.vaultAddress ||
+                !questionData.betting
+            ) {
+                setCanDeleteEvent(false);
+                return;
+            }
 
             const now = Math.floor(Date.now() / 1000);
 
@@ -901,14 +857,26 @@ const QuestionDetails = () => {
     }, [questionData, publicKey]);
 
     const deleteEvent = async () => {
+        const thinWallet = { publicKey, sendTransaction, signTransaction };
+
         if (!publicKey) return toast.error("Connect wallet first");
+        if (!bettingProgram || !truthNetworkProgram) {
+            return toast.error("Programs are not ready. Please reload the page.");
+        }
+
+        if (
+            !questionData?.betting?.id ||
+            !questionData?.betting?.vault ||
+            !questionData?.truth?.questionKey ||
+            !questionData?.truth?.vaultAddress
+        ) {
+            return toast.error("Event data is not ready. Please try again.");
+        }
+
+        setLoading(true);
     
         try {
-            setLoading(true);
-    
-            const tx = await bettingProgram.methods
-                .deleteEvent()
-                .accounts({
+            const accounts = {
                     bettingQuestion: new PublicKey(questionData.betting.id),
                     vault: new PublicKey(questionData.betting.vault),
                     user: publicKey,
@@ -916,17 +884,60 @@ const QuestionDetails = () => {
                     truthVault: new PublicKey(questionData.truth.vaultAddress),
                     systemProgram: web3.SystemProgram.programId,
                     truthNetworkProgram: truthNetworkProgram.programId
-                })
-                .rpc();
-    
-            toast.success("Event deleted successfully!");
-            await fetch(`https://solbetx.com/api/event/${questionData.betting.id.toString()}`, {
-                method: "DELETE"
+                };
+
+            let built;
+
+            try {
+                built = await simulateAndBuildIxWithFallback({
+                    methodBuilder: bettingProgram.methods.deleteEvent(),
+                    accounts,
+                    wallet: thinWallet,
+                });
+            } catch (simulationError) {
+                const hint = parseAnchorLogHint(simulationError?.logs) || simulationError?.message || "Delete event simulation failed.";
+
+                return toast.error(hint, {transition: Bounce,})
+            }
+
+            const signature = await sendAndConfirmIxs({
+                ixs: [
+                    ...computeBudgetIxs(),
+                    built.ix,
+                ],
+                connection: built.conn,
+                wallet: thinWallet,
+                feePayer: publicKey,
             });
-            navigate("/"); 
-        } catch (err) {
-            console.error("Failed to delete event:", err);
-            toast.error("Error deleting event.");
+
+            console.log("Event deleted transaction: ", signature);
+            toast.success("Event deleted successfully!", {transition: Bounce});
+
+            try {
+                await fetch(
+                    `https://solbetx.com/api/event/${questionData.betting.id}`,
+                    {method: "DELETE",}
+                );
+            } catch (apiError) {
+                console.warn("Event deleted on-chain, but API cleanup failed:",apiError);
+
+                toast.warning("Event was deleted on-chain, but the server record could not be removed.");
+            }
+
+            navigate("/");
+        } catch (error) {
+            console.error("Failed to delete event:", error);
+
+            if (error?.code === "TRANSIENT_SEND") {
+                toast.info("Delete transaction submitted. The network is still confirming it.", { transition: Bounce });
+            } else {
+                const hint =
+                    parseAnchorLogHint(error?.logs) ||
+                    error?.message ||
+                    "Failed to delete event.";
+
+                toast.error(hint, {transition: Bounce,});
+            }
         } finally {
             setLoading(false);
         }
@@ -1029,25 +1040,16 @@ const QuestionDetails = () => {
                     <span className={status?.className}>{status?.label}</span>
                 </p>
 
-                {bettorData && bettorData.claimed && (() => {
-                    const rawTxBytes = new Uint8Array(bettorData.claimTxId);
-                    const decodedTxId = new TextDecoder().decode(rawTxBytes).replace(/\0/g, "");
-
-                    if (!decodedTxId || decodedTxId.length < 30) {
-                        return <p className="text-yellow-400 text-xs mt-2">Tx not yet saved</p>;
-                    }
-
-                    return (
-                        <a
-                            href={`https://explorer.solana.com/tx/${decodedTxId}?cluster=mainnet`}
-                            className="text-blue-400 underline text-xs mt-2"
-                            target="_blank"
-                            rel="noreferrer"
-                        >
-                            View Claim Tx
-                        </a>
-                    );
-                })()}
+                {txAction === "claim" && bettorData?.claimed && txSig && (
+                    <a
+                        href={`https://solscan.io/tx/${txSig}`}
+                        className="mt-2 text-xs text-blue-400 underline"
+                        target="_blank"
+                        rel="noreferrer"
+                    >
+                        View Claim Transaction
+                    </a>
+                )}
 
                 {/* <p className="text-sm text-gray-300 mt-1"><strong>Options:</strong> {questionData?.betting.option1} vs {questionData?.betting.option2}</p> */}
 
@@ -1131,7 +1133,7 @@ const QuestionDetails = () => {
                             )}
                         </div>
 
-                        {txStatus && txSig && (
+                        {txAction === "bet" && txStatus && txSig && (
                             <div className="mt-3 text-sm text-center flex items-center justify-center gap-2">
                                 {txStatus === "pending" && (
                                     <span className="flex items-center gap-2 text-yellow-400 animate-pulse">
@@ -1371,7 +1373,7 @@ const QuestionDetails = () => {
                                 <p className="text-gray-400 mt-1">
                                     <strong>Consensus:</strong> {questionData.truth.winningPercent.toFixed(2)}% 
                                     {questionData.truth.votesOption1 > questionData.truth.votesOption2 ? 
-                                        ` (${questionData.truth.votesOption1} / ${questionData.truth.votesOption + questionData.truth.votesOption2} votes)`
+                                        ` (${questionData.truth.votesOption1} / ${questionData.truth.votesOption1 + questionData.truth.votesOption2} votes)`
                                         :
                                         ` (${questionData.truth.votesOption2} / ${questionData.truth.votesOption1 + questionData.truth.votesOption2} votes)`
                                     }
