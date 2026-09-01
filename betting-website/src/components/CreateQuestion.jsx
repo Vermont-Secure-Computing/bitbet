@@ -54,7 +54,7 @@ const CreateQuestion = ({setActiveTab}) => {
                 publicKey, 
                 signTransaction, 
                 signAllTransactions, 
-                network: "mainnet" 
+                //network: "mainnet" 
             } : null;
             const provider = new AnchorProvider(connection, walletAdapter, { preflightCommitment: "processed" });
 
@@ -104,15 +104,15 @@ const CreateQuestion = ({setActiveTab}) => {
         if (!bettingEndTime || close <= now) 
             return toast.error("Close date must be in the future.");
     
-        //Commit must be at least 1 dat after betting close
-        if (commit.getTime() - close.getTime() < 1 * 24 * 60 * 60 * 1000) {
-            return toast.error("Commit End Time must be at least 1 day after Betting Close Date.");
-        }
+        // //Commit must be at least 1 dat after betting close
+        // if (commit.getTime() - close.getTime() < 1 * 24 * 60 * 60 * 1000) {
+        //     return toast.error("Commit End Time must be at least 1 day after Betting Close Date.");
+        // }
     
-        // Reveal must be at least 1 day after commit end
-        if (reveal.getTime() - commit.getTime() < 1 * 24 * 60 * 60 * 1000) {
-            return toast.error("Reveal End Time must be at least 1 day after Commit End Time.");
-        }
+        // // Reveal must be at least 1 day after commit end
+        // if (reveal.getTime() - commit.getTime() < 1 * 24 * 60 * 60 * 1000) {
+        //     return toast.error("Reveal End Time must be at least 1 day after Commit End Time.");
+        // }
     
         setShowConfirm(true);
     };
@@ -279,6 +279,8 @@ const CreateQuestion = ({setActiveTab}) => {
                     bettingQuestion: bettingQuestionPDA,
                     creator: publicKey,
                     questionPda: questionPDA,
+                    bettingContract: BETTING_CONTRACT_PROGRAM_ID,
+                    vault: bettingVaultPDA,
                     systemProgram: web3.SystemProgram.programId
                 })
                 .instruction();

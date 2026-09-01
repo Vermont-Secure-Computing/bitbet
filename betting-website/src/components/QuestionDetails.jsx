@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
+import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { Program, AnchorProvider, web3, BN } from "@coral-xyz/anchor";
 import { toast, Bounce } from "react-toastify";
 import { useNavigate } from "react-router-dom";
@@ -469,15 +469,12 @@ const QuestionDetails = () => {
 
             const accounts = {
                 bettingQuestion: bettingQuestion_PDA,
-                vault: vaultPDA,
-                user: publicKey,
                 bettorAccount: bettorPda,
+                user: publicKey,
+                vault: vaultPDA,
                 truthNetworkQuestion: new PublicKey(questionData.truth.questionKey),
-                betProgram: bettingProgram.programId,
-                truthNetworkProgram: truthNetworkProgram.programId,
-                systemProgram: SystemProgram.programId,
                 truthNetworkVault: new PublicKey(questionData.truth.vaultAddress),
-                rent: SYSVAR_RENT_PUBKEY,
+                systemProgram: SystemProgram.programId,
             };
           
             let sim;
@@ -532,9 +529,15 @@ const QuestionDetails = () => {
         if (!bettingQuestion_PDA || !questionData?.truth?.questionKey) {
             return toast.error("Question data not ready. Please try again.");
         }
+        if (!bettingProgram || !truthNetworkProgram) {
+            return toast.error(
+                "Programs are not ready. Please reload the page."
+            );
+        }
 
         setLoading(true)
         try {
+
             const accounts = {
                 bettingQuestion: bettingQuestion_PDA,
                 truthNetworkQuestion: new PublicKey(questionData.truth.questionKey),
@@ -554,7 +557,7 @@ const QuestionDetails = () => {
                 return toast.error(hint, { transition: Bounce });
             }
 
-            const sig = await sendAndConfirmIxs({
+            await sendAndConfirmIxs({
                 ixs: [...computeBudgetIxs(), sim.ix],
                 connection: sim.conn,
                 wallet: thinWallet,
@@ -562,12 +565,20 @@ const QuestionDetails = () => {
             });
 
             toast.success("Winner fetched & winnings calculated!", { transition: Bounce });
-            await Promise.allSettled([fetchQuestionDetails(), fetchBettorData()]);
+            await Promise.allSettled([fetchQuestionDetails(), fetchBettorData(), fetchVaultBalance()]);
             
         } catch (error) {
             setLoading(false);
             console.error("Error fetching winner & determining winners:", error);
-            toast.error("Failed to fetch winner & calculate winnings.", { transition: Bounce });
+            const hint =
+                parseAnchorLogHint(error?.logs) ||
+                error?.message ||
+                "Failed to fetch winner & calculate winnings.";
+
+            toast.error(hint, {
+                transition: Bounce
+            });
+
         } finally {
             setLoading(false);
         }
@@ -580,7 +591,6 @@ const QuestionDetails = () => {
         if (!publicKey) return toast.error("Please connect your wallet.");
         if (!bettingProgram) {return toast.error("Betting program is not ready. Please reload the page.");}
         if (!bettingQuestion_PDA) {return toast.error("Betting question is not ready. Please try again.");}
-        if (!questionData?.truth?.questionKey) {return toast.error("Truth Network question is not ready.");}
         if (!bettorData) return toast.error("No bettor data found.");
         if (bettorData.claimed) return toast.info("Winnings already claimed.");
     
@@ -596,9 +606,7 @@ const QuestionDetails = () => {
                 bettingQuestion: bettingQuestion_PDA,
                 bettorAccount: bettorPda,
                 user: publicKey,
-                truthNetworkQuestion: new PublicKey(questionData.truth.questionKey),
                 vault: vaultPDA,
-                systemProgram: web3.SystemProgram.programId,
             }
 
             // 1) Claim winnings
@@ -653,19 +661,29 @@ const QuestionDetails = () => {
         if (!publicKey) {
             return toast.error("Please connect your wallet.");
         }
+
+        if (!bettingProgram) {
+            return toast.error(
+                "Betting program is not ready. Please reload the page."
+            );
+        }
+
+        if (!bettingQuestion_PDA) {
+            return toast.error(
+                "Betting question is not ready. Please try again."
+            );
+        }
+
     
         setLoadingCommission(true);
     
         try {
-            const truthPk = new PublicKey(questionData.truth.questionKey);
-            const bqPDA   = findBettingQuestionPda(truthPk, BETTING_CONTRACT_PROGRAM_ID);
-            const vault   = findVaultPda(bqPDA, bettingProgram.programId);
+            const vault   = findVaultPda(bettingQuestion_PDA, bettingProgram.programId);
 
             const accounts = {
-                bettingQuestion: bqPDA,
+                bettingQuestion: bettingQuestion_PDA,
                 creator: publicKey,
                 vault,
-                systemProgram: web3.SystemProgram.programId,
             };
 
             let sim;
@@ -693,7 +711,12 @@ const QuestionDetails = () => {
     
         } catch (error) {
             console.error("Error claiming commission:", error);
-            toast.error("Failed to claim commission.");
+            const hint =
+                parseAnchorLogHint(error?.logs) ||
+                error?.message ||
+                "Failed to claim commission.";
+
+            toast.error(hint, { transition: Bounce });
         } finally {
             setLoadingCommission(false);
         }
@@ -705,6 +728,9 @@ const QuestionDetails = () => {
         const thinWallet = { publicKey, sendTransaction, signTransaction };
 
         if (!publicKey) return toast.error("Please connect your wallet.");
+        if (!bettingProgram) return toast.error("Betting program is not ready. Please reload the page.");
+        if (!bettingQuestion_PDA) return toast.error("Betting question is not ready. Please try again.");
+        
         setLoadingDeleting(true);
         try {
             const bettorPda = findBettorPda(publicKey, bettingQuestion_PDA, BETTING_CONTRACT_PROGRAM_ID);
@@ -713,7 +739,6 @@ const QuestionDetails = () => {
                 user: publicKey,
                 bettorAccount: bettorPda,
                 bettingQuestion: bettingQuestion_PDA,
-                truthQuestion: truthNetworkQuestionPDA,
             };
 
             let sim;
@@ -741,7 +766,14 @@ const QuestionDetails = () => {
             
         } catch (err) {
             console.error("Failed to delete bettor account", err);
-            toast.error("Failed to delete bettor record.");
+            const hint =
+                parseAnchorLogHint(err?.logs) ||
+                err?.message ||
+                "Failed to delete bettor record.";
+
+            toast.error(hint, {
+                transition: Bounce
+            });
         } finally {
             setLoadingDeleting(false);
         }
@@ -753,28 +785,20 @@ const QuestionDetails = () => {
             if (
                 !questionData ||
                 questionData.truth?.missing ||
-                !questionData.truth?.vaultAddress ||
                 !questionData.betting
             ) {
                 setCanDeleteEvent(false);
                 return;
             }
 
-            const now = Math.floor(Date.now() / 1000);
-
-
             /**
              * Truth-network validation
              */
             const isFinalized = questionData.truth.finalized;
             const revealEnded = questionData.truth.revealEndTime <= Date.now() / 1000;
-            const truthVaultPubkey = new PublicKey(questionData.truth.vaultAddress);
-            const truthVaultAccountInfo = await connection.getAccountInfo(truthVaultPubkey);
-            const truthRentExemption = await connection.getMinimumBalanceForRentExemption(8);
-            const truthVaultBalance = truthVaultAccountInfo?.lamports ?? 0;
-
-            const vaultOnlyHasRent = (truthVaultBalance - truthRentExemption) < 1000;
-
+            const isCreator = publicKey?.toBase58() === questionData.betting.creator;
+            const isTruthAsker = publicKey?.toBase58() === questionData.truth.asker;
+            const allBettorRecordsClosed = questionData.betting.bettorRecordsClosed.eq(questionData.betting.bettorRecordsCount);
             
             /**
              * Bitbet validation
@@ -783,74 +807,45 @@ const QuestionDetails = () => {
             const vaultInfo = await connection.getAccountInfo(vaultAddress);
             const vaultLamports = vaultInfo?.lamports || 0;
             const minRent = await connection.getMinimumBalanceForRentExemption(0);
+            const bettingVaultSettled = vaultLamports <= minRent + 1000;
 
-            let hasBettorRecord = true;
-
-            if (!publicKey || !bettingQuestion_PDA) {
-                console.warn("Wallet or question PDA not available.");
-                hasBettorRecord = false;
-            } else {
-                try {
-                    const [bettorPda] = PublicKey.findProgramAddressSync(
-                        [
-                            Buffer.from("bettor"),
-                            publicKey.toBuffer(),
-                            bettingQuestion_PDA.toBuffer(),
-                        ],
-                        BETTING_CONTRACT_PROGRAM_ID
-                    );
-            
-                    const bettorAccountInfo = await connection.getAccountInfo(bettorPda);
-                    hasBettorRecord = !!bettorAccountInfo;
-            
-                    console.log("Has bettor record:", hasBettorRecord);
-                } catch (err) {
-                    console.warn("Error checking bettor record:", err);
-                    hasBettorRecord = false;
-                }
-            }
-            
-            console.log("truth network validation")
-            console.log("isFinalized: ", isFinalized)
-            console.log("vault lamports: ", vaultLamports)
-            console.log("vault lamports check: ", vaultLamports - minRent < 1000)
-            console.log("minRent: ", minRent)
-            console.log("revealEnded: ", revealEnded)
-            console.log("truthVaultBalance: ", truthVaultBalance)
-            console.log("truthRentExemption: ", truthRentExemption)
-            console.log("vaultOnlyHasRent: ", vaultOnlyHasRent)
-            console.log("asker: ", questionData.truth.asker)
-            console.log("truth creator: ", publicKey?.toBase58() === questionData.truth.asker)
-            console.log("other check: ", (questionData.truth.committedVoters === 0 || (questionData.truth.voterRecordsCount === 0 || questionData.truth.voterRecordsClosed === questionData.truth.voterRecordsCount) &&(questionData.truth.totalDistributed >= questionData.truth.snapshotReward || questionData.truth.originalReward === 0)))
-
-
-            if (
-                isFinalized &&
-                vaultLamports - minRent < 1000 &&
-                publicKey?.toBase58() === questionData.betting.creator &&
-                !hasBettorRecord &&
-                publicKey?.toBase58() === questionData.truth.asker &&
-                revealEnded &&
-                vaultOnlyHasRent &&
+            const truthSettled =
+                questionData.truth.committedVoters === 0 ||
                 (
-                    // Allow delete if either:
-                    // no one committed
-                    questionData.truth.committedVoters === 0 ||
-                    // all rent + rewards are cleaned
                     (
-                        questionData.truth.voterRecordsCount === 0 || questionData.truth.voterRecordsClosed === questionData.truth.voterRecordsCount
+                        questionData.truth.voterRecordsCount === 0 ||
+                        questionData.truth.voterRecordsClosed ===
+                            questionData.truth.voterRecordsCount
                     ) &&
                     (
-                        questionData.truth.totalDistributed >= questionData.truth.snapshotReward || questionData.truth.originalReward === 0
-                    )                
-                )
-            ) {
-                console.log("user can delete the event")
-                setCanDeleteEvent(true);
-            }else{
-                console.log("user cannot delete the event")
-                setCanDeleteEvent(false);
-            }
+                        questionData.truth.totalDistributed >=
+                            questionData.truth.snapshotReward ||
+                        questionData.truth.originalReward === 0
+                    )
+                );
+
+            const canDelete =
+                isFinalized &&
+                revealEnded &&
+                isCreator &&
+                isTruthAsker &&
+                allBettorRecordsClosed &&
+                bettingVaultSettled &&
+                truthSettled;
+            
+            console.log("Delete event validation");
+            console.log("isFinalized: ", isFinalized);
+            console.log("vault lamports: ", vaultLamports);
+            console.log("bettingVaultSettled: ", bettingVaultSettled);
+            console.log("minRent: ", minRent);
+            console.log("revealEnded: ", revealEnded);
+            console.log("isCreator: ", isCreator);
+            console.log("isTruthAsker: ", isTruthAsker);
+            console.log("allBettorRecordsClosed: ", allBettorRecordsClosed);
+            console.log("truthSettled: ", truthSettled);
+            console.log("canDelete: ", canDelete);
+            setCanDeleteEvent(canDelete);
+            
         };
 
         checkCanDelete();
@@ -872,18 +867,18 @@ const QuestionDetails = () => {
         ) {
             return toast.error("Event data is not ready. Please try again.");
         }
-
+        console.log("questionData.betting: ", questionData.betting)
         setLoading(true);
     
         try {
             const accounts = {
                     bettingQuestion: new PublicKey(questionData.betting.id),
-                    vault: new PublicKey(questionData.betting.vault),
-                    user: publicKey,
+                    creator: publicKey,
                     truthQuestion: new PublicKey(questionData.truth.questionKey),
+                    bettingVault: new PublicKey(questionData.betting.vault),
                     truthVault: new PublicKey(questionData.truth.vaultAddress),
+                    truthNetworkProgram: truthNetworkProgram.programId,
                     systemProgram: web3.SystemProgram.programId,
-                    truthNetworkProgram: truthNetworkProgram.programId
                 };
 
             let built;
@@ -1042,7 +1037,7 @@ const QuestionDetails = () => {
 
                 {txAction === "claim" && bettorData?.claimed && txSig && (
                     <a
-                        href={`https://solscan.io/tx/${txSig}`}
+                        href={`https://solscan.io/tx/${txSig}${constants.SOLSCAN_CLUSTER}`}
                         className="mt-2 text-xs text-blue-400 underline"
                         target="_blank"
                         rel="noreferrer"
@@ -1146,7 +1141,7 @@ const QuestionDetails = () => {
                                         <FaCheckCircle />
                                         Bet confirmed!
                                         <a
-                                        href={`https://solscan.io/tx/${txSig}`}
+                                        href={`https://solscan.io/tx/${txSig}${constants.SOLSCAN_CLUSTER}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="underline text-blue-400 inline-flex items-center gap-1"
@@ -1166,7 +1161,7 @@ const QuestionDetails = () => {
                                         <FaClock />
                                         Confirmation delayed.
                                         <a
-                                            href={`https://solscan.io/tx/${txSig}`}
+                                            href={`https://solscan.io/tx/${txSig}${constants.SOLSCAN_CLUSTER}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="underline text-blue-400 inline-flex items-center gap-1"
@@ -1203,7 +1198,7 @@ const QuestionDetails = () => {
                 <div className="mt-6 bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-md">
                     <h3 className="text-lg font-semibold text-gray-300">Betting Pool</h3>
                     <p className="text-sm text-gray-500 mb-2 italic">
-                        Betting pool distribution: 1% to event creator, 1% to SolbetX dev fund, 1% to Truth.It for resolution, and 97% shared among winning bettors.
+                        Betting pool distribution: 1% total platform fee, split between the event creator, SolBetX, and Truth.It. The remaining 99% goes to the betting pool.
                     </p>
 
                     <p className="text-gray-400">
@@ -1250,7 +1245,7 @@ const QuestionDetails = () => {
                 </div>
 
 
-                {revealEndTime && Date.now() / 1000 >= revealEndTime.getTime() / 1000 && !questionData?.truth.finalized && (
+                {revealEndTime && Date.now() / 1000 >= revealEndTime.getTime() / 1000 && questionData?.betting?.status !== "close" && (
                     <button
                         onClick={fetchWinner}
                         disabled={loading}

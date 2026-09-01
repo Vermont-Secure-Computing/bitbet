@@ -32,6 +32,8 @@ export const SOLBETX_VERSIONS = [
 // Header title
 export const NETWORK_NAME = "MainNet"
 
+export const SOLSCAN_CLUSTER = "";
+
 // Switch Website network
 export const SWITCH_LINK_LABEL = "Open in DevNet"
 export const SWITCH_LINK_URL = "https://devnet.solbetx.com"

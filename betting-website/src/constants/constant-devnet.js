@@ -1,8 +1,8 @@
 import { PublicKey } from "@solana/web3.js";
 
 // Define version-specific program IDs
-export const BETTING_CONTRACT_PROGRAM_ID = new PublicKey("H7bHnh15df8mfnnWC9K861bGh8DLD1rTqmu86NKRTf6e");
-export const TRUTH_NETWORK_PROGRAM_ID = new PublicKey("31wdq6EJgHKRjZotAjc6vkuJ7aRyQPauwmgadPiEm8EY");
+export const BETTING_CONTRACT_PROGRAM_ID = new PublicKey("B8XxuJynFpSVkuYumB6mXFxHEkDvdddavCudCHH7NJWM");
+export const TRUTH_NETWORK_PROGRAM_ID = new PublicKey("jQkyaTq7X9YphoWizETjJf1c1mAZzQPV5iR7afHk5s1");
 
 // Fallback RPCs
 export const FALLBACK_RPC_URLS = [
