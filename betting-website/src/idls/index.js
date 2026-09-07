@@ -7,6 +7,9 @@ import truthCoucal from "./mainnet/coucal/truth_network.json";
 import bettingMalkoha from "./mainnet/malkoha/betting.json";
 import truthMalkoha from "./mainnet/malkoha/truth_network.json";
 
+import bettingGarganey from "./mainnet/garganey/betting.json";
+import truthGarganey from "./mainnet/garganey/truth_network.json";
+
 import bettingDevnet from "./devnet/betting.json";
 import truthDevnet from "./devnet/truth_network.json";
 
@@ -32,6 +35,11 @@ export function getIdls() {
             return {
                 bettingIDL: bettingMalkoha,
                 truthNetworkIDL: truthMalkoha,
+            };
+        case "garganey":
+            return {
+                bettingIDL: bettingGarganey,
+                truthNetworkIDL: truthGarganey,
             };
         default:
             return {
