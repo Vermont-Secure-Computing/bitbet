@@ -376,7 +376,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "FFL71XjBkjq5gce7EtpB7Wa5p8qnRNueLKSzM4tkEMoc"
+          "address": "jQkyaTq7X9YphoWizETjJf1c1mAZzQPV5iR7afHk5s1"
         },
         {
           "name": "system_program",
@@ -408,7 +408,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "FFL71XjBkjq5gce7EtpB7Wa5p8qnRNueLKSzM4tkEMoc"
+          "address": "jQkyaTq7X9YphoWizETjJf1c1mAZzQPV5iR7afHk5s1"
         },
         {
           "name": "house_wallet",
@@ -815,78 +815,78 @@
     },
     {
       "code": 6021,
-      "name": "RevealNotEnded",
-      "msg": "Reveal end time hasn't expired."
-    },
-    {
-      "code": 6022,
       "name": "RemainingBettingBalance",
       "msg": "Betting vault still contains unsettled balance."
     },
     {
-      "code": 6023,
+      "code": 6022,
       "name": "ActionInProgress",
       "msg": "Function already being processed. Try again."
     },
     {
-      "code": 6024,
+      "code": 6023,
       "name": "CannotChangeBetSide",
       "msg": "Cannot change bet side after the first bet."
     },
     {
-      "code": 6025,
+      "code": 6024,
       "name": "TruthQuestionMismatch",
       "msg": "Truth Network question does not match this betting market."
     },
     {
-      "code": 6026,
+      "code": 6025,
       "name": "TruthVaultMismatch",
       "msg": "Truth Network vault does not match this Truth question."
     },
     {
-      "code": 6027,
+      "code": 6026,
       "name": "WinnerAlreadyFinalized",
       "msg": "Truth Network question is already finalized."
     },
     {
-      "code": 6028,
+      "code": 6027,
       "name": "TruthQuestionClosed",
       "msg": "Truth Network question is no longer accepting votes."
     },
     {
-      "code": 6029,
+      "code": 6028,
       "name": "InvalidBettingTimeframe",
       "msg": "Betting end time must be before the Truth Network commit end time."
     },
     {
-      "code": 6030,
+      "code": 6029,
       "name": "InvalidVault",
       "msg": "Invalid betting vault."
     },
     {
-      "code": 6031,
+      "code": 6030,
       "name": "MathOverflow",
       "msg": "Arithmetic overflow."
     },
     {
-      "code": 6032,
+      "code": 6031,
       "name": "TruthQuestionIdMismatch",
       "msg": "Truth Network question ID does not match the supplied question ID."
     },
     {
-      "code": 6033,
+      "code": 6032,
       "name": "TruthRevealActive",
       "msg": "Truth Network reveal period is still active."
     },
     {
-      "code": 6034,
+      "code": 6033,
       "name": "WinnerNotStored",
       "msg": "Winner has not yet been stored in the betting event."
     },
     {
-      "code": 6035,
+      "code": 6034,
       "name": "BettorRecordsStillOpen",
       "msg": "All bettor records must be closed before deleting the event."
+    },
+    {
+      "code": 6035,
+      "name": "TruthClaimPeriodNotExpired",
+      "msg": "Truth Network's 30-day claim period has not expired yet."
     }
   ],
   "types": [

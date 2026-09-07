@@ -3,12 +3,11 @@ use anchor_lang::solana_program::{program::invoke, program::invoke_signed};
 use anchor_lang::solana_program::instruction::Instruction;
 use anchor_lang::solana_program::system_instruction;
 use anchor_lang::system_program;
-use anchor_lang::solana_program::rent::Rent;
 use std::str::FromStr;
 
 // Import the truth_network program
 declare_program!(truth_network);
-use truth_network::{ 
+use truth_network::{
     program::TruthNetwork,
     cpi::accounts::FinalizeVoting,
     cpi::accounts::DeleteExpiredQuestion,
@@ -21,7 +20,7 @@ use truth_network::accounts::Question;
 
 pub const HOUSE_WALLET: &str = "CQaZgx5jqQrz7c8shCG3vJLiiPGPrawSGhvkgXtGyxL";
 
-declare_id!("B8XxuJynFpSVkuYumB6mXFxHEkDvdddavCudCHH7NJWM");
+declare_id!("DAanVG7q38LfrTsxuGPn6gxWU7jKtEChXhiiJVNCZv4G");
 
 // Used for adding on-chain event logs
 #[event]
@@ -66,6 +65,9 @@ pub struct BettorRecordDeleted {
     pub bettor: Pubkey,
     pub betting_question: Pubkey,
 }
+
+// Truth network 30 day period before question deletion
+pub const TRUTH_CLAIM_EXPIRY_SECS: i64 = 30 * 24 * 60 * 60;
 
 
 // Main program
@@ -136,6 +138,10 @@ pub mod betting_contract {
         betting_question.creator_commission_claimed = false;
         betting_question.bettor_records_count = 0;
         betting_question.bettor_records_closed = 0;
+        betting_question.claim_expires_at = ctx.accounts
+            .question_pda
+            .reveal_end_time
+            .saturating_add(TRUTH_CLAIM_EXPIRY_SECS);
 
         msg!("Betting Question Created Successfully!");
         msg!("Stored Truth-Network Question PDA: {}", betting_question.question_pda);
@@ -152,7 +158,7 @@ pub mod betting_contract {
 
     /// Function to place a bet on a question
     pub fn place_bet(ctx: Context<PlaceBet>, amount: u64, is_option_1: bool) -> Result<()> {
-        
+
         let betting_question = &mut ctx.accounts.betting_question;
         let user = &ctx.accounts.user;
         let vault = &mut ctx.accounts.vault; // Betting vault (owned by Betting Program)
@@ -215,12 +221,12 @@ pub mod betting_contract {
             let creator_commission = total_commission - truth_network_commission - house_commission;
 
             let bet_after_commissions = amount - total_commission;
-        
+
             // Track total amount bet before deductions
             betting_question.total_bets_before_commission = betting_question.total_bets_before_commission
                 .checked_add(amount)
                 .ok_or(BettingError::MathOverflow)?;
-        
+
             // Update total bets
             if is_option_1 {
                 betting_question.total_bets_option1 = betting_question.total_bets_option1
@@ -234,8 +240,8 @@ pub mod betting_contract {
             betting_question.total_pool = betting_question.total_pool
                 .checked_add(bet_after_commissions)
                 .ok_or(BettingError::MathOverflow)?;
-        
-        
+
+
             // Transfer the user's bet to the vault using System Program
             {
                 anchor_lang::system_program::transfer(
@@ -250,27 +256,27 @@ pub mod betting_contract {
                 )?;
                 msg!("User bet is transferred to the vault, amount: {}", amount);
             }
-        
+
             // Transfer commission from Betting Vault to Truth-Network Vault
             {
                 let vault_balance_before = vault.get_lamports();
                 let truth_balance_before = truth_vault.get_lamports();
-        
+
                 // Subtract from betting vault
                 vault.sub_lamports(truth_network_commission)?;
-        
+
                 // Add to truth network vault
                 truth_vault.add_lamports(truth_network_commission)?;
-        
+
                 let vault_balance_after = vault.get_lamports();
                 let truth_balance_after = truth_vault.get_lamports();
-        
+
                 require_eq!(vault_balance_after, vault_balance_before - truth_network_commission);
                 require_eq!(truth_balance_after, truth_balance_before + truth_network_commission);
-        
+
                 msg!("Successfully transferred {} lamports to Truth-Network vault!", truth_network_commission);
             }
-        
+
             // Compute odds
             if betting_question.total_bets_option1 > 0 && betting_question.total_bets_option2 > 0 {
                 betting_question.option1_odds = betting_question.total_pool as f64 / betting_question.total_bets_option1 as f64;
@@ -279,7 +285,7 @@ pub mod betting_contract {
                 betting_question.option1_odds = 0.0;
                 betting_question.option2_odds = 0.0;
             }
-        
+
             // Update total commission fields
             betting_question.total_creator_commission = betting_question.total_creator_commission
                 .checked_add(creator_commission)
@@ -288,7 +294,7 @@ pub mod betting_contract {
             betting_question.total_house_commision = betting_question.total_house_commision
                 .checked_add(house_commission)
                 .ok_or(BettingError::MathOverflow)?;
-        
+
             msg!("Truth network question rewards updated with {}", truth_network_commission);
 
             emit!(BetPlaced {
@@ -302,11 +308,11 @@ pub mod betting_contract {
         })();
 
         betting_question.action_in_progress = false;
-    
+
         result
     }
-    
-    
+
+
     pub fn check_betting_question(ctx: Context<CheckBettingQuestion>) -> Result<()> {
         let betting_question = &ctx.accounts.betting_question;
         msg!("Betting Question Exists: {}", betting_question.title);
@@ -315,108 +321,117 @@ pub mod betting_contract {
 
     pub fn fetch_and_store_winner(ctx: Context<FetchAndStoreWinner>, question_id: u64) -> Result<()> {
         let betting_question = &mut ctx.accounts.betting_question;
-        let truth_network_question = &ctx.accounts.truth_network_question;
-        let house_wallet = &ctx.accounts.house_wallet;
 
-        // Ensure betting has ended
-        let current_time = Clock::get()?.unix_timestamp;
-        require!(current_time >= betting_question.close_date, BettingError::BettingActive);
-        require_eq!(truth_network_question.id, question_id, BettingError::TruthQuestionIdMismatch);
-        require!(current_time >= truth_network_question.reveal_end_time, BettingError::TruthRevealActive);
-    
-        msg!("Fetching winner from Truth Network...");
+        require!(!betting_question.action_in_progress, BettingError::ActionInProgress);
+        betting_question.action_in_progress = true;
 
-        // Step 1: Call 'finalize_voting' on Truth-Network contract
-        {
-            let cpi_accounts = FinalizeVoting {
-                question: truth_network_question.to_account_info(),
-            };
-    
-            let cpi_context = CpiContext::new(ctx.accounts.truth_network_program.to_account_info(), cpi_accounts);
-            finalize_voting(cpi_context, question_id)?;
-        }
-        
-        msg!("Called finalize_voting on Truth-Network for Question ID: {}", question_id);
+        let result = (|| {
+            let truth_network_question = &ctx.accounts.truth_network_question;
+            let house_wallet = &ctx.accounts.house_wallet;
 
-        // Step 2: Manually Re-fetch the Truth-Network Question
-        let account_info = truth_network_question.to_account_info();
-        let latest_data = &mut account_info.try_borrow_mut_data()?;
-        let truth_network_question: Question = Question::try_deserialize(&mut latest_data.as_ref())?;
-    
-        // Step 3: Fetch winner details from Truth-Network
-        let winner = truth_network_question.winning_option;
-        let winning_percentage = truth_network_question.winning_percent;
+            // Ensure betting has ended
+            let current_time = Clock::get()?.unix_timestamp;
+            require!(current_time >= betting_question.close_date, BettingError::BettingActive);
+            require_eq!(truth_network_question.id, question_id, BettingError::TruthQuestionIdMismatch);
+            require!(current_time >= truth_network_question.reveal_end_time, BettingError::TruthRevealActive);
 
-        msg!("winning option: {}", winner);
-        msg!("winning percent: {}", winning_percentage);
-    
-        require!(winner == 0 || winner == 1 || winner == 2, BettingError::InvalidWinner);
-    
-        // Step 4: Update betting question result
-        betting_question.winner = winner;
-        betting_question.winning_percentage = winning_percentage;
-        betting_question.status = "close".to_string();
-    
-        msg!("Winner Fetched & Stored: Option {} ({}%)", winner, winning_percentage);
+            msg!("Fetching winner from Truth Network...");
 
-        // Step 5: Compute Winning Odds
-        let winning_odds = match winner {
-            1 => betting_question.option1_odds,
-            2 => betting_question.option2_odds,
-            _ => 0.99, // Tie, no winner — use default or neutral odds
-        };
+            // Step 1: Call 'finalize_voting' on Truth-Network contract
+            {
+                let cpi_accounts = FinalizeVoting {
+                    question: truth_network_question.to_account_info(),
+                };
 
-        msg!(
-            "Winning Option: {}",
-            match winner {
-                1 => "Option 1",
-                2 => "Option 2",
-                _ => "Tie",
+                let cpi_context = CpiContext::new(ctx.accounts.truth_network_program.to_account_info(), cpi_accounts);
+                finalize_voting(cpi_context, question_id)?;
             }
-        );
-        msg!("Winning Odds: {}", winning_odds);
 
+            msg!("Called finalize_voting on Truth-Network for Question ID: {}", question_id);
 
-        // Step 6: Transfer House Commission if Not Yet Claimed
-        {
-            if !betting_question.house_commission_claimed {
-                let house_commission = betting_question.total_house_commision;
-                
-                if house_commission > 0 {
-                    msg!(
-                        "Transferring {} lamports to House Wallet: {}",
-                        house_commission,
-                        house_wallet.key()
-                    );
-                
-                    let vault_info = ctx.accounts.vault.to_account_info();
-                    let house_info = ctx.accounts.house_wallet.to_account_info();
-                
-                    let mut vault_lamports = vault_info.try_borrow_mut_lamports()?;
-                    let mut house_lamports = house_info.try_borrow_mut_lamports()?;
-                
-                    **vault_lamports = vault_lamports
-                        .checked_sub(house_commission)
-                        .ok_or(BettingError::InsufficientVaultBalance)?;
-                
-                    **house_lamports = house_lamports
-                        .checked_add(house_commission)
-                        .ok_or(BettingError::MathOverflow)?;
-                
-                    msg!("Successfully transferred manually!");
-                
-                } else {
-                    msg!("No house commission to transfer.");
+            // Step 2: Manually Re-fetch the Truth-Network Question
+            let account_info = truth_network_question.to_account_info();
+            let latest_data = &mut account_info.try_borrow_mut_data()?;
+            let truth_network_question: Question = Question::try_deserialize(&mut latest_data.as_ref())?;
+
+            // Step 3: Fetch winner details from Truth-Network
+            let winner = truth_network_question.winning_option;
+            let winning_percentage = truth_network_question.winning_percent;
+
+            msg!("winning option: {}", winner);
+            msg!("winning percent: {}", winning_percentage);
+
+            require!(winner == 0 || winner == 1 || winner == 2, BettingError::InvalidWinner);
+
+            // Step 4: Update betting question result
+            betting_question.winner = winner;
+            betting_question.winning_percentage = winning_percentage;
+            betting_question.status = "close".to_string();
+
+            msg!("Winner Fetched & Stored: Option {} ({}%)", winner, winning_percentage);
+
+            // Step 5: Compute Winning Odds
+            let winning_odds = match winner {
+                1 => betting_question.option1_odds,
+                2 => betting_question.option2_odds,
+                _ => 0.99, // Tie, no winner — use default or neutral odds
+            };
+
+            msg!(
+                "Winning Option: {}",
+                match winner {
+                    1 => "Option 1",
+                    2 => "Option 2",
+                    _ => "Tie",
                 }
-            
-                betting_question.house_commission_claimed = true;
-            } else {
-                msg!("House commission already claimed.");
-            }                     
-        }
-        
-    
-        Ok(())
+            );
+            msg!("Winning Odds: {}", winning_odds);
+
+
+            // Step 6: Transfer House Commission if Not Yet Claimed
+            {
+                if !betting_question.house_commission_claimed {
+                    let house_commission = betting_question.total_house_commision;
+
+                    if house_commission > 0 {
+                        msg!(
+                            "Transferring {} lamports to House Wallet: {}",
+                            house_commission,
+                            house_wallet.key()
+                        );
+
+                        let vault_info = ctx.accounts.vault.to_account_info();
+                        let house_info = ctx.accounts.house_wallet.to_account_info();
+
+                        let mut vault_lamports = vault_info.try_borrow_mut_lamports()?;
+                        let mut house_lamports = house_info.try_borrow_mut_lamports()?;
+
+                        **vault_lamports = vault_lamports
+                            .checked_sub(house_commission)
+                            .ok_or(BettingError::InsufficientVaultBalance)?;
+
+                        **house_lamports = house_lamports
+                            .checked_add(house_commission)
+                            .ok_or(BettingError::MathOverflow)?;
+
+                        msg!("Successfully transferred manually!");
+
+                    } else {
+                        msg!("No house commission to transfer.");
+                    }
+
+                    betting_question.house_commission_claimed = true;
+                } else {
+                    msg!("House commission already claimed.");
+                }
+            }
+
+
+            Ok(())
+        })();
+
+        betting_question.action_in_progress = false;
+        result
     }
 
 
@@ -425,7 +440,7 @@ pub mod betting_contract {
         let bettor_account = &mut ctx.accounts.bettor_account;
         let user = &ctx.accounts.user;
         let vault = &mut ctx.accounts.vault; // Betting Vault
-    
+
         msg!("User {} is attempting to claim winnings", user.key());
 
         // Reentrancy guard check
@@ -435,7 +450,7 @@ pub mod betting_contract {
         let result = (|| {
             // Check if the user has already claimed winnings
             require!(
-                !bettor_account.claimed, 
+                !bettor_account.claimed,
                 BettingError::AlreadyClaimed
             );
 
@@ -443,33 +458,45 @@ pub mod betting_contract {
                 betting_question.status == "close",
                 BettingError::WinnerNotStored
             );
-        
+
+            let now = Clock::get()?.unix_timestamp;
+
+            require!(
+                betting_question.claim_expires_at > 0,
+                BettingError::ClaimWindowNotSet
+            );
+
+            require!(
+                now < betting_question.claim_expires_at,
+                BettingError::ClaimWindowExpired
+            );
+
             // Check if betting has ended
             require!(
                 Clock::get()?.unix_timestamp >= betting_question.close_date,
                 BettingError::BettingActive
             );
-        
+
             // Get the winning option from Truth-Network question
             let winning_option = betting_question.winner;
             let winning_percentage = betting_question.winning_percentage;
 
             require!(winning_option == 0 || winning_option == 1 || winning_option == 2, BettingError::InvalidWinner);
-            
+
             msg!(
                 "Winning option: {}, Winning percentage: {}%",
                 winning_option,
                 winning_percentage
             );
-            
+
 
             // Case 1: If winning percentage is 75% or higher -> Only winners get winnings
             if winning_percentage >= 75.0 {
 
                 // Check if only one side bet exists
-                let one_side_only = betting_question.total_bets_option1 == 0 
+                let one_side_only = betting_question.total_bets_option1 == 0
                     || betting_question.total_bets_option2 == 0;
-                
+
                 if one_side_only {
                     // Treat as unresolved → refund 99%
                     let refund_amount = bettor_account.bet_amount
@@ -485,7 +512,7 @@ pub mod betting_contract {
 
                     bettor_account.winnings = refund_amount;
                     bettor_account.claimed = true;
-                    
+
                     msg!(
                         "One-sided bet detected. Refunded {} lamports to user {}.",
                         refund_amount,
@@ -493,47 +520,47 @@ pub mod betting_contract {
                     );
 
                     Ok(())
-                    
+
 
                 } else {
 
                     // Check if the user placed a bet on the winning option
                     let user_bet_won = (winning_option == 1 && bettor_account.chosen_option)
                         || (winning_option == 2 && !bettor_account.chosen_option);
-                
+
                     require!(user_bet_won, BettingError::UserDidNotWin);
-            
+
                     // Compute winnings
                     let winning_odds = if winning_option == 1 {
                         betting_question.option1_odds
                     } else {
                         betting_question.option2_odds
                     };
-            
+
                     let user_winnings = (bettor_account.bet_amount as f64 * winning_odds) as u64;
                     require!(user_winnings > 0, BettingError::NoWinningsAvailable);
-            
+
                     // Check if vault has enough balance
                     let vault_balance = vault.get_lamports();
                     require!(vault_balance >= user_winnings, BettingError::InsufficientVaultBalance);
-            
+
                     msg!(
                         "User won {} lamports. Transferring from vault {}...",
                         user_winnings,
                         vault.key()
                     );
-            
+
                     // Transfer winnings from Vault to User
                     {
                         let vault_balance_before = vault.get_lamports();
                         let user_balance_before = user.get_lamports();
-                
+
                         // Deduct from vault
                         vault.sub_lamports(user_winnings)?;
-                
+
                         // Add to user
                         user.add_lamports(user_winnings)?;
-                
+
                         let vault_balance_after = vault.get_lamports();
                         let user_balance_after = user.get_lamports();
 
@@ -564,7 +591,7 @@ pub mod betting_contract {
 
                     Ok(())
                 }
-                
+
             } else {
                 // Case 2: If winning percentage is below 75% -> Refund 99% of bet amount to all bettors
                 let refund_amount = bettor_account.bet_amount
@@ -610,14 +637,14 @@ pub mod betting_contract {
 
     pub fn set_claim_tx_id(ctx: Context<SetClaimTxId>, tx_sig: String) -> Result<()> {
         let bettor = &mut ctx.accounts.bettor_account;
-    
+
         let bytes = tx_sig.as_bytes();
         let len = bytes.len().min(88);
         bettor.claim_tx_id[..len].copy_from_slice(&bytes[..len]);
         for i in len..88 {
             bettor.claim_tx_id[i] = 0;
         }
-    
+
         Ok(())
     }
 
@@ -626,7 +653,7 @@ pub mod betting_contract {
         let betting_question = &mut ctx.accounts.betting_question;
         let creator = &ctx.accounts.creator;
         let vault = &mut ctx.accounts.vault;
-    
+
         msg!("Creator {} is attempting to claim commission", creator.key());
 
         // Reentrancy guard check
@@ -634,37 +661,49 @@ pub mod betting_contract {
         betting_question.action_in_progress = true;
 
         let result = (|| {
-    
+
             require!(
                 betting_question.creator == *creator.key,
                 BettingError::UnauthorizedCreator
             );
-        
+
+            let now = Clock::get()?.unix_timestamp;
+
             require!(
-                Clock::get()?.unix_timestamp >= betting_question.close_date,
+                now >= betting_question.close_date,
                 BettingError::BettingActive
             );
-        
+
+            require!(
+                betting_question.claim_expires_at > 0,
+                BettingError::ClaimWindowNotSet
+            );
+
+            require!(
+                now < betting_question.claim_expires_at,
+                BettingError::ClaimWindowExpired
+            );
+
             require!(!betting_question.creator_commission_claimed, BettingError::CommissionAlreadyClaimed);
-            
+
             let commission_amount = betting_question.total_creator_commission;
             require!(commission_amount > 0, BettingError::NoCommissionAvailable);
-        
+
             let vault_balance = vault.get_lamports();
             require!(vault_balance >= commission_amount, BettingError::InsufficientVaultBalance);
-        
+
             msg!(
                 "Transferring {} lamports to creator {}...",
                 commission_amount,
                 creator.key()
             );
-        
+
             vault.sub_lamports(commission_amount)?;
             creator.add_lamports(commission_amount)?;
-        
+
             // Mark as claimed
             betting_question.creator_commission_claimed = true;
-        
+
             msg!("Creator commission of {} lamports claimed by {}", commission_amount, creator.key());
 
             emit!(CreatorCommissionClaimed {
@@ -700,18 +739,23 @@ pub mod betting_contract {
         } else {
             false
         };
-        
-        // Winners/refund-eligible bettors must claim first.
-        // Losing bettors have nothing to claim and may close immediately.
+
+        let now = Clock::get()?.unix_timestamp;
+
+        let claim_window_expired = betting_question.claim_expires_at > 0
+            && now >= betting_question.claim_expires_at;
+
         require!(
-            bettor_account.claimed || user_lost,
+            bettor_account.claimed ||
+            user_lost ||
+            claim_window_expired,
             BettingError::NotReadyToDelete
         );
 
         betting_question.bettor_records_closed = betting_question.bettor_records_closed
             .checked_add(1)
             .ok_or(BettingError::MathOverflow)?;
-    
+
         msg!(
             "User {} is closing bettor record {}",
             ctx.accounts.user.key(),
@@ -722,7 +766,7 @@ pub mod betting_contract {
             bettor: ctx.accounts.user.key(),
             betting_question: betting_question.key(),
         });
-    
+
         Ok(())
     }
 
@@ -731,6 +775,7 @@ pub mod betting_contract {
         let betting_question = &mut ctx.accounts.betting_question;
         let betting_vault = &ctx.accounts.betting_vault;
         let creator = &ctx.accounts.creator;
+        let house_wallet = &ctx.accounts.house_wallet;
         let truth_question = &ctx.accounts.truth_question;
 
         let now = Clock::get()?.unix_timestamp;
@@ -744,24 +789,26 @@ pub mod betting_contract {
             // Event must not be active
             require!(betting_question.status == "close", BettingError::BettingActive);
 
-            require!(betting_question.bettor_records_closed == betting_question.bettor_records_count,
-                BettingError::BettorRecordsStillOpen
-            );
-
             // Check truth network finalized
             require!(truth_question.finalized, BettingError::WinnerNotFinalized);
 
-            // Reveal phase should have ended
-            require!(now >= truth_question.reveal_end_time, BettingError::RevealNotEnded);
+            let truth_delete_allowed_at = truth_question
+                .reveal_end_time
+                .saturating_add(TRUTH_CLAIM_EXPIRY_SECS);
 
-            // SolbetX betting vault must only have rent remaining
-            let rent = Rent::get()?;
-            let betting_min_balance = rent.minimum_balance(betting_vault.data_len());
-            let betting_vault_balance = **betting_vault.lamports.borrow();
-            require!(betting_vault_balance <= betting_min_balance + 1000, BettingError::RemainingBettingBalance);
+            require!(betting_question.claim_expires_at > 0, BettingError::ClaimWindowNotSet);
+
+            require_eq!(
+                betting_question.claim_expires_at,
+                truth_delete_allowed_at,
+                BettingError::InvalidClaimExpiry
+            );
+
+            require!(now >= betting_question.claim_expires_at, BettingError::ClaimWindowNotExpired);
 
             // Truth Network now validates its own reward settlement and
-            // voter-record settlement before allowing deletion.
+            // voter-record settlement and
+            // 30 day expiry before allowing deletion.
             msg!("Calling Truth Network delete question");
 
             let cpi_ctx = CpiContext::new(
@@ -775,15 +822,21 @@ pub mod betting_contract {
             );
             delete_expired_question(cpi_ctx)?;
 
-            // Drain betting vault → creator
+            // Drain expired betting vault → house
             let vault_lamports = **betting_vault.lamports.borrow();
+
             require!(vault_lamports > 0, BettingError::VaultEmptyAlready);
-        
-            **creator.lamports.borrow_mut() += vault_lamports;
+
+            let house_balance = **house_wallet.lamports.borrow();
+
+            **house_wallet.lamports.borrow_mut() = house_balance
+                .checked_add(vault_lamports)
+                .ok_or(BettingError::MathOverflow)?;
+
             **betting_vault.lamports.borrow_mut() = 0;
-        
-            msg!("Drained betting vault: {} lamports sent to creator {}", vault_lamports, creator.key());
-        
+
+            msg!("Drained betting vault: {} lamports sent to house {}", vault_lamports, house_wallet.key());
+
             // Betting Question will be closed automatically
             msg!("BettingQuestion deleted. Rents refunded to {}", creator.key());
 
@@ -799,8 +852,8 @@ pub mod betting_contract {
 
         betting_question.action_in_progress = false;
         result
-        
-    }    
+
+    }
 
 }
 
@@ -824,7 +877,7 @@ pub struct BettingQuestion {
     pub total_house_commision: u64,
     pub close_date: i64,
     pub reward_date: i64,
-    pub status: String, 
+    pub status: String,
     pub result: Option<String>,
     pub winner: u8,
     pub winning_percentage: f64,
@@ -834,6 +887,7 @@ pub struct BettingQuestion {
     pub action_in_progress: bool,
     pub bettor_records_count: u64,
     pub bettor_records_closed: u64,
+    pub claim_expires_at: i64,
 }
 
 /// Account Structs
@@ -875,7 +929,7 @@ pub struct CreateBettingQuestion<'info> {
         bump
     )]
     pub vault: AccountInfo<'info>,
-    
+
 
     pub system_program: Program<'info, System>,
 }
@@ -884,8 +938,8 @@ pub struct CreateBettingQuestion<'info> {
 #[derive(Accounts)]
 pub struct InitializeHouseWallet<'info> {
     #[account(
-        init, 
-        payer = creator, 
+        init,
+        payer = creator,
         space = 8 + 8
     )]
     pub house_wallet: Account<'info, HouseWallet>,
@@ -899,12 +953,12 @@ pub struct InitializeHouseWallet<'info> {
 pub struct PlaceBet<'info> {
     #[account(mut)]
     pub betting_question: Account<'info, BettingQuestion>,
-    
+
     #[account(
-        init_if_needed, 
-        payer = user, 
-        space = 8 + 179, 
-        seeds = [b"bettor", user.key().as_ref(), betting_question.key().as_ref()], 
+        init_if_needed,
+        payer = user,
+        space = 8 + 179,
+        seeds = [b"bettor", user.key().as_ref(), betting_question.key().as_ref()],
         bump)]
     pub bettor_account: Account<'info, BettorAccount>,
 
@@ -921,7 +975,7 @@ pub struct PlaceBet<'info> {
             @ BettingError::InvalidVault
     )]
     pub vault: AccountInfo<'info>,
-    
+
     #[account(
         constraint = betting_question.question_pda == truth_network_question.key()
             @ BettingError::TruthQuestionMismatch
@@ -935,7 +989,7 @@ pub struct PlaceBet<'info> {
             @ BettingError::TruthVaultMismatch
     )]
     pub truth_network_vault: UncheckedAccount<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
 
@@ -1002,7 +1056,6 @@ pub struct FetchAndStoreWinner<'info> {
 
 #[derive(Accounts)]
 pub struct CheckBettingQuestion<'info> {
-    #[account(mut)]
     pub betting_question: Account<'info, BettingQuestion>,
 }
 
@@ -1027,7 +1080,7 @@ pub struct ClaimWinnings<'info> {
     pub bettor_account: Account<'info, BettorAccount>,
 
     #[account(mut)]
-    pub user: Signer<'info>, 
+    pub user: Signer<'info>,
 
     /// CHECK: SolBetX betting vault PDA. PDA and stored vault address are validated.
     #[account(
@@ -1047,7 +1100,7 @@ pub struct ClaimCreatorCommission<'info> {
     pub betting_question: Account<'info, BettingQuestion>,
 
     #[account(mut)]
-    pub creator: Signer<'info>, 
+    pub creator: Signer<'info>,
 
     /// CHECK: SolBetX-owned PDA vault used to hold lamports.
     /// PDA seeds and stored vault address are validated.
@@ -1068,7 +1121,7 @@ pub struct DeleteBettorAccount<'info> {
     pub user: Signer<'info>,
 
     #[account(
-        mut, 
+        mut,
         close = user,
         seeds = [
             b"bettor",
@@ -1100,6 +1153,13 @@ pub struct DeleteEvent<'info> {
 
     #[account(mut)]
     pub creator: Signer<'info>,
+
+    /// CHECK: Fixed SolBetX house wallet receives expired residual betting-vault SOL.
+    #[account(
+        mut,
+        address = HOUSE_WALLET.parse::<Pubkey>().unwrap()
+    )]
+    pub house_wallet: AccountInfo<'info>,
 
     #[account(
         mut,
@@ -1182,7 +1242,7 @@ pub enum BettingError {
 
     #[msg("Invalid title length. Title must be between 10 and 150 characters.")]
     InvalidTitleLength,
-    
+
     #[msg("Minimum bet is 0.01 SOL.")]
     MinimumBetNotMet,
 
@@ -1200,12 +1260,6 @@ pub enum BettingError {
 
     #[msg("Unauthorized: Only the creator can delete this event.")]
     Unauthorized,
-
-    #[msg("Reveal end time hasn't expired.")]
-    RevealNotEnded,
-    
-    #[msg("Betting vault still contains unsettled balance.")]
-    RemainingBettingBalance, 
 
     #[msg("Function already being processed. Try again.")]
     ActionInProgress,
@@ -1243,8 +1297,18 @@ pub enum BettingError {
     #[msg("Winner has not yet been stored in the betting event.")]
     WinnerNotStored,
 
-    #[msg("All bettor records must be closed before deleting the event.")]
-    BettorRecordsStillOpen,
+    #[msg("The SolBetX claim window has expired.")]
+    ClaimWindowExpired,
+
+    #[msg("The SolBetX claim window has not expired yet.")]
+    ClaimWindowNotExpired,
+
+    #[msg("The SolBetX claim expiry has not been initialized.")]
+    ClaimWindowNotSet,
+
+    #[msg("SolBetX claim expiry does not match the Truth Network claim expiry.")]
+    InvalidClaimExpiry,
+
 }
 
 
@@ -1255,13 +1319,12 @@ use solana_security_txt::security_txt;
 security_txt! {
     name: "SolBetX",
     project_url: "https://solbetx.com/",
-    contacts: "mailto:office@vtscc.org,https://vtscc.org/contact.html",
+    contacts: "email:office@vtscc.org,link:https://vtscc.org/contact.html",
     policy: "https://solbetx.com/security-policy",
 
-    // Optional Fields
     preferred_languages: "en",
     source_code: "https://github.com/Vermont-Secure-Computing/bitbet",
-    source_revision: "B8XxuJynFpSVkuYumB6mXFxHEkDvdddavCudCHH7NJWM",
+    source_revision: "",
     source_release: "",
     encryption: "",
     auditors: "vtscc.org",

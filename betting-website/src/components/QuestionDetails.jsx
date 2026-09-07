@@ -94,32 +94,32 @@ const QuestionDetails = () => {
 
     const fetchQuestionDetails = async () => {
         const { RPC_HELP_LINKS } = constants;
-      
+
         let success = false;
         let lastError = null;
         const tried = [];
-      
+
         const allRpcUrls = [
           ...(localStorage.getItem("customRpcUrl") ? [localStorage.getItem("customRpcUrl")] : []),
           ...constants.FALLBACK_RPC_URLS
         ];
-      
+
         setFetchingQuestionDetails(true);
         try {
           for (const rpcUrl of allRpcUrls) {
             if (!rpcUrl) continue;
             tried.push(rpcUrl);
             console.log("============ trying rpc: ", rpcUrl);
-      
+
             try {
               // Build connection/provider/programs for THIS rpcUrl
               const connection = new web3.Connection(rpcUrl, "confirmed");
               const provider = new AnchorProvider(connection, wallet, { preflightCommitment: "processed" });
-      
+
               // Recreate programs bound to this provider
               const bettingProg = new Program(bettingIDL, provider);
               const truthProg = new Program(truthNetworkIDL, provider);
-      
+
               // Fetch data
               const bettingQuestion = await bettingProg.account.bettingQuestion.fetch(questionPda);
               //const truthNetworkQuestion = await truthProg.account.question.fetch(bettingQuestion.questionPda);
@@ -130,7 +130,7 @@ const QuestionDetails = () => {
               } catch (e) {
                 console.warn("Truth question missing/closed:", bettingQuestion.questionPda.toBase58(), e?.message || e);
               }
-      
+
               // Parse numbers
               const totalPool = new BN(bettingQuestion.totalPool);
               const totalBetsOption1 = new BN(bettingQuestion.totalBetsOption1);
@@ -141,10 +141,10 @@ const QuestionDetails = () => {
               const totalCreatorCommission = new BN(bettingQuestion.totalCreatorCommission);
               const betClosing = new BN(bettingQuestion.closeDate);
               const betCreator = bettingQuestion.creator.toString();
-      
+
               // Save the working RPC
               localStorage.setItem("lastWorkingRpc", rpcUrl);
-      
+
               setQuestionData({
                 betting: {
                   ...bettingQuestion,
@@ -208,14 +208,14 @@ const QuestionDetails = () => {
                         snapshotReward: truthNetworkQuestion.snapshotReward.toNumber(),
                     }
                     : {
-                        missing: true,           
+                        missing: true,
                         questionKey: bettingQuestion.questionPda.toBase58(),
                     },
               });
-      
+
               success = true;
               break; // stop trying more RPCs
-      
+
             } catch (err) {
               lastError = err;
               console.warn(`Error using RPC ${rpcUrl}:`, err?.message || err);
@@ -225,7 +225,7 @@ const QuestionDetails = () => {
         } finally {
           setFetchingQuestionDetails(false);
         }
-      
+
         if (!success) {
           // Defer so App's event listener is definitely mounted
           setTimeout(() => {
@@ -241,7 +241,7 @@ const QuestionDetails = () => {
             );
           }, 0);
         }
-      
+
         // If you want to force-show the modal even on success (for testing), uncomment:
         // else {
         //   setTimeout(() => {
@@ -257,8 +257,8 @@ const QuestionDetails = () => {
         //   }, 0);
         // }
     };
-      
-    
+
+
 
     const [bettingQuestionPDA, setBettingQuestionPDA] = useState(null);
     const [truthNetworkQuestionPDA, setTruthNetworkQuestionPDA] = useState(null);
@@ -288,10 +288,10 @@ const QuestionDetails = () => {
             const parsedCloseDate = new Date(questionData.betting.closeDate * 1000);
             setCloseDate(parsedCloseDate);
         }
-    
+
         if (questionData?.truth?.revealEndTime) {
             const parsedRevealEndTime = new Date(questionData.truth.revealEndTime * 1000);
-            
+
             setRevealEndTime(parsedRevealEndTime);
         }
     }, [questionData]);
@@ -325,13 +325,13 @@ const QuestionDetails = () => {
 
     useEffect(() => {
         if (!questionData) return;
-      
+
         let bettingQuestionPDA = new PublicKey(questionData.betting.questionPda);
         let truthNetworkQuestionPDA = new PublicKey(questionData.truth.questionKey);
 
         setBettingQuestionPDA(bettingQuestionPDA);
         setTruthNetworkQuestionPDA(truthNetworkQuestionPDA);
-      
+
       }, [questionData]);
 
 
@@ -342,16 +342,16 @@ const QuestionDetails = () => {
     const [bettingQuestion_PDA, setBettingQuestion_PDA] = useState(null);
     useEffect(() => {
         if (!questionData || !questionData.truth.questionKey) return;
-    
+
         const [pda] = PublicKey.findProgramAddressSync(
             [
                 Buffer.from("betting_question"),
                 BETTING_CONTRACT_PROGRAM_ID.toBuffer(),
-                new PublicKey(questionData.truth.questionKey).toBuffer(), 
+                new PublicKey(questionData.truth.questionKey).toBuffer(),
             ],
             BETTING_CONTRACT_PROGRAM_ID
         );
-    
+
         setBettingQuestion_PDA(pda);
     }, [questionData]);
 
@@ -366,7 +366,7 @@ const QuestionDetails = () => {
             console.warn("Missing publicKey or bettingQuestion_PDA");
             return;
         }
-    
+
         try {
             const [bettorPda] = PublicKey.findProgramAddressSync(
                 [
@@ -376,7 +376,7 @@ const QuestionDetails = () => {
                 ],
                 BETTING_CONTRACT_PROGRAM_ID
             );
-    
+
             // Check if the account exists first
             const bettorAccountInfo = await connection.getAccountInfo(bettorPda);
             if (!bettorAccountInfo) {
@@ -384,7 +384,7 @@ const QuestionDetails = () => {
                 setBettorData(null);
                 return;
             }
-    
+
             // If the account exists, fetch it
             const bettorAccount = await bettingProgram.account.bettorAccount.fetch(bettorPda);
             setBettorData(bettorAccount);
@@ -392,7 +392,7 @@ const QuestionDetails = () => {
             console.error("Error fetching bettor account:", error);
         }
     };
-    
+
 
 
     const fetchVaultBalance = async () => {
@@ -401,19 +401,19 @@ const QuestionDetails = () => {
                 console.warn("Vault data is missing. Skipping balance fetch.");
                 return;
             }
-    
+
             const bettingVaultPubKey = new PublicKey(questionData.betting.vault.toString());
             const truthVaultPubKey = new PublicKey(questionData.truth.vaultAddress.toString());
             const bettingVaultLamports = await connection.getBalance(bettingVaultPubKey);
             const truthVaultLamports = await connection.getBalance(truthVaultPubKey);
-    
+
             setVaultBalance(Number(new BN(bettingVaultLamports)) / 1_000_000_000);
             setTruthVaultBalance(Number(new BN(truthVaultLamports)) / 1_000_000_000);
         } catch (error) {
             console.error("Error fetching vault balance: ", error);
         }
     };
-    
+
 
     // ---------------- helpers ----------------
 
@@ -476,7 +476,7 @@ const QuestionDetails = () => {
                 truthNetworkVault: new PublicKey(questionData.truth.vaultAddress),
                 systemProgram: SystemProgram.programId,
             };
-          
+
             let sim;
             try {
                 sim = await simulateAndBuildIxWithFallback({
@@ -566,7 +566,7 @@ const QuestionDetails = () => {
 
             toast.success("Winner fetched & winnings calculated!", { transition: Bounce });
             await Promise.allSettled([fetchQuestionDetails(), fetchBettorData(), fetchVaultBalance()]);
-            
+
         } catch (error) {
             setLoading(false);
             console.error("Error fetching winner & determining winners:", error);
@@ -593,15 +593,15 @@ const QuestionDetails = () => {
         if (!bettingQuestion_PDA) {return toast.error("Betting question is not ready. Please try again.");}
         if (!bettorData) return toast.error("No bettor data found.");
         if (bettorData.claimed) return toast.info("Winnings already claimed.");
-    
+
         setLoadingWinnings(true);
         setTxSig(undefined);
         setTxStatus(undefined);
-    
+
         try {
             const bettorPda = findBettorPda(publicKey, bettingQuestion_PDA, BETTING_CONTRACT_PROGRAM_ID);
             const vaultPDA = findVaultPda(bettingQuestion_PDA, bettingProgram.programId);
-            
+
             const accounts = {
                 bettingQuestion: bettingQuestion_PDA,
                 bettorAccount: bettorPda,
@@ -674,9 +674,9 @@ const QuestionDetails = () => {
             );
         }
 
-    
+
         setLoadingCommission(true);
-    
+
         try {
             const vault   = findVaultPda(bettingQuestion_PDA, bettingProgram.programId);
 
@@ -708,7 +708,7 @@ const QuestionDetails = () => {
 
             await Promise.allSettled([fetchBettorData(), fetchVaultBalance(), fetchQuestionDetails()]);
             toast.success("Commission claimed successfully!");
-    
+
         } catch (error) {
             console.error("Error claiming commission:", error);
             const hint =
@@ -720,7 +720,7 @@ const QuestionDetails = () => {
         } finally {
             setLoadingCommission(false);
         }
-    
+
     };
 
 
@@ -730,7 +730,7 @@ const QuestionDetails = () => {
         if (!publicKey) return toast.error("Please connect your wallet.");
         if (!bettingProgram) return toast.error("Betting program is not ready. Please reload the page.");
         if (!bettingQuestion_PDA) return toast.error("Betting question is not ready. Please try again.");
-        
+
         setLoadingDeleting(true);
         try {
             const bettorPda = findBettorPda(publicKey, bettingQuestion_PDA, BETTING_CONTRACT_PROGRAM_ID);
@@ -763,7 +763,7 @@ const QuestionDetails = () => {
 
             toast.success("Bettor record deleted. Rent refunded!");
             await fetchBettorData();
-            
+
         } catch (err) {
             console.error("Failed to delete bettor account", err);
             const hint =
@@ -799,7 +799,7 @@ const QuestionDetails = () => {
             const isCreator = publicKey?.toBase58() === questionData.betting.creator;
             const isTruthAsker = publicKey?.toBase58() === questionData.truth.asker;
             const allBettorRecordsClosed = questionData.betting.bettorRecordsClosed.eq(questionData.betting.bettorRecordsCount);
-            
+
             /**
              * Bitbet validation
              */
@@ -832,7 +832,7 @@ const QuestionDetails = () => {
                 allBettorRecordsClosed &&
                 bettingVaultSettled &&
                 truthSettled;
-            
+
             console.log("Delete event validation");
             console.log("isFinalized: ", isFinalized);
             console.log("vault lamports: ", vaultLamports);
@@ -845,7 +845,7 @@ const QuestionDetails = () => {
             console.log("truthSettled: ", truthSettled);
             console.log("canDelete: ", canDelete);
             setCanDeleteEvent(canDelete);
-            
+
         };
 
         checkCanDelete();
@@ -869,7 +869,7 @@ const QuestionDetails = () => {
         }
         console.log("questionData.betting: ", questionData.betting)
         setLoading(true);
-    
+
         try {
             const accounts = {
                     bettingQuestion: new PublicKey(questionData.betting.id),
@@ -942,7 +942,7 @@ const QuestionDetails = () => {
     const sharingComponent = () => {
         return (
             <div className="mt-1 flex flex-col gap-1 text-sm text-gray-500">
-    
+
             {/* Copy to clipboard */}
             <div
                 className="flex items-center gap-1 cursor-pointer hover:underline"
@@ -997,27 +997,27 @@ const QuestionDetails = () => {
 
     console.log("question data: ", questionData)
     // console.log("bettor data: ", bettorData)
-    
+
     // console.log("show delete event button: ", canDeleteEvent)
 
     // console.log("is creator: ", publicKey?.toBase58() === questionData?.betting.creator)
     // console.log("is finalized: ", questionData?.truth.finalized)
     // console.log("creator commission claime: ", publicKey?.toBase58() !== questionData?.betting.creator)
-    
+
 
     // Compute odds for progress bar
-    
+
     const totalBets = Number(questionData?.betting.totalBetsOption1) + Number(questionData?.betting.totalBetsOption2);
     const option1Percentage = totalBets === 0 ? 50 : (Number(questionData?.betting.totalBetsOption1) / totalBets) * 100;
     const option2Percentage = 100 - option1Percentage;
 
     return (
-        <div className="flex flex-col min-h-screen justify-center pb-4 items-center bg-gray-900 text-white">  
-            <Link to="/">Back to List</Link>      
+        <div className="flex flex-col min-h-screen justify-center pb-4 items-center bg-gray-900 text-white">
+            <Link to="/">Back to List</Link>
 
             <div className="w-full max-w-2xl mx-auto p-6 border border-gray-600 rounded-lg shadow-lg bg-gray-800">
-                
-                {!publicKey && 
+
+                {!publicKey &&
                     <div className="mt-6 mb-6 p-4 bg-gray-800 border-l-4 border-yellow-500 text-yellow-300 rounded-md flex items-start gap-3">
                         <FiLogIn className="text-2xl mt-0.5" />
                         <div>
@@ -1029,7 +1029,7 @@ const QuestionDetails = () => {
 
                 <h2 className="text-2xl font-bold text-gray-200">{questionData?.betting.title}</h2>
                 {sharingComponent()}
-                
+
                 <p className="text-gray-400 mt-2">
                     <strong>Status:</strong>{" "}
                     <span className={status?.className}>{status?.label}</span>
@@ -1054,10 +1054,10 @@ const QuestionDetails = () => {
                         <strong>You have placed your bet on: </strong>
                         {bettorData.chosenOption ? questionData?.betting.option1 : questionData?.betting.option2}
                         </p>
-                        
+
                         <p className="text-gray-300 mt-1">
-                        <strong>Bet Amount: </strong> 
-                        {bettorData.betAmount && bettorData.betAmount.toNumber 
+                        <strong>Bet Amount: </strong>
+                        {bettorData.betAmount && bettorData.betAmount.toNumber
                             ? `${(bettorData.betAmount.toNumber() / 1_000_000_000).toFixed(2)} SOL`
                             : "Invalid Amount"}
                         </p>
@@ -1067,9 +1067,9 @@ const QuestionDetails = () => {
                 <p className="mt-4">{option1Percentage.toFixed(2)}%</p>
                 {questionPda && <BetChart questionPda={questionPda} />}
 
-                {/* 
-                    Betting Form 
-                    Hidden when betting is closed    
+                {/*
+                    Betting Form
+                    Hidden when betting is closed
                 */}
                 {closeDate && Date.now() / 1000 < closeDate.getTime() / 1000 && (
                     <div className="mt-4">
@@ -1091,7 +1091,7 @@ const QuestionDetails = () => {
                                 <button
                                     onClick={() => handleBet(true)}
                                     disabled={loading}
-                                    className={`flex-1 font-bold py-2 px-4 rounded-lg transition 
+                                    className={`flex-1 font-bold py-2 px-4 rounded-lg transition
                                         ${loading
                                         ? "!bg-gray-500 cursor-not-allowed text-gray-300"
                                         : "!bg-green-500 hover:bg-green-600 text-white"
@@ -1103,7 +1103,7 @@ const QuestionDetails = () => {
                                 <button
                                     onClick={() => handleBet(false)}
                                     disabled={loading}
-                                    className={`flex-1 font-bold py-2 px-4 rounded-lg transition 
+                                    className={`flex-1 font-bold py-2 px-4 rounded-lg transition
                                         ${loading
                                         ? "!bg-gray-500 cursor-not-allowed text-gray-300"
                                         : "!bg-red-500 hover:bg-red-600 text-white"
@@ -1116,13 +1116,13 @@ const QuestionDetails = () => {
                                 <button
                                 onClick={() => handleBet(bettorData.chosenOption)}
                                 disabled={loading}
-                                className={`flex-1 font-bold py-2 px-4 rounded-lg transition 
+                                className={`flex-1 font-bold py-2 px-4 rounded-lg transition
                                     ${bettorData?.chosenOption
                                     ? "!bg-green-500 hover:bg-green-600 text-white"
                                     : "!bg-red-500 hover:bg-red-600 text-white"
                                     }`}
                                 >
-                                Add Bet on {bettorData?.chosenOption ? questionData?.betting.option1 : questionData?.betting.option2} 
+                                Add Bet on {bettorData?.chosenOption ? questionData?.betting.option1 : questionData?.betting.option2}
                                 (1: {bettorData?.chosenOption ? option1Odds.toFixed(2) : option2Odds.toFixed(2)})
                                 </button>
                             )}
@@ -1202,20 +1202,20 @@ const QuestionDetails = () => {
                     </p>
 
                     <p className="text-gray-400">
-                        Total Pool: 
-                        <span 
+                        Total Pool:
+                        <span
                             className="text-green-400">
                                 {questionData?.betting.totalPool ? (Number(questionData?.betting.totalPool) / 1_000_000_000).toFixed(8) : 0} SOL
                         </span>
                     </p>
                     <p className="text-gray-400">
-                        House Commission: 
+                        House Commission:
                         <span className="text-yellow-400">
                             {questionData?.betting.totalHouseCommision ? (Number(questionData?.betting.totalHouseCommision) / 1_000_000_000).toFixed(8) : 0} SOL
                         </span>
                     </p>
                     <p className="text-gray-400">
-                        Creator Commission: 
+                        Creator Commission:
                         <span className="text-blue-400">
                             {questionData?.betting.totalCreatorCommission ? (Number(questionData?.betting.totalCreatorCommission) / 1_000_000_000).toFixed(8) : 0} SOL
                         </span>
@@ -1251,14 +1251,14 @@ const QuestionDetails = () => {
                         disabled={loading}
                         className="w-full mt-4 !bg-purple-500 hover:!bg-purple-600 text-white font-bold py-2 px-4 rounded-lg transition"
                     >
-                        {loading ? 
+                        {loading ?
                             (
                                 <span className="flex items-center justify-center">
                                     Getting Result <span className="dot-animate">.</span>
                                     <span className="dot-animate dot2">.</span>
                                     <span className="dot-animate dot3">.</span>
                                 </span>
-                            ) 
+                            )
                             :
                             "Get Result"
                         }
@@ -1266,27 +1266,29 @@ const QuestionDetails = () => {
                 )}
 
                 {bettorData &&
-                    questionData?.truth.finalized &&
-                    questionData?.truth.winningOption !== null &&
-                    bettorData.chosenOption === questionData?.truth.winningOption &&
+                    questionData?.betting?.status === "close" &&
                     questionData?.truth.winningPercent >= 75 &&
+                    (
+                        (bettorData.chosenOption && questionData?.betting?.winner === 1) ||
+                        (!bettorData.chosenOption && questionData?.betting?.winner === 2)
+                    ) &&
                     !bettorData.claimed &&
                     parseFloat(questionData?.betting.totalBetsOption1) > 0 &&
-                    parseFloat(questionData?.betting.totalBetsOption2) > 0 && 
+                    parseFloat(questionData?.betting.totalBetsOption2) > 0 &&
                 (
                     <button
                     onClick={claimWinnings}
                     disabled={loadingWinnings}
                     className="w-full mt-4 !bg-yellow-500 hover:!bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition"
                     >
-                        {loadingWinnings ? 
+                        {loadingWinnings ?
                             (
                                 <span className="flex items-center justify-center">
                                     Claiming Winnings <span className="dot-animate">.</span>
                                     <span className="dot-animate dot2">.</span>
                                     <span className="dot-animate dot3">.</span>
                                 </span>
-                            ) 
+                            )
                             :
                             "Claim Winnings"
                         }
@@ -1295,34 +1297,27 @@ const QuestionDetails = () => {
 
                 {bettorData &&
                     publicKey &&
-                    questionData?.truth.finalized && 
+                    questionData?.betting?.status === "close" &&
+                    !bettorData.claimed &&
                     (
-                        questionData?.truth.winningOption === null ||
-                        questionData?.truth.winningOption === 0 ||
-                        questionData?.truth.winningPercent < 75 ||
-                        (
-                            questionData?.truth.winningPercent >= 75 &&
-                            (
-                                parseFloat(questionData?.betting.totalBetsOption1) === 0 ||
-                                parseFloat(questionData?.betting.totalBetsOption2) === 0
-                            )
-                        )
+                        questionData?.betting?.winningPercentage < 75 ||
+                        parseFloat(questionData?.betting.totalBetsOption1) === 0 ||
+                        parseFloat(questionData?.betting.totalBetsOption2) === 0
                     ) &&
-                    !bettorData.claimed && 
                 (
                     <button
                         onClick={claimWinnings}
                         disabled={loadingWinnings}
                         className="w-full mt-4 !bg-yellow-500 hover:!bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition"
                     >
-                        {loadingWinnings ? 
+                        {loadingWinnings ?
                             (
                                 <span className="flex items-center justify-center">
                                     Refunding Bet <span className="dot-animate">.</span>
                                     <span className="dot-animate dot2">.</span>
                                     <span className="dot-animate dot3">.</span>
                                 </span>
-                            ) 
+                            )
                             :
                             "Refund Bet"
                         }
@@ -1337,14 +1332,14 @@ const QuestionDetails = () => {
                             disabled={loadingCommission}
                             className="w-full mt-4 !bg-orange-500 hover:!bg-orange-600 text-white font-bold py-2 px-4 rounded-lg transition"
                         >
-                            {loadingCommission ? 
+                            {loadingCommission ?
                             (
                                 <span className="flex items-center justify-center">
                                     Claiming Commission <span className="dot-animate">.</span>
                                     <span className="dot-animate dot2">.</span>
                                     <span className="dot-animate dot3">.</span>
                                 </span>
-                            ) 
+                            )
                             :
                             "Claim Commission"
                         }
@@ -1353,7 +1348,7 @@ const QuestionDetails = () => {
 
                 {questionData?.truth.finalized && (
                     <div className="mt-6 bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-md">
-                        <p className="text-lg font-semibold text-gray-300">Result from truth.it network</p>   
+                        <p className="text-lg font-semibold text-gray-300">Result from truth.it network</p>
                         {questionData.truth.winningPercent > 0 ? (
                             <>
                                 {questionData.truth.winningPercent < 75 ?
@@ -1366,8 +1361,8 @@ const QuestionDetails = () => {
                                     </p>
                                 }
                                 <p className="text-gray-400 mt-1">
-                                    <strong>Consensus:</strong> {questionData.truth.winningPercent.toFixed(2)}% 
-                                    {questionData.truth.votesOption1 > questionData.truth.votesOption2 ? 
+                                    <strong>Consensus:</strong> {questionData.truth.winningPercent.toFixed(2)}%
+                                    {questionData.truth.votesOption1 > questionData.truth.votesOption2 ?
                                         ` (${questionData.truth.votesOption1} / ${questionData.truth.votesOption1 + questionData.truth.votesOption2} votes)`
                                         :
                                         ` (${questionData.truth.votesOption2} / ${questionData.truth.votesOption1 + questionData.truth.votesOption2} votes)`
@@ -1430,7 +1425,7 @@ const QuestionDetails = () => {
                                     bettorData.claimed
                                 ) // no voters, claimed refund
                             )
-                            && 
+                            &&
                             (
                                 publicKey?.toBase58() !== questionData?.betting.creator ||
                                 (publicKey?.toBase58() === questionData?.betting.creator && questionData?.betting.creatorCommissionClaimed)
@@ -1477,7 +1472,7 @@ const QuestionDetails = () => {
                         </button>
                     </div>
                 )}
-                
+
             </div>
         </div>
     );

@@ -104,15 +104,15 @@ const CreateQuestion = ({setActiveTab}) => {
         if (!bettingEndTime || close <= now) 
             return toast.error("Close date must be in the future.");
     
-        // //Commit must be at least 1 dat after betting close
-        // if (commit.getTime() - close.getTime() < 1 * 24 * 60 * 60 * 1000) {
-        //     return toast.error("Commit End Time must be at least 1 day after Betting Close Date.");
-        // }
+        //Commit must be at least 1 dat after betting close
+        if (commit.getTime() - close.getTime() < 1 * 24 * 60 * 60 * 1000) {
+            return toast.error("Commit End Time must be at least 1 day after Betting Close Date.");
+        }
     
-        // // Reveal must be at least 1 day after commit end
-        // if (reveal.getTime() - commit.getTime() < 1 * 24 * 60 * 60 * 1000) {
-        //     return toast.error("Reveal End Time must be at least 1 day after Commit End Time.");
-        // }
+        // Reveal must be at least 1 day after commit end
+        if (reveal.getTime() - commit.getTime() < 1 * 24 * 60 * 60 * 1000) {
+            return toast.error("Reveal End Time must be at least 1 day after Commit End Time.");
+        }
     
         setShowConfirm(true);
     };

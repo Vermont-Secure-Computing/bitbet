@@ -22,3 +22,5 @@ betting-website/*.ntvs*
 betting-website/*.njsproj
 betting-website/*.sln
 betting-website/*.sw?
+
+target/
