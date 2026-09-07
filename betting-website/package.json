@@ -14,6 +14,9 @@
     "dev-mainnet-latest": "vite --mode mainnet-latest",
     "build-mainnet-latest": "vite build --mode mainnet-latest",
 
+    "dev-mainnet-garganey": "vite --mode mainnet-garganey",
+    "build-mainnet-garganey": "vite build --mode mainnet-garganey",
+
     "dev-mainnet-coucal": "vite --mode mainnet-coucal",
     "build-mainnet-coucal": "vite build --mode mainnet-coucal",
 

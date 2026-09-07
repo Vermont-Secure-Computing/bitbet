@@ -3,6 +3,10 @@ import { PublicKey } from "@solana/web3.js";
 // Define version-specific program IDs
 const PROGRAM_IDS = {
     latest: {
+        BETTING_CONTRACT_PROGRAM_ID: new PublicKey("DAanVG7q38LfrTsxuGPn6gxWU7jKtEChXhiiJVNCZv4G"),
+        TRUTH_NETWORK_PROGRAM_ID: new PublicKey("A1TH3GZoz6QV4wPECMH2r3tnV3wEWvEtwZwGnfP3U6RX"),
+    },
+    garganey: {
         BETTING_CONTRACT_PROGRAM_ID: new PublicKey("B8XxuJynFpSVkuYumB6mXFxHEkDvdddavCudCHH7NJWM"),
         TRUTH_NETWORK_PROGRAM_ID: new PublicKey("FFL71XjBkjq5gce7EtpB7Wa5p8qnRNueLKSzM4tkEMoc"),
     },
@@ -45,6 +49,7 @@ export const RPC_HELP_LINKS = [
 
 export const SOLBETX_VERSIONS = [
     { label: "Latest", value: "latest", url: "https://solbetx.com" },
+    { label: "Garganey", value: "garganey", url: "https://garganey.solbetx.com" },
     { label: "Coucal", value: "coucal", url: "https://coucal.solbetx.com" },
     { label: "Malkoha", value: "malkoha", url: "https://malkoha.solbetx.com" },
     {

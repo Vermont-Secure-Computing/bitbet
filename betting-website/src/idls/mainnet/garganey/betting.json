@@ -1,5 +1,5 @@
 {
-  "address": "DAanVG7q38LfrTsxuGPn6gxWU7jKtEChXhiiJVNCZv4G",
+  "address": "B8XxuJynFpSVkuYumB6mXFxHEkDvdddavCudCHH7NJWM",
   "metadata": {
     "name": "betting_contract",
     "version": "0.1.0",
@@ -21,7 +21,8 @@
       ],
       "accounts": [
         {
-          "name": "betting_question"
+          "name": "betting_question",
+          "writable": true
         }
       ],
       "args": []
@@ -50,9 +51,6 @@
         },
         {
           "name": "vault",
-          "docs": [
-            "PDA seeds and stored vault address are validated."
-          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -76,6 +74,10 @@
               }
             ]
           }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": []
@@ -99,35 +101,16 @@
         },
         {
           "name": "bettor_account",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  98,
-                  101,
-                  116,
-                  116,
-                  111,
-                  114
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "user"
-              },
-              {
-                "kind": "account",
-                "path": "betting_question"
-              }
-            ]
-          }
+          "writable": true
         },
         {
           "name": "user",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "truth_network_question",
+          "writable": true
         },
         {
           "name": "vault",
@@ -154,6 +137,10 @@
               }
             ]
           }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": []
@@ -217,11 +204,12 @@
           "signer": true
         },
         {
-          "name": "question_pda"
+          "name": "question_pda",
+          "writable": true
         },
         {
           "name": "betting_contract",
-          "address": "DAanVG7q38LfrTsxuGPn6gxWU7jKtEChXhiiJVNCZv4G"
+          "address": "B8XxuJynFpSVkuYumB6mXFxHEkDvdddavCudCHH7NJWM"
         },
         {
           "name": "vault",
@@ -285,34 +273,13 @@
         },
         {
           "name": "bettor_account",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  98,
-                  101,
-                  116,
-                  116,
-                  111,
-                  114
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "user"
-              },
-              {
-                "kind": "account",
-                "path": "betting_question"
-              }
-            ]
-          }
+          "writable": true
         },
         {
-          "name": "betting_question",
-          "writable": true
+          "name": "truth_question"
+        },
+        {
+          "name": "betting_question"
         }
       ],
       "args": []
@@ -338,11 +305,6 @@
           "name": "creator",
           "writable": true,
           "signer": true
-        },
-        {
-          "name": "house_wallet",
-          "writable": true,
-          "address": "CQaZgx5jqQrz7c8shCG3vJLiiPGPrawSGhvkgXtGyxL"
         },
         {
           "name": "truth_question",
@@ -380,7 +342,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "A1TH3GZoz6QV4wPECMH2r3tnV3wEWvEtwZwGnfP3U6RX"
+          "address": "FFL71XjBkjq5gce7EtpB7Wa5p8qnRNueLKSzM4tkEMoc"
         },
         {
           "name": "system_program",
@@ -412,7 +374,7 @@
         },
         {
           "name": "truth_network_program",
-          "address": "A1TH3GZoz6QV4wPECMH2r3tnV3wEWvEtwZwGnfP3U6RX"
+          "address": "FFL71XjBkjq5gce7EtpB7Wa5p8qnRNueLKSzM4tkEMoc"
         },
         {
           "name": "house_wallet",
@@ -444,6 +406,10 @@
               }
             ]
           }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -507,9 +473,6 @@
         },
         {
           "name": "vault",
-          "docs": [
-            "PDA and stored vault address are validated."
-          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -535,15 +498,23 @@
           }
         },
         {
-          "name": "truth_network_question"
+          "name": "truth_network_question",
+          "writable": true
         },
         {
-          "name": "truth_network_vault",
-          "writable": true
+          "name": "bet_program"
+        },
+        {
+          "name": "truth_network_program",
+          "address": "FFL71XjBkjq5gce7EtpB7Wa5p8qnRNueLKSzM4tkEMoc"
         },
         {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "truth_network_vault",
+          "writable": true
         }
       ],
       "args": [
@@ -790,7 +761,7 @@
     {
       "code": 6015,
       "name": "MinimumBetNotMet",
-      "msg": "Minimum bet is 0.01 SOL."
+      "msg": "Minimum bet is 0.1 SOL."
     },
     {
       "code": 6016,
@@ -809,93 +780,63 @@
     },
     {
       "code": 6019,
+      "name": "RevealNotExpired",
+      "msg": "Reveal end time hasn't expired."
+    },
+    {
+      "code": 6020,
+      "name": "VaultNotEmpty",
+      "msg": "Vault is not empty."
+    },
+    {
+      "code": 6021,
+      "name": "TruthVaultNotEmpty",
+      "msg": "Truth Network vault still holds balance."
+    },
+    {
+      "code": 6022,
+      "name": "QuestionAccountNotEmpty",
+      "msg": "Question account still holds lamports."
+    },
+    {
+      "code": 6023,
+      "name": "RentNotExpired",
+      "msg": "Truth-network rent period has not expired yet."
+    },
+    {
+      "code": 6024,
       "name": "VaultEmptyAlready",
       "msg": "Vault has already been emptied."
     },
     {
-      "code": 6020,
+      "code": 6025,
       "name": "Unauthorized",
       "msg": "Unauthorized: Only the creator can delete this event."
     },
     {
-      "code": 6021,
-      "name": "ActionInProgress",
-      "msg": "Function already being processed. Try again."
-    },
-    {
-      "code": 6022,
-      "name": "CannotChangeBetSide",
-      "msg": "Cannot change bet side after the first bet."
-    },
-    {
-      "code": 6023,
-      "name": "TruthQuestionMismatch",
-      "msg": "Truth Network question does not match this betting market."
-    },
-    {
-      "code": 6024,
-      "name": "TruthVaultMismatch",
-      "msg": "Truth Network vault does not match this Truth question."
-    },
-    {
-      "code": 6025,
-      "name": "WinnerAlreadyFinalized",
-      "msg": "Truth Network question is already finalized."
-    },
-    {
       "code": 6026,
-      "name": "TruthQuestionClosed",
-      "msg": "Truth Network question is no longer accepting votes."
+      "name": "TruthRentNotExpired",
+      "msg": "Truth Network rent has not expired yet."
     },
     {
       "code": 6027,
-      "name": "InvalidBettingTimeframe",
-      "msg": "Betting end time must be before the Truth Network commit end time."
+      "name": "RevealNotEnded",
+      "msg": "Reveal end time hasn't expired."
     },
     {
       "code": 6028,
-      "name": "InvalidVault",
-      "msg": "Invalid betting vault."
+      "name": "RemainingRewardExists",
+      "msg": "Truth Network vault still contains rewards."
     },
     {
       "code": 6029,
-      "name": "MathOverflow",
-      "msg": "Arithmetic overflow."
+      "name": "RemainingBettingBalance",
+      "msg": "Betting vault still contains rewards."
     },
     {
       "code": 6030,
-      "name": "TruthQuestionIdMismatch",
-      "msg": "Truth Network question ID does not match the supplied question ID."
-    },
-    {
-      "code": 6031,
-      "name": "TruthRevealActive",
-      "msg": "Truth Network reveal period is still active."
-    },
-    {
-      "code": 6032,
-      "name": "WinnerNotStored",
-      "msg": "Winner has not yet been stored in the betting event."
-    },
-    {
-      "code": 6033,
-      "name": "ClaimWindowExpired",
-      "msg": "The SolBetX claim window has expired."
-    },
-    {
-      "code": 6034,
-      "name": "ClaimWindowNotExpired",
-      "msg": "The SolBetX claim window has not expired yet."
-    },
-    {
-      "code": 6035,
-      "name": "ClaimWindowNotSet",
-      "msg": "The SolBetX claim expiry has not been initialized."
-    },
-    {
-      "code": 6036,
-      "name": "InvalidClaimExpiry",
-      "msg": "SolBetX claim expiry does not match the Truth Network claim expiry."
+      "name": "ActionInProgress",
+      "msg": "Function already being processed. Try again."
     }
   ],
   "types": [
@@ -1028,18 +969,6 @@
           {
             "name": "action_in_progress",
             "type": "bool"
-          },
-          {
-            "name": "bettor_records_count",
-            "type": "u64"
-          },
-          {
-            "name": "bettor_records_closed",
-            "type": "u64"
-          },
-          {
-            "name": "claim_expires_at",
-            "type": "i64"
           }
         ]
       }
