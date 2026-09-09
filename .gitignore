@@ -24,3 +24,5 @@ betting-website/*.sln
 betting-website/*.sw?
 
 target/
+node_modules/
+test-ledger/
