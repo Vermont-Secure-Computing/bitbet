@@ -10,7 +10,7 @@ import {
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const rewardData = {
-  labels: ["Event Creator (1%)", "Dev Fund (1%)", "Truth Network (1%)", "Winners (97%)"],
+  labels: ["Event Creator (0.33%)", "Dev Fund (0.33%)", "Truth Network (0.33%)", "Winners (99%)"],
   datasets: [
     {
       data: [1, 1, 1, 97],
@@ -68,7 +68,7 @@ export default function InstructionsPage() {
         <Pie data={rewardData} />
       </div>
       <p className="mb-6 text-justify">
-        1% of all the coin wagered on a given event are rewarded to the address which initiated the betting event.  A further 1% of the coin goes to the SolbetX development fund address.  Another 1% goes to the Truth.It network for providing the result of the event,  thus determining the winners of the bet.  The remaining 97% of all bets are distributed among the betters on the favorable side of the event (the winners) according to their share as determined by the amount of their bet.
+        0.33% of all the coin wagered on a given event are rewarded to the address which initiated the betting event.  A further 0.33% of the coin goes to the SolbetX development fund address.  Another 0.33% goes to the Truth.It network for providing the result of the event,  thus determining the winners of the bet.  The remaining 99% of all bets are distributed among the betters on the favorable side of the event (the winners) according to their share as determined by the amount of their bet.
       </p>
 
       <h2 className="text-xl font-semibold mb-3 text-yellow-400">3. Odds </h2>
@@ -78,7 +78,7 @@ export default function InstructionsPage() {
       <p className="mb-4 text-justify">
         Rewards are calculated using:
         <code className="block bg-gray-800 mt-2 p-2 rounded text-xs overflow-x-auto">
-          Your Reward = (Your Bet / Total Winning Side Bets) × Total Pool (after 3%)
+          Your Reward = (Your Bet / Total Winning Side Bets) × Total Pool (after 1%)
         </code>
       </p>
       <div className="flex">
