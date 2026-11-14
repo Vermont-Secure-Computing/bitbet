@@ -5,7 +5,7 @@
 
 #root {
   width: 100%;
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: "Inter", sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
@@ -17,6 +17,14 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@font-face {
+    font-family: "Inter";
+    src: url("/fonts/InterVariable.woff2") format("woff2");
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
 }
 
 a {
